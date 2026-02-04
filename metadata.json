@@ -1,0 +1,8 @@
+
+{
+  "name": "XẤU MÃ - Nông Sản Mộc Mạc",
+  "description": "Nền tảng thương mại điện tử kết nối trực tiếp nông dân và người tiêu dùng, chuyên doanh nông sản 'xấu mã' nhưng chất lượng cao, giúp giảm lãng phí thực phẩm.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
