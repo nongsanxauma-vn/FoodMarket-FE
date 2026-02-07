@@ -8,7 +8,6 @@ export default defineConfig(({ mode }) => {
           base: "/nong_san_xau_ma/",
 
       server: {
-          base: "/FoodMarket-FE/", 
         port: 3000,
         host: '0.0.0.0',
       },
