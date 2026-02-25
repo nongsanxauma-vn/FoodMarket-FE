@@ -34,16 +34,34 @@ class HttpClient {
   }
 
   /**
+   * Kiểm tra xem endpoint có phải là public không
+   */
+  private isPublicEndpoint(url: string): boolean {
+    const publicEndpoints = [
+      '/auth/login',
+      '/users/register',
+      '/otp-verification/send-otp',
+      '/otp-verification/verify-otp',
+      '/forgot-password/reset',
+    ];
+    
+    return publicEndpoints.some(endpoint => url.includes(endpoint));
+  }
+
+  /**
    * Tạo headers mặc định
    */
-  private getDefaultHeaders(): Record<string, string> {
+  private getDefaultHeaders(url: string): Record<string, string> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 
-    const token = this.getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    // Chỉ thêm token nếu không phải public endpoint
+    if (!this.isPublicEndpoint(url)) {
+      const token = this.getToken();
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
     }
 
     return headers;
@@ -75,7 +93,7 @@ class HttpClient {
     const fullUrl = `${this.baseURL}${url}${this.buildQueryString(config?.params)}`;
     
     const headers = {
-      ...this.getDefaultHeaders(),
+      ...this.getDefaultHeaders(url),
       ...config?.headers,
     };
 
