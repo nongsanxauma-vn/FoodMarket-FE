@@ -2,15 +2,21 @@
 import React, { useState } from 'react';
 import { AppRole } from '../../types';
 import { Facebook } from "lucide-react";
+import { authService } from '../../services';
 
 interface LoginProps {
   onLogin: (role: AppRole) => void;
   onGoToRegister: () => void;
+  onForgotPassword?: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin, onGoToRegister }) => {
+const Login: React.FC<LoginProps> = ({ onLogin, onGoToRegister, onForgotPassword }) => {
   const [selectedRole, setSelectedRole] = useState<AppRole>(AppRole.BUYER);
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background-light">
@@ -52,7 +58,38 @@ const Login: React.FC<LoginProps> = ({ onLogin, onGoToRegister }) => {
             <p className="text-[#64748b] text-lg font-medium leading-tight">Chào mừng bạn quay trở lại với cộng đồng Xấu Mã.</p>
           </div>
 
-          <form className="space-y-4 shrink-0" onSubmit={(e) => { e.preventDefault(); onLogin(selectedRole); }}>
+          <form className="space-y-4 shrink-0" onSubmit={async (e) => { 
+            e.preventDefault(); 
+            setError(null);
+            setIsLoading(true);
+            
+            try {
+              const response = await authService.login({ email, password });
+              
+              if (response.result?.authenticated) {
+                // Lấy thông tin user sau khi login thành công
+                const userInfo = await authService.getMyInfo();
+                
+                if (userInfo.result) {
+                  // Map role từ backend sang frontend
+                  const roleMap: Record<string, AppRole> = {
+                    'BUYER': AppRole.BUYER,
+                    'SHOP_OWNER': AppRole.FARMER,
+                    'SHIPPER': AppRole.SHIPPER,
+                    'ADMIN': AppRole.ADMIN,
+                  };
+                  
+                  const userRole = roleMap[userInfo.result.role?.name || 'BUYER'] || AppRole.BUYER;
+                  onLogin(userRole);
+                }
+              }
+            } catch (err: any) {
+              console.error('Login failed:', err);
+              setError(err?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.');
+            } finally {
+              setIsLoading(false);
+            }
+          }}>
             
             {/* Role Selection */}
             <div className="space-y-2">
@@ -82,12 +119,22 @@ const Login: React.FC<LoginProps> = ({ onLogin, onGoToRegister }) => {
             </div>
 
             <div className="space-y-3">
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-2xl">
+                  <p className="text-sm text-red-600 font-semibold">{error}</p>
+                </div>
+              )}
+              
               <div className="relative group">
                 <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-xl z-10">person</span>
                 <input 
                   className="w-full pl-14 pr-5 py-3.5 rounded-2xl border-2 border-cream bg-white focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none font-bold text-slate-700 placeholder:text-slate-300 text-base" 
-                  placeholder="Email hoặc số điện thoại" 
-                  type="text" 
+                  placeholder="Email" 
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={isLoading}
                 />
               </div>
 
@@ -97,11 +144,16 @@ const Login: React.FC<LoginProps> = ({ onLogin, onGoToRegister }) => {
                   className="w-full pl-14 pr-12 py-3.5 rounded-2xl border-2 border-cream bg-white focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none font-bold text-slate-700 placeholder:text-slate-300 text-base" 
                   placeholder="Mật khẩu" 
                   type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={isLoading}
                 />
                 <button 
                   type="button" 
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10"
+                  disabled={isLoading}
                 >
                   <span className="material-symbols-outlined text-xl">{showPassword ? "visibility_off" : "visibility"}</span>
                 </button>
@@ -113,14 +165,21 @@ const Login: React.FC<LoginProps> = ({ onLogin, onGoToRegister }) => {
                 <input className="w-5 h-5 rounded border-cream text-primary focus:ring-primary/20 transition-all cursor-pointer" type="checkbox" />
                 <span className="text-sm font-bold text-slate-500 group-hover:text-slate-700">Ghi nhớ</span>
               </label>
-              <button type="button" className="text-sm font-bold text-primary hover:underline">Quên mật khẩu?</button>
+              <button 
+                type="button" 
+                onClick={onForgotPassword}
+                className="text-sm font-bold text-primary hover:underline"
+              >
+                Quên mật khẩu?
+              </button>
             </div>
 
             <button 
-              className="w-full py-4 bg-primary text-white font-extrabold rounded-2xl hover:bg-primary/90 hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl shadow-primary/20 text-lg" 
+              className="w-full py-4 bg-primary text-white font-extrabold rounded-2xl hover:bg-primary/90 hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl shadow-primary/20 text-lg disabled:opacity-50 disabled:cursor-not-allowed" 
               type="submit"
+              disabled={isLoading || !email || !password}
             >
-              ĐĂNG NHẬP
+              {isLoading ? 'ĐANG ĐĂNG NHẬP...' : 'ĐĂNG NHẬP'}
             </button>
           </form>
 

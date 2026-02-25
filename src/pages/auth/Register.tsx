@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { AppRole } from '../../types/index';
 import { Leaf, User, Phone, Lock, ArrowRight, ShieldCheck, Chrome, Facebook, Info, ArrowLeft } from 'lucide-react';
+import { authService } from '../../services';
+import OTPVerification from '../../components/auth/OTPVerification';
 
 interface RegisterProps {
   onRegister: (role: AppRole) => void;
@@ -10,6 +12,51 @@ interface RegisterProps {
 const Register: React.FC<RegisterProps> = ({ onRegister, onGoToLogin }) => {
   const [selectedRole, setSelectedRole] = useState<AppRole>(AppRole.FARMER);
   const [agreed, setAgreed] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [showOtpVerification, setShowOtpVerification] = useState(false);
+  const [pendingRegistration, setPendingRegistration] = useState<any>(null);
+
+  // Nếu đang ở bước OTP verification
+  if (showOtpVerification) {
+    return (
+      <OTPVerification
+        email={email}
+        onVerified={async () => {
+          // Sau khi verify OTP thành công, thực hiện đăng ký
+          if (pendingRegistration) {
+            setIsLoading(true);
+            try {
+              const response = await authService.register(pendingRegistration);
+              
+              if (response.result) {
+                setSuccess('Đăng ký thành công! Đang chuyển hướng...');
+                setTimeout(() => {
+                  onRegister(selectedRole);
+                }, 1500);
+              }
+            } catch (err: any) {
+              console.error('Register failed:', err);
+              setError(err?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+              setShowOtpVerification(false);
+            } finally {
+              setIsLoading(false);
+            }
+          }
+        }}
+        onBack={() => {
+          setShowOtpVerification(false);
+          setPendingRegistration(null);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="h-screen bg-[#f8faf8] flex items-center justify-center p-0 md:p-4 lg:p-6 overflow-hidden font-sans">
@@ -54,7 +101,52 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onGoToLogin }) => {
                 <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Bắt đầu hành trình của bạn</p>
               </div>
 
-              <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+              <form className="space-y-4" onSubmit={async (e) => {
+                e.preventDefault();
+                setError(null);
+                setSuccess(null);
+                
+                // Validation
+                if (!fullName || !email || !phone || !password || !confirmPassword) {
+                  setError('Vui lòng điền đầy đủ thông tin');
+                  return;
+                }
+                
+                if (password !== confirmPassword) {
+                  setError('Mật khẩu xác nhận không khớp');
+                  return;
+                }
+                
+                if (password.length < 8) {
+                  setError('Mật khẩu phải có ít nhất 8 ký tự');
+                  return;
+                }
+                
+                if (!agreed) {
+                  setError('Vui lòng đồng ý với điều khoản và chính sách');
+                  return;
+                }
+                
+                // Chuẩn bị dữ liệu đăng ký
+                const roleMap: Record<AppRole, 'BUYER' | 'SHOP_OWNER' | 'SHIPPER' | 'ADMIN'> = {
+                  [AppRole.BUYER]: 'BUYER',
+                  [AppRole.FARMER]: 'SHOP_OWNER',
+                  [AppRole.SHIPPER]: 'SHIPPER',
+                  [AppRole.ADMIN]: 'ADMIN',
+                };
+                
+                const registrationData = {
+                  email,
+                  password,
+                  fullName,
+                  phoneNumber: phone,
+                  roleName: roleMap[selectedRole],
+                };
+                
+                // Lưu dữ liệu và chuyển sang bước OTP
+                setPendingRegistration(registrationData);
+                setShowOtpVerification(true);
+              }}>
                 {/* Role Selection */}
                 <div className="bg-gray-100 p-1 rounded-2xl flex gap-1">
                   {( [ [AppRole.BUYER, 'Người mua'], [AppRole.FARMER, 'Người bán'] ] as const).map(([role, label]) => (
@@ -73,12 +165,41 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onGoToLogin }) => {
 
                 {/* Input Fields - Optimized Height */}
                 <div className="space-y-3">
+                  {error && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+                      <p className="text-xs text-red-600 font-semibold">{error}</p>
+                    </div>
+                  )}
+                  
+                  {success && (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-xl">
+                      <p className="text-xs text-green-600 font-semibold">{success}</p>
+                    </div>
+                  )}
+                  
                   <div className="relative">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
                     <input 
                       type="text" 
                       placeholder="Họ và tên" 
                       className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-[#5c8d5e] focus:ring-4 focus:ring-[#5c8d5e]/5 outline-none text-sm font-semibold transition-all"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      required
+                      disabled={isLoading}
+                    />
+                  </div>
+
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+                    <input 
+                      type="email" 
+                      placeholder="Email" 
+                      className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-[#5c8d5e] focus:ring-4 focus:ring-[#5c8d5e]/5 outline-none text-sm font-semibold transition-all"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      disabled={isLoading}
                     />
                   </div>
 
@@ -88,6 +209,10 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onGoToLogin }) => {
                       type="text" 
                       placeholder="Số điện thoại" 
                       className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-[#5c8d5e] focus:ring-4 focus:ring-[#5c8d5e]/5 outline-none text-sm font-semibold transition-all"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      required
+                      disabled={isLoading}
                     />
                   </div>
 
@@ -98,6 +223,10 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onGoToLogin }) => {
                         type="password" 
                         placeholder="Mật khẩu" 
                         className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-[#5c8d5e] outline-none text-sm font-semibold transition-all"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        disabled={isLoading}
                       />
                     </div>
                     <div className="relative">
@@ -106,6 +235,10 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onGoToLogin }) => {
                         type="password" 
                         placeholder="Xác nhận" 
                         className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-[#5c8d5e] outline-none text-sm font-semibold transition-all"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -134,13 +267,13 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onGoToLogin }) => {
                 </label>
 
                 <button 
-                  onClick={() => onRegister(selectedRole)}
-                  disabled={!agreed}
+                  type="submit"
+                  disabled={!agreed || isLoading}
                   className={`w-full py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
-                    agreed ? 'bg-[#5c8d5e] text-white shadow-lg shadow-[#5c8d5e]/20 hover:bg-[#4a724b]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    agreed && !isLoading ? 'bg-[#5c8d5e] text-white shadow-lg shadow-[#5c8d5e]/20 hover:bg-[#4a724b]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   }`}
                 >
-                  TẠO TÀI KHOẢN <ArrowRight className="size-4" />
+                  {isLoading ? 'ĐANG TẠO TÀI KHOẢN...' : 'TẠO TÀI KHOẢN'} <ArrowRight className="size-4" />
                 </button>
 
                 <div className="relative flex items-center gap-4 py-2">

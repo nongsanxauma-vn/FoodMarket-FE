@@ -1,0 +1,153 @@
+/**
+ * HTTP Client
+ * Xử lý tất cả các HTTP requests với axios-like interface
+ */
+
+import { API_BASE_URL, API_TIMEOUT, TOKEN_KEY } from './api.config';
+
+export interface ApiResponse<T = any> {
+  code?: number;
+  message?: string;
+  result?: T;
+}
+
+export interface RequestConfig {
+  headers?: Record<string, string>;
+  params?: Record<string, any>;
+  timeout?: number;
+}
+
+class HttpClient {
+  private baseURL: string;
+  private timeout: number;
+
+  constructor(baseURL: string, timeout: number) {
+    this.baseURL = baseURL;
+    this.timeout = timeout;
+  }
+
+  /**
+   * Lấy token từ localStorage
+   */
+  private getToken(): string | null {
+    return localStorage.getItem(TOKEN_KEY);
+  }
+
+  /**
+   * Tạo headers mặc định
+   */
+  private getDefaultHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    const token = this.getToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    return headers;
+  }
+
+  /**
+   * Xử lý query parameters
+   */
+  private buildQueryString(params?: Record<string, any>): string {
+    if (!params) return '';
+    
+    const queryString = Object.entries(params)
+      .filter(([_, value]) => value !== undefined && value !== null)
+      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+      .join('&');
+    
+    return queryString ? `?${queryString}` : '';
+  }
+
+  /**
+   * Thực hiện HTTP request
+   */
+  private async request<T>(
+    method: string,
+    url: string,
+    data?: any,
+    config?: RequestConfig
+  ): Promise<ApiResponse<T>> {
+    const fullUrl = `${this.baseURL}${url}${this.buildQueryString(config?.params)}`;
+    
+    const headers = {
+      ...this.getDefaultHeaders(),
+      ...config?.headers,
+    };
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), config?.timeout || this.timeout);
+
+    try {
+      const response = await fetch(fullUrl, {
+        method,
+        headers,
+        body: data ? JSON.stringify(data) : undefined,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw {
+          status: response.status,
+          data: responseData,
+        };
+      }
+
+      return responseData;
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout');
+      }
+
+      throw error;
+    }
+  }
+
+  /**
+   * GET request
+   */
+  async get<T>(url: string, config?: RequestConfig): Promise<ApiResponse<T>> {
+    return this.request<T>('GET', url, undefined, config);
+  }
+
+  /**
+   * POST request
+   */
+  async post<T>(url: string, data?: any, config?: RequestConfig): Promise<ApiResponse<T>> {
+    return this.request<T>('POST', url, data, config);
+  }
+
+  /**
+   * PUT request
+   */
+  async put<T>(url: string, data?: any, config?: RequestConfig): Promise<ApiResponse<T>> {
+    return this.request<T>('PUT', url, data, config);
+  }
+
+  /**
+   * PATCH request
+   */
+  async patch<T>(url: string, data?: any, config?: RequestConfig): Promise<ApiResponse<T>> {
+    return this.request<T>('PATCH', url, data, config);
+  }
+
+  /**
+   * DELETE request
+   */
+  async delete<T>(url: string, config?: RequestConfig): Promise<ApiResponse<T>> {
+    return this.request<T>('DELETE', url, undefined, config);
+  }
+}
+
+// Export singleton instance
+export const httpClient = new HttpClient(API_BASE_URL, API_TIMEOUT);
