@@ -1,8 +1,54 @@
 
-import React from 'react';
-import { ShieldCheck, UserCheck, CheckCircle, Search, Bell, Info, ChevronLeft, ChevronRight, FileText, Landmark } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ShieldCheck, UserCheck, CheckCircle, Search, Bell, Info, ChevronLeft, ChevronRight, FileText, Landmark, AlertCircle } from 'lucide-react';
+import { userService, UserResponse } from '../../services';
 
 const KYCApproval: React.FC = () => {
+  const [pendingUsers, setPendingUsers] = useState<UserResponse[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [approvingId, setApprovingId] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await userService.getAllUsers();
+        const all = response.result || [];
+        // Tạm coi KYC chờ duyệt là các SHOP_OWNER chưa ACTIVE
+        const pending = all.filter(
+          (u) => u.role?.name === 'SHOP_OWNER' && u.status !== 'ACTIVE'
+        );
+        setPendingUsers(pending);
+      } catch (err) {
+        console.error('Failed to load users for KYC', err);
+        setError('Không thể tải danh sách hồ sơ KYC. Vui lòng kiểm tra quyền Admin hoặc thử lại sau.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
+  const handleApprove = async (userId: number) => {
+    setApprovingId(userId);
+    setError(null);
+    try {
+      const response = await userService.approveShopOwner(userId);
+      const updated = response.result;
+      if (updated) {
+        setPendingUsers((prev) => prev.filter((u) => u.id !== updated.id));
+      }
+    } catch (err) {
+      console.error('Failed to approve shop owner', err);
+      setError('Duyệt hồ sơ thất bại. Vui lòng thử lại sau.');
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-8 p-8 animate-in fade-in duration-500">
       <div className="flex justify-between items-center">
@@ -17,7 +63,9 @@ const KYCApproval: React.FC = () => {
               </div>
               <div>
                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">CHỜ DUYỆT</p>
-                 <h4 className="text-xl font-black text-gray-900">42</h4>
+                 <h4 className="text-xl font-black text-gray-900">
+                  {loading ? '...' : pendingUsers.length}
+                 </h4>
               </div>
            </div>
            <div className="bg-white p-4 rounded-[28px] border border-gray-100 shadow-sm flex items-center gap-4 pr-10">
@@ -32,11 +80,20 @@ const KYCApproval: React.FC = () => {
         </div>
       </div>
 
+      {error && (
+        <div className="bg-red-50 rounded-[32px] border border-red-100 shadow-sm px-6 py-4 text-sm text-red-700 flex items-center gap-3">
+          <AlertCircle className="size-4" />
+          <span>{error}</span>
+        </div>
+      )}
+
       <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-10 py-8 border-b border-gray-50 flex items-center justify-between">
            <div className="flex items-center gap-4">
               <h4 className="font-black text-gray-800 uppercase tracking-tight">Danh sách hồ sơ</h4>
-              <span className="px-3 py-1 bg-gray-100 text-gray-400 text-[10px] font-black rounded-full">Hiện có 42 hồ sơ</span>
+              <span className="px-3 py-1 bg-gray-100 text-gray-400 text-[10px] font-black rounded-full">
+                Hiện có {pendingUsers.length} hồ sơ
+              </span>
            </div>
            <div className="flex items-center gap-4">
               <button className="size-10 flex items-center justify-center text-gray-300 hover:text-gray-900"><span className="material-symbols-outlined">filter_list</span></button>
@@ -56,37 +113,68 @@ const KYCApproval: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {[
-                { name: 'Nguyễn Văn An', id: 'ND-88912', area: 'Lâm Đồng', main: 'Sầu riêng, Bơ', date: '14/10/2023 09:30', status: 'CHỜ DUYỆT', color: 'text-blue-600' },
-                { name: 'Trần Thị Bé', id: 'ND-22105', area: 'Tiền Giang', main: 'Thanh long, Khóm', date: '14/10/2023 08:15', status: 'ĐANG XEM XÉT', color: 'text-orange-500' },
-                { name: 'Lê Hoàng Nam', id: 'ND-00122', area: 'Bình Phước', main: 'Điều, Tiêu', date: '13/10/2023 16:45', status: 'CHỜ DUYỆT', color: 'text-blue-600' },
-              ].map((p, i) => (
-                <tr key={i} className="hover:bg-gray-50/30 transition-colors">
-                  <td className="px-10 py-6">
-                    <div className="flex items-center gap-4">
-                      <img src={`https://picsum.photos/seed/k${i}/80/80`} className="size-11 rounded-full object-cover" />
-                      <div>
-                        <p className="text-sm font-black text-gray-900">{p.name}</p>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">ID: {p.id}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-6 text-sm font-bold text-gray-600">{p.area}</td>
-                  <td className="px-6 py-6 text-center">
-                    <span className="px-4 py-1.5 bg-green-50 text-emerald-600 text-[10px] font-black rounded-full uppercase tracking-tight">{p.main}</span>
-                  </td>
-                  <td className="px-6 py-6 text-[11px] font-bold text-gray-400">{p.date}</td>
-                  <td className="px-6 py-6">
-                    <div className="flex items-center gap-2">
-                       <span className={`size-2 rounded-full bg-current ${p.color}`} />
-                       <span className={`text-[10px] font-black uppercase tracking-widest ${p.color}`}>{p.status}</span>
-                    </div>
-                  </td>
-                  <td className="px-10 py-6 text-right">
-                    <button className="px-6 py-2.5 bg-gray-50 text-gray-500 text-[10px] font-black rounded-xl uppercase tracking-widest hover:bg-gray-100 transition-colors">Xem chi tiết</button>
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-10 py-8 text-sm text-gray-500">
+                    Đang tải danh sách hồ sơ...
                   </td>
                 </tr>
-              ))}
+              ) : pendingUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-10 py-8 text-sm text-gray-400 text-center font-medium">
+                    Hiện chưa có hồ sơ KYC nào cần duyệt.
+                  </td>
+                </tr>
+              ) : (
+                pendingUsers.map((u, index) => (
+                  <tr key={u.id ?? index} className="hover:bg-gray-50/30 transition-colors">
+                    <td className="px-10 py-6">
+                      <div className="flex items-center gap-4">
+                        <div className="size-11 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
+                          <UserCheck className="size-5" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-gray-900">
+                            {u.fullName || u.email}
+                          </p>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                            {u.email}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-6 text-sm font-bold text-gray-600">
+                      {u.address || '—'}
+                    </td>
+                    <td className="px-6 py-6 text-center">
+                      <span className="px-4 py-1.5 bg-green-50 text-emerald-600 text-[10px] font-black rounded-full uppercase tracking-tight">
+                        {u.shopName || 'Nhà vườn'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-6 text-[11px] font-bold text-gray-400">
+                      {/* BE chưa trả createdAt, tạm để trống */}
+                      —
+                    </td>
+                    <td className="px-6 py-6">
+                      <div className="flex items-center gap-2">
+                        <span className="size-2 rounded-full bg-current text-blue-600" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-600">
+                          CHỜ DUYỆT
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-10 py-6 text-right">
+                      <button
+                        onClick={() => u.id && handleApprove(u.id)}
+                        disabled={approvingId === u.id}
+                        className="px-6 py-2.5 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-xl uppercase tracking-widest hover:bg-emerald-100 transition-colors disabled:bg-gray-100 disabled:text-gray-400"
+                      >
+                        {approvingId === u.id ? 'ĐANG DUYỆT...' : 'Duyệt hồ sơ'}
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

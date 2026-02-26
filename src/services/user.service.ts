@@ -90,6 +90,32 @@ class UserService {
       throw error;
     }
   }
+
+  /**
+   * Phê duyệt shop owner (Admin only)
+   */
+  async approveShopOwner(userId: number): Promise<ApiResponse<UserResponse>> {
+    try {
+      const response = await httpClient.patch<UserResponse>(`/users/${userId}/approve-shop-owner`);
+      return response;
+    } catch (error) {
+      console.error('Approve shop owner error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Phê duyệt shipper (Admin only)
+   */
+  async approveShipper(userId: number): Promise<ApiResponse<UserResponse>> {
+    try {
+      const response = await httpClient.patch<UserResponse>(`/users/${userId}/approve-shipper`);
+      return response;
+    } catch (error) {
+      console.error('Approve shipper error:', error);
+      throw error;
+    }
+  }
 }
 
 // Export singleton instance

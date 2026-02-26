@@ -1,29 +1,66 @@
 
-import React, { useState } from 'react';
-import { Send, Users, User, Sprout, Truck, History, CheckCircle2, Clock, Trash2, ShieldAlert } from 'lucide-react';
-import { AppRole } from '../../types/index';
+import React, { useEffect, useState } from 'react';
+import { Send, Users, User, Sprout, Truck, History, CheckCircle2, Clock, Trash2, ShieldAlert, AlertCircle } from 'lucide-react';
+import { notificationService, NotificationItem } from '../../services';
+
+type TargetOption = 'all' | 'buyer' | 'farmer' | 'shipper';
+
+const TARGET_MAPPING: Record<TargetOption, string[]> = {
+  all: ['BUYER', 'SHOP_OWNER', 'SHIPPER'],
+  buyer: ['BUYER'],
+  farmer: ['SHOP_OWNER'],
+  shipper: ['SHIPPER'],
+};
 
 const NotificationManagement: React.FC = () => {
-  const [target, setTarget] = useState<string>('all');
+  const [target, setTarget] = useState<TargetOption>('all');
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
 
-  const history = [
-    { id: 1, title: 'Thông báo bảo trì hệ thống', target: 'Tất cả', time: '14:20, 24/05/2024', status: 'Đã gửi' },
-    { id: 2, title: 'Cập nhật chính sách phí sàn mới', target: 'Nông dân', time: '10:00, 22/05/2024', status: 'Đã gửi' },
-    { id: 3, title: 'Khuyến mãi hè 50%', target: 'Người mua', time: '18:30, 20/05/2024', status: 'Đã gửi' },
-  ];
+  const [history, setHistory] = useState<NotificationItem[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSend = () => {
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      setLoadingHistory(true);
+      setError(null);
+      try {
+        const response = await notificationService.getAllNotifications();
+        setHistory(response.result || []);
+      } catch (err) {
+        console.error('Failed to load notifications', err);
+        setError('Không thể tải danh sách thông báo. Vui lòng thử lại sau.');
+      } finally {
+        setLoadingHistory(false);
+      }
+    };
+
+    fetchNotifications();
+  }, []);
+
+  const handleSend = async () => {
     if (!title || !message) return;
     setSending(true);
-    setTimeout(() => {
-      setSending(false);
+    setError(null);
+    try {
+      await notificationService.adminSendToGroups({
+        title,
+        content: message,
+        receiverTypes: TARGET_MAPPING[target],
+      });
       setTitle('');
       setMessage('');
+      const response = await notificationService.getAllNotifications();
+      setHistory(response.result || []);
       alert('Thông báo đã được gửi thành công!');
-    }, 1500);
+    } catch (err) {
+      console.error('Failed to send notification', err);
+      setError('Gửi thông báo thất bại. Vui lòng kiểm tra lại quyền Admin hoặc thử lại sau.');
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -47,17 +84,19 @@ const NotificationManagement: React.FC = () => {
             <div className="flex flex-col gap-4">
                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Đối tượng nhận</label>
                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {[
+                    {[
                     { id: 'all', name: 'Tất cả', icon: Users },
                     { id: 'buyer', name: 'Người mua', icon: User },
                     { id: 'farmer', name: 'Nông dân', icon: Sprout },
                     { id: 'shipper', name: 'Shipper', icon: Truck },
                   ].map((t) => (
                     <button
-                      key={t.id}
-                      onClick={() => setTarget(t.id)}
+                      key={t.id as TargetOption}
+                      onClick={() => setTarget(t.id as TargetOption)}
                       className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${
-                        target === t.id ? 'border-primary bg-primary/5 text-primary' : 'border-gray-50 text-gray-400 hover:border-gray-100'
+                        target === t.id
+                          ? 'border-primary bg-primary/5 text-primary'
+                          : 'border-gray-50 text-gray-400 hover:border-gray-100'
                       }`}
                     >
                       <t.icon className="size-5" />
@@ -115,21 +154,55 @@ const NotificationManagement: React.FC = () => {
                  <h4 className="font-black text-gray-800 uppercase tracking-tight">Lịch sử gửi</h4>
               </div>
 
-              <div className="space-y-4">
-                 {history.map((h) => (
-                   <div key={h.id} className="p-5 bg-gray-50/50 rounded-3xl border border-gray-100 group hover:border-primary/20 transition-all">
+              {loadingHistory && (
+                <div className="p-5 bg-gray-50/80 rounded-3xl border border-gray-100 flex items-center gap-3">
+                  <Clock className="size-4 text-primary" />
+                  <p className="text-xs font-medium text-gray-600">Đang tải lịch sử thông báo...</p>
+                </div>
+              )}
+
+              {error && !loadingHistory && (
+                <div className="p-5 bg-red-50 rounded-3xl border border-red-100 flex items-center gap-3">
+                  <AlertCircle className="size-4 text-red-500" />
+                  <p className="text-xs font-medium text-red-700">{error}</p>
+                </div>
+              )}
+
+              {!loadingHistory && !error && (
+                <div className="space-y-4">
+                  {history.map((h) => (
+                    <div
+                      key={h.id}
+                      className="p-5 bg-gray-50/50 rounded-3xl border border-gray-100 group hover:border-primary/20 transition-all"
+                    >
                       <div className="flex justify-between items-start mb-2">
-                         <span className="text-[9px] font-black text-primary uppercase tracking-widest">{h.target}</span>
-                         <span className="text-[9px] font-bold text-gray-400">{h.time}</span>
+                        <span className="text-[9px] font-black text-primary uppercase tracking-widest">
+                          {(h.receiverType || 'HỆ THỐNG').toUpperCase()}
+                        </span>
+                        <span className="text-[9px] font-bold text-gray-400">
+                          {h.createdAt ? new Date(h.createdAt).toLocaleString('vi-VN') : ''}
+                        </span>
                       </div>
                       <h5 className="text-sm font-black text-gray-900 leading-snug">{h.title}</h5>
+                      <p className="mt-1 text-[11px] text-gray-500 line-clamp-2">{h.content}</p>
                       <div className="flex items-center justify-between mt-4">
-                         <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600"><CheckCircle2 className="size-3" /> {h.status}</span>
-                         <button className="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"><Trash2 className="size-4" /></button>
+                        <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600">
+                          <CheckCircle2 className="size-3" /> ĐÃ GỬI
+                        </span>
+                        <button className="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+                          <Trash2 className="size-4" />
+                        </button>
                       </div>
-                   </div>
-                 ))}
-              </div>
+                    </div>
+                  ))}
+
+                  {!history.length && (
+                    <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] text-center">
+                      Chưa có thông báo nào được gửi
+                    </p>
+                  )}
+                </div>
+              )}
 
               <button className="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:underline mx-auto">Xem báo cáo chi tiết</button>
            </div>

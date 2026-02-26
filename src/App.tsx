@@ -22,6 +22,7 @@ import BlindBoxTool from './pages/farmer/BlindBoxTool';
 import FarmerNotifications from './pages/farmer/Notifications';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import ShipperRegister from './pages/auth/ShipperRegister';
 import KYC from './pages/auth/KYC';
 import ShipperDashboard from './pages/shipper/Dashboard';
 import AdminDashboard from './pages/admin/Dashboard';
@@ -39,7 +40,7 @@ import { AppRole, User, KYCStatus } from './types/index';
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isKYCRequired, setIsKYCRequired] = useState(false);
-  const [authMode, setAuthMode] = useState<'LOGIN' | 'REGISTER' | null>(null);
+  const [authMode, setAuthMode] = useState<'LOGIN' | 'REGISTER' | 'SHIPPER_REGISTER' | null>(null);
   const [role, setRole] = useState<AppRole>(AppRole.BUYER);
   const [farmerSubPage, setFarmerSubPage] = useState<string>('overview');
   const [adminSubPage, setAdminSubPage] = useState<string>('admin-overview');
@@ -190,8 +191,21 @@ const App: React.FC = () => {
     return <KYC role={role as any} onComplete={handleKYCComplete} onBack={() => setIsKYCRequired(false)} />;
   }
 
+  if (authMode === 'SHIPPER_REGISTER') {
+    return <ShipperRegister 
+      onComplete={() => {
+        setAuthMode('LOGIN');
+      }} 
+      onBack={() => setAuthMode('REGISTER')} 
+    />;
+  }
+
   if (authMode === 'REGISTER') {
-    return <Register onRegister={handleRegister} onGoToLogin={() => setAuthMode('LOGIN')} />;
+    return <Register 
+      onRegister={handleRegister} 
+      onGoToLogin={() => setAuthMode('LOGIN')} 
+      onGoToShipperRegister={() => setAuthMode('SHIPPER_REGISTER')}
+    />;
   }
 
   if (authMode === 'LOGIN') {

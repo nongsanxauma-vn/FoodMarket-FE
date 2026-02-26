@@ -1,9 +1,73 @@
 
-import React from 'react';
-/* Fix: Import missing User and CheckCircle2 icons from lucide-react */
+import React, { useEffect, useState } from 'react';
 import { Camera, ShieldCheck, Mail, Phone, MapPin, Star, Award, Leaf, FileText, Plus, Save, ExternalLink, User, CheckCircle2 } from 'lucide-react';
+import { authService, UserResponse } from '../../services';
 
 const Profile: React.FC = () => {
+  const [user, setUser] = useState<UserResponse | null>(null);
+  const [fullName, setFullName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [email, setEmail] = useState('');
+  const [address, setAddress] = useState('');
+  const [shopName, setShopName] = useState('');
+  const [description, setDescription] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await authService.getMyInfo();
+        if (response.result) {
+          const u = response.result;
+          setUser(u);
+          setFullName(u.fullName || '');
+          setPhoneNumber(u.phoneNumber || '');
+          setEmail(u.email || '');
+          setAddress(u.address || '');
+          setShopName(u.shopName || '');
+          setDescription(u.description || '');
+        }
+      } catch (err) {
+        console.error('Failed to load profile', err);
+        setError('Không thể tải hồ sơ. Vui lòng đảm bảo bạn đã đăng nhập.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  const handleSave = async () => {
+    if (!user) return;
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const response = await authService.updateMyInfo({
+        fullName,
+        phoneNumber,
+        address,
+        shopName,
+        description,
+      });
+      if (response.result) {
+        setUser(response.result);
+        setSuccess('Lưu thay đổi thành công.');
+      }
+    } catch (err) {
+      console.error('Failed to update profile', err);
+      setError('Lưu thay đổi thất bại. Vui lòng thử lại sau.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-8 p-8 animate-in fade-in duration-500 pb-20">
       <div className="flex justify-between items-center">
@@ -11,10 +75,32 @@ const Profile: React.FC = () => {
           <h2 className="text-3xl font-black font-display text-gray-900">Hồ sơ cá nhân & Cửa hàng</h2>
           <p className="text-gray-400 font-medium text-sm mt-1">Quản lý thông tin nhà vườn và cấu hình vận hành cửa hàng.</p>
         </div>
-        <button className="px-8 py-3 bg-primary text-white rounded-2xl font-black flex items-center gap-2 shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all transform active:scale-95">
+        <button
+          onClick={handleSave}
+          disabled={saving || loading}
+          className="px-8 py-3 bg-primary text-white rounded-2xl font-black flex items-center gap-2 shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all transform active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed"
+        >
           <Save className="size-5" /> Lưu thay đổi
         </button>
       </div>
+
+      {loading && (
+        <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm p-6 text-sm text-gray-600">
+          Đang tải hồ sơ của bạn...
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-red-50 rounded-[32px] border border-red-100 shadow-sm p-6 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="bg-emerald-50 rounded-[32px] border border-emerald-100 shadow-sm p-6 text-sm text-emerald-700">
+          {success}
+        </div>
+      )}
 
       <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-10 flex flex-col md:flex-row items-center gap-10">
         <div className="relative group">
@@ -27,7 +113,9 @@ const Profile: React.FC = () => {
         </div>
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-4">
-            <h3 className="text-3xl font-black text-gray-900">Nông Trại Xanh</h3>
+            <h3 className="text-3xl font-black text-gray-900">
+              {shopName || user?.shopName || 'Nông Trại của bạn'}
+            </h3>
             <span className="flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase rounded-full">
               <ShieldCheck className="size-3" /> Đã xác thực KYC
             </span>
@@ -35,7 +123,9 @@ const Profile: React.FC = () => {
           <div className="flex flex-wrap items-center gap-6">
             <div className="flex flex-col">
               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Mã định danh</span>
-              <span className="text-sm font-bold text-gray-700 flex items-center gap-1"><User className="size-3" /> FARM-8829</span>
+              <span className="text-sm font-bold text-gray-700 flex items-center gap-1">
+                <User className="size-3" /> ID: {user?.id ?? '—'}
+              </span>
             </div>
             <div className="flex flex-col">
               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tham gia</span>
@@ -62,22 +152,43 @@ const Profile: React.FC = () => {
           <div className="space-y-8">
             <div className="flex flex-col gap-3">
               <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Họ và tên chủ vườn</label>
-              <input type="text" defaultValue="Bác Ba Nông Dân" className="w-full px-6 py-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all" />
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="w-full px-6 py-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all"
+              />
             </div>
             <div className="grid grid-cols-2 gap-8">
               <div className="flex flex-col gap-3">
                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Số điện thoại</label>
-                <input type="text" defaultValue="0987 654 321" className="w-full px-6 py-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all" />
+                <input
+                  type="text"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  className="w-full px-6 py-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all"
+                />
               </div>
               <div className="flex flex-col gap-3">
                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Email</label>
-                <input type="email" defaultValue="bacba.farm@email.com" className="w-full px-6 py-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled
+                  className="w-full px-6 py-4 bg-gray-100 border border-transparent rounded-2xl text-sm font-bold outline-none text-gray-500"
+                />
               </div>
             </div>
             <div className="flex flex-col gap-3">
               <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Địa chỉ vườn</label>
               <div className="relative">
-                 <input type="text" defaultValue="Ấp Phú Lộc, xã An Khánh, huyện Châu Thành, Đồng Tháp" className="w-full pl-6 pr-12 py-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all" />
+                 <input
+                   type="text"
+                   value={address}
+                   onChange={(e) => setAddress(e.target.value)}
+                   className="w-full pl-6 pr-12 py-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all"
+                 />
                  <MapPin className="absolute right-4 top-1/2 -translate-y-1/2 size-5 text-primary" />
               </div>
               <p className="text-[10px] text-gray-400 font-medium italic">* Định vị chính xác để hỗ trợ tính phí ship &lt;10km cho khách hàng.</p>
@@ -169,7 +280,12 @@ const Profile: React.FC = () => {
           </div>
           <div className="flex flex-col gap-3">
              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Mô tả phương pháp canh tác</label>
-             <textarea rows={3} className="w-full px-6 py-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-medium outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all resize-none" defaultValue="Nông trại áp dụng phương pháp canh tác hoàn toàn thuận tự nhiên, không sử dụng phân bón hóa học và thuốc trừ sâu tổng hợp." />
+             <textarea
+               rows={3}
+               className="w-full px-6 py-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-medium outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all resize-none"
+               value={description}
+               onChange={(e) => setDescription(e.target.value)}
+             />
           </div>
         </div>
       </div>

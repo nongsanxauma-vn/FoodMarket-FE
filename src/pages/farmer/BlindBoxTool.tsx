@@ -1,15 +1,37 @@
 
-import React, { useState } from 'react';
-import { Sparkles, Info, ArrowRight, Package, Box, Zap, Gift, Trash2, Sprout } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Sparkles, Info, ArrowRight, Package, Box, Zap, Gift, Trash2, Sprout, AlertCircle, Clock } from 'lucide-react';
+import { mysteryBoxService, MysteryBox } from '../../services';
 
 const BlindBoxTool: React.FC = () => {
   const [price, setPrice] = useState(59000);
+  const [runningBoxes, setRunningBoxes] = useState<MysteryBox[]>([]);
+  const [loadingBoxes, setLoadingBoxes] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const items = [
     { id: 1, name: 'Bắp cải', image: 'https://picsum.photos/seed/cabbage/100/100', surplus: '15kg' },
     { id: 2, name: 'Cà chua', image: 'https://picsum.photos/seed/tomato/100/100', surplus: '8kg' },
     { id: 3, name: 'Khoai tây', image: 'https://picsum.photos/seed/potato/100/100', surplus: '20kg' },
     { id: 4, name: 'Cà rốt', image: 'https://picsum.photos/seed/carrot/100/100', surplus: '5kg' },
   ];
+
+  useEffect(() => {
+    const fetchMyBoxes = async () => {
+      setLoadingBoxes(true);
+      setError(null);
+      try {
+        const response = await mysteryBoxService.getMyBoxes();
+        setRunningBoxes(response.result || []);
+      } catch (err) {
+        console.error('Failed to load mystery boxes', err);
+        setError('Không thể tải danh sách túi mù. Vui lòng đảm bảo bạn đã đăng nhập với vai trò nhà vườn.');
+      } finally {
+        setLoadingBoxes(false);
+      }
+    };
+
+    fetchMyBoxes();
+  }, []);
 
   return (
     <div className="flex flex-col gap-8 p-8 animate-in fade-in duration-500 pb-20">
@@ -147,21 +169,55 @@ const BlindBoxTool: React.FC = () => {
            </div>
 
            <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-8 flex flex-col gap-6">
-              <h5 className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Túi đang chạy (2)</h5>
-              <div className="space-y-4">
-                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 group">
-                    <div className="flex items-center gap-3">
-                       <Sprout className="size-5 text-primary" />
-                       <div>
-                          <p className="text-xs font-black text-gray-800 uppercase">Gói Đất Đỏ</p>
-                          <p className="text-[10px] text-gray-400 font-bold">Giá: 59.000đ • Đã bán: 12</p>
-                       </div>
+              <h5 className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                Túi đang chạy ({runningBoxes.length})
+              </h5>
+
+              {loadingBoxes && (
+                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-center gap-3">
+                  <Clock className="size-4 text-primary" />
+                  <p className="text-[11px] text-gray-600 font-medium">Đang tải danh sách túi mù...</p>
+                </div>
+              )}
+
+              {error && !loadingBoxes && (
+                <div className="p-4 bg-red-50 rounded-2xl border border-red-100 flex items-center gap-3">
+                  <AlertCircle className="size-4 text-red-500" />
+                  <p className="text-[11px] text-red-700 font-medium">{error}</p>
+                </div>
+              )}
+
+              {!loadingBoxes && !error && (
+                <div className="space-y-4">
+                  {runningBoxes.map((box) => (
+                    <div
+                      key={box.id}
+                      className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Sprout className="size-5 text-primary" />
+                        <div>
+                          <p className="text-xs font-black text-gray-800 uppercase">
+                            {box.boxType || `Túi mù #${box.id}`}
+                          </p>
+                          <p className="text-[10px] text-gray-400 font-bold">
+                            Giá: {box.price?.toLocaleString('vi-VN')}đ
+                          </p>
+                        </div>
+                      </div>
+                      <button className="text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Trash2 className="size-4" />
+                      </button>
                     </div>
-                    <button className="text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                       <Trash2 className="size-4" />
-                    </button>
-                 </div>
-              </div>
+                  ))}
+
+                  {!runningBoxes.length && (
+                    <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] text-center">
+                      Bạn chưa có túi mù nào đang chạy
+                    </p>
+                  )}
+                </div>
+              )}
            </div>
         </div>
       </div>

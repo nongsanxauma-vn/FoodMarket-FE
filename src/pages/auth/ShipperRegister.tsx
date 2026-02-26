@@ -1,0 +1,401 @@
+import React, { useState } from 'react';
+import { Bike, User, Phone, Mail, Lock, MapPin, CreditCard, FileText, Camera, ArrowRight, ArrowLeft, CheckCircle2, Shield } from 'lucide-react';
+import { shipperService } from '../../services';
+
+interface ShipperRegisterProps {
+  onComplete: () => void;
+  onBack: () => void;
+}
+
+const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack }) => {
+  const [step, setStep] = useState(1);
+  const [formData, setFormData] = useState({
+    fullName: '', phone: '', email: '', password: '', confirmPassword: '',
+    address: '', city: '', vehicleType: 'motorbike',
+    licensePlate: '', driverLicense: '', bankName: '', bankAccount: '', bankAccountName: '',
+  });
+
+  const [uploadedFiles, setUploadedFiles] = useState({
+    driverLicense: null as File | null, vehicleRegistration: null as File | null, portrait: null as File | null,
+  });
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleFileUpload = (field: keyof typeof uploadedFiles, file: File) => {
+    setUploadedFiles({ ...uploadedFiles, [field]: file });
+  };
+
+  const validateStep = (currentStep: number): boolean => {
+    setError(null);
+    
+    switch (currentStep) {
+      case 1:
+        if (!formData.fullName || !formData.phone || !formData.email || !formData.password || !formData.confirmPassword || !formData.city || !formData.address) {
+          setError('Vui lòng điền đầy đủ thông tin');
+          return false;
+        }
+        if (formData.password !== formData.confirmPassword) {
+          setError('Mật khẩu xác nhận không khớp');
+          return false;
+        }
+        if (formData.password.length < 8) {
+          setError('Mật khẩu phải có ít nhất 8 ký tự');
+          return false;
+        }
+        break;
+      case 2:
+        if (!formData.licensePlate || !formData.driverLicense) {
+          setError('Vui lòng điền đầy đủ thông tin phương tiện');
+          return false;
+        }
+        break;
+      case 3:
+        if (!uploadedFiles.driverLicense || !uploadedFiles.vehicleRegistration || !uploadedFiles.portrait) {
+          setError('Vui lòng tải lên đầy đủ giấy tờ');
+          return false;
+        }
+        break;
+      case 4:
+        if (!formData.bankName || !formData.bankAccount || !formData.bankAccountName) {
+          setError('Vui lòng điền đầy đủ thông tin thanh toán');
+          return false;
+        }
+        break;
+    }
+    return true;
+  };
+
+  const handleSubmit = async () => {
+    if (!validateStep(4)) return;
+    
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Tạo description từ các thông tin bổ sung
+      const description = `Loại xe: ${formData.vehicleType === 'motorbike' ? 'Xe máy' : 'Ô tô'}. ` +
+        `Thành phố: ${formData.city}. ` +
+        `Ngân hàng: ${formData.bankName} - ${formData.bankAccount} - ${formData.bankAccountName}`;
+
+      const registerData = {
+        fullName: formData.fullName,
+        phoneNumber: formData.phone,
+        email: formData.email,
+        password: formData.password,
+        address: formData.address,
+        license: formData.driverLicense, // Số bằng lái xe
+        vehicleNumber: formData.licensePlate, // Biển số xe
+        description: description,
+        // Không gửi bankAccount vì backend sẽ set về null cho SHIPPER
+      };
+
+      console.log('Shipper registration data:', registerData);
+      console.log('Uploaded files:', uploadedFiles);
+
+      const response = await shipperService.register(registerData, uploadedFiles);
+
+      if (response.result) {
+        onComplete();
+      }
+    } catch (err: any) {
+      console.error('Shipper registration failed:', err);
+      setError(err?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleNext = () => {
+    if (validateStep(step)) {
+      setStep(step + 1);
+    }
+  };
+
+  const steps = [
+    { number: 1, title: 'Cá nhân', icon: User },
+    { number: 2, title: 'Phương tiện', icon: Bike },
+    { number: 3, title: 'Giấy tờ', icon: FileText },
+    { number: 4, title: 'Thanh toán', icon: CreditCard },
+  ];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#e8f5e9] via-[#f1f8f4] to-[#e0f2f1] flex items-center justify-center p-6 relative overflow-hidden">
+      {/* Decorative Background Elements */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-primary/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-green-400/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl" />
+      </div>
+      
+      <div className="w-full max-w-[900px] bg-white rounded-[40px] shadow-2xl overflow-hidden flex border animate-in fade-in duration-700 relative z-10">
+        
+        {/* Left Sidebar */}
+        <div className="w-[280px] bg-gradient-to-br from-[#1a4d2e] to-[#2d6b3f] p-8 text-white flex flex-col justify-between relative overflow-hidden">
+          <div className="relative z-10">
+            <button onClick={onBack} className="flex items-center gap-2 text-white/70 hover:text-white mb-8 transition-colors font-bold text-xs uppercase">
+              <ArrowLeft className="size-4" /> Quay lại
+            </button>
+            
+            <div className="size-14 bg-white rounded-2xl flex items-center justify-center text-primary mb-5 shadow-xl">
+              <Bike className="size-7" />
+            </div>
+            
+            <h1 className="text-3xl font-black font-display leading-tight mb-2 uppercase">ĐĂNG KÝ</h1>
+            <h2 className="text-2xl font-black text-white/50 font-display mb-4">SHIPPER</h2>
+            
+            <p className="text-sm text-white/90 font-medium leading-relaxed mb-8">
+              Trở thành đối tác vận chuyển và kiếm thu nhập linh hoạt.
+            </p>
+
+            <div className="space-y-3">
+              {steps.map((s) => (
+                <div key={s.number} className="flex items-center gap-3">
+                  <div className={`size-10 rounded-xl flex items-center justify-center font-black text-sm transition-all ${
+                    step === s.number ? 'bg-white text-primary shadow-lg' :
+                    step > s.number ? 'bg-primary/30 text-white' : 'bg-white/10 text-white/50'
+                  }`}>
+                    {step > s.number ? <CheckCircle2 className="size-5" /> : s.number}
+                  </div>
+                  <p className={`text-sm font-bold uppercase ${step === s.number ? 'text-white' : 'text-white/50'}`}>
+                    {s.title}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative z-10 bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/20 mt-8">
+            <p className="text-xs italic font-medium">💰 Thu nhập TB: <span className="font-black">8-12tr/tháng</span></p>
+          </div>
+          <div className="absolute -bottom-20 -right-20 size-64 bg-white/5 rounded-full blur-3xl" />
+        </div>
+
+        {/* Right Form */}
+        <div className="flex-1 p-8 bg-white overflow-y-auto max-h-[90vh] custom-scrollbar">
+          <div className="max-w-[480px] mx-auto">
+            {/* Progress */}
+            <div className="mb-6">
+              <div className="flex gap-2 mb-3">
+                {steps.map((s) => (
+                  <div key={s.number} className={`flex-1 h-2 rounded-full transition-all ${step >= s.number ? 'bg-primary' : 'bg-gray-100'}`} />
+                ))}
+              </div>
+              <p className="text-sm font-bold text-gray-400">Bước {step} / {steps.length}</p>
+            </div>
+
+            {/* Step 1 */}
+            {step === 1 && (
+              <div className="space-y-3">
+                <div className="mb-4">
+                  <h3 className="text-xl font-black text-gray-900 mb-1 uppercase">Thông tin cá nhân</h3>
+                  <p className="text-sm text-gray-500">Điền đầy đủ thông tin chính xác</p>
+                </div>
+                
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-2xl">
+                    <p className="text-sm text-red-600 font-semibold">{error}</p>
+                  </div>
+                )}
+                
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
+                  <input type="text" value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                    placeholder="Họ và tên" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base" 
+                    required disabled={isLoading} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
+                    <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="Số điện thoại" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base" 
+                      required disabled={isLoading} />
+                  </div>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
+                    <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="Email" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base" 
+                      required disabled={isLoading} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
+                    <input type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      placeholder="Mật khẩu" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base" 
+                      required disabled={isLoading} />
+                  </div>
+                  <div className="relative">
+                    <Shield className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
+                    <input type="password" value={formData.confirmPassword} onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                      placeholder="Xác nhận mật khẩu" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base" 
+                      required disabled={isLoading} />
+                  </div>
+                </div>
+                <select value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base cursor-pointer"
+                  required disabled={isLoading}>
+                  <option value="">Chọn Tỉnh/Thành phố</option>
+                  <option value="hcm">TP. Hồ Chí Minh</option>
+                  <option value="hn">Hà Nội</option>
+                  <option value="dn">Đà Nẵng</option>
+                </select>
+                <div className="relative">
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
+                  <input type="text" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="Địa chỉ chi tiết" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base" 
+                    required disabled={isLoading} />
+                </div>
+              </div>
+            )}
+
+            {/* Step 2 */}
+            {step === 2 && (
+              <div className="space-y-3">
+                <div className="mb-4">
+                  <h3 className="text-xl font-black text-gray-900 mb-1 uppercase">Phương tiện</h3>
+                  <p className="text-sm text-gray-500">Thông tin xe vận chuyển</p>
+                </div>
+                
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-2xl">
+                    <p className="text-sm text-red-600 font-semibold">{error}</p>
+                  </div>
+                )}
+                
+                <div>
+                  <label className="text-sm font-bold text-gray-600 uppercase mb-3 block">Loại xe</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[{ value: 'motorbike', label: 'Xe máy', icon: '🏍️' }, { value: 'car', label: 'Ô tô', icon: '🚗' }].map((type) => (
+                      <button key={type.value} onClick={() => setFormData({ ...formData, vehicleType: type.value })} type="button"
+                        disabled={isLoading}
+                        className={`p-5 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${formData.vehicleType === type.value ? 'border-primary bg-primary/5 shadow-lg' : 'border-gray-200 hover:border-gray-300'}`}>
+                        <span className="text-3xl">{type.icon}</span>
+                        <span className="text-base font-bold">{type.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="relative">
+                  <Bike className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
+                  <input type="text" value={formData.licensePlate} onChange={(e) => setFormData({ ...formData, licensePlate: e.target.value })}
+                    placeholder="Biển số xe" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base uppercase" 
+                    required disabled={isLoading} />
+                </div>
+                <div className="relative">
+                  <FileText className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
+                  <input type="text" value={formData.driverLicense} onChange={(e) => setFormData({ ...formData, driverLicense: e.target.value })}
+                    placeholder="Số bằng lái xe" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base" 
+                    required disabled={isLoading} />
+                </div>
+              </div>
+            )}
+
+            {/* Step 3 */}
+            {step === 3 && (
+              <div className="space-y-2.5">
+                <div className="mb-3">
+                  <h3 className="text-xl font-black text-gray-900 mb-1 uppercase">Giấy tờ</h3>
+                  <p className="text-sm text-gray-500">Tải lên ảnh rõ ràng</p>
+                </div>
+                
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-2xl mb-2">
+                    <p className="text-sm text-red-600 font-semibold">{error}</p>
+                  </div>
+                )}
+                
+                {(['driverLicense', 'vehicleRegistration', 'portrait'] as const).map((field) => {
+                  const labels = { driverLicense: 'Bằng lái xe', vehicleRegistration: 'Đăng ký xe', portrait: 'Ảnh chân dung' };
+                  return (
+                    <div key={field}>
+                      <input type="file" id={field} accept="image/*" onChange={(e) => e.target.files && handleFileUpload(field, e.target.files[0])} className="hidden" disabled={isLoading} />
+                      <label htmlFor={field} className={`block p-3.5 rounded-2xl border-2 border-dashed cursor-pointer flex items-center gap-3 transition-all ${uploadedFiles[field] ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-primary/50 hover:bg-gray-50'} ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                        {uploadedFiles[field] ? <CheckCircle2 className="size-5 text-primary" /> : <Camera className="size-5 text-gray-300" />}
+                        <span className="text-sm font-bold text-gray-700">{labels[field]}</span>
+                        {uploadedFiles[field] && <span className="text-sm text-primary ml-auto font-bold">✓ Đã tải</span>}
+                      </label>
+                    </div>
+                  );
+                })}
+                <div className="p-3.5 bg-blue-50 rounded-2xl border border-blue-100 flex gap-3 mt-3">
+                  <Shield className="size-5 text-blue-600 shrink-0 mt-0.5" />
+                  <p className="text-xs text-blue-800 leading-relaxed">Thông tin được mã hóa và bảo mật, chỉ dùng để xác thực danh tính.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Step 4 */}
+            {step === 4 && (
+              <div className="space-y-3">
+                <div className="mb-4">
+                  <h3 className="text-xl font-black text-gray-900 mb-1 uppercase">Thanh toán</h3>
+                  <p className="text-sm text-gray-500">Nhận thu nhập từ giao hàng</p>
+                </div>
+                
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-2xl">
+                    <p className="text-sm text-red-600 font-semibold">{error}</p>
+                  </div>
+                )}
+                
+                <select value={formData.bankName} onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                  className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base cursor-pointer"
+                  required disabled={isLoading}>
+                  <option value="">Chọn ngân hàng</option>
+                  <option value="vcb">Vietcombank</option>
+                  <option value="tcb">Techcombank</option>
+                  <option value="mb">MB Bank</option>
+                  <option value="acb">ACB</option>
+                  <option value="bidv">BIDV</option>
+                </select>
+                <div className="relative">
+                  <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
+                  <input type="text" value={formData.bankAccount} onChange={(e) => setFormData({ ...formData, bankAccount: e.target.value })}
+                    placeholder="Số tài khoản" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base" 
+                    required disabled={isLoading} />
+                </div>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
+                  <input type="text" value={formData.bankAccountName} onChange={(e) => setFormData({ ...formData, bankAccountName: e.target.value })}
+                    placeholder="Tên chủ tài khoản" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base uppercase" 
+                    required disabled={isLoading} />
+                </div>
+                <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20 mt-4">
+                  <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2 text-base">
+                    <CheckCircle2 className="size-5 text-primary" /> Hoàn tất đăng ký!
+                  </h4>
+                  <p className="text-sm text-gray-600 leading-relaxed">Hồ sơ của bạn sẽ được xem xét và duyệt trong vòng 24-48 giờ. Chúng tôi sẽ thông báo kết quả qua email và SMS.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Buttons */}
+            <div className="flex gap-3 mt-6">
+              {step > 1 && (
+                <button onClick={() => setStep(step - 1)} type="button"
+                  disabled={isLoading}
+                  className="px-6 py-3.5 bg-gray-100 text-gray-600 rounded-2xl font-bold text-base hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                  Quay lại
+                </button>
+              )}
+              <button onClick={() => step < 4 ? handleNext() : handleSubmit()} type="button"
+                disabled={isLoading}
+                className="flex-1 py-3.5 bg-primary text-white rounded-2xl font-bold text-base flex items-center justify-center gap-2 hover:bg-primary-dark shadow-lg shadow-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                {isLoading ? (
+                  <>Đang xử lý...</>
+                ) : step < 4 ? (
+                  <>Tiếp tục <ArrowRight className="size-5" /></>
+                ) : (
+                  <>Hoàn tất đăng ký <CheckCircle2 className="size-5" /></>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ShipperRegister;
