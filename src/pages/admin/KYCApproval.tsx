@@ -16,9 +16,9 @@ const KYCApproval: React.FC = () => {
       try {
         const response = await userService.getAllUsers();
         const all = response.result || [];
-        // Tạm coi KYC chờ duyệt là các SHOP_OWNER chưa ACTIVE
+        // Chờ duyệt: SHOP_OWNER hoặc SHIPPER chưa ACTIVE
         const pending = all.filter(
-          (u) => u.role?.name === 'SHOP_OWNER' && u.status !== 'ACTIVE'
+          (u) => (u.role?.name === 'SHOP_OWNER' || u.role?.name === 'SHIPPER') && u.status !== 'ACTIVE'
         );
         setPendingUsers(pending);
       } catch (err) {
@@ -32,51 +32,66 @@ const KYCApproval: React.FC = () => {
     fetchUsers();
   }, []);
 
-  const handleApprove = async (userId: number) => {
+  const handleApprove = async (userId: number, roleName: string) => {
     setApprovingId(userId);
     setError(null);
     try {
-      const response = await userService.approveShopOwner(userId);
+      let response;
+      if (roleName === 'SHOP_OWNER') {
+        response = await userService.approveShopOwner(userId);
+      } else {
+        response = await userService.approveShipper(userId);
+      }
+
       const updated = response.result;
       if (updated) {
-        setPendingUsers((prev) => prev.filter((u) => u.id !== updated.id));
+        setPendingUsers((prev) => prev.filter((u) => u.id !== userId));
       }
     } catch (err) {
-      console.error('Failed to approve shop owner', err);
+      console.error('Failed to approve user', err);
       setError('Duyệt hồ sơ thất bại. Vui lòng thử lại sau.');
     } finally {
       setApprovingId(null);
     }
   };
 
+  // Helper to get image full URL
+  const getImageUrl = (path?: string) => {
+    if (!path) return 'https://picsum.photos/seed/user_placeholder/100/100';
+    if (path.startsWith('http')) return path;
+    // Tạm giả định BE serve static files tại root hoặc theo path cụ thể
+    // Nếu BE dùng /images/... hoặc tương tự thì cần điều chỉnh ở đây
+    return `http://localhost:8080/${path}`;
+  };
+
   return (
     <div className="flex flex-col gap-8 p-8 animate-in fade-in duration-500">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-black font-display text-gray-900">Duyệt Hồ Sơ Nông Dân (KYC)</h2>
-          <p className="text-gray-400 font-medium text-sm mt-1">Xác minh danh tính người bán để đảm bảo chất lượng nông sản XẤU MÃ.</p>
+          <h2 className="text-3xl font-black font-display text-gray-900 uppercase">Duyệt Hồ Sơ (KYC)</h2>
+          <p className="text-gray-400 font-medium text-sm mt-1">Xác minh danh tính người bán và shipper để đảm bảo chất lượng hệ thống.</p>
         </div>
         <div className="flex items-center gap-4">
-           <div className="bg-white p-4 rounded-[28px] border border-gray-100 shadow-sm flex items-center gap-4 pr-10">
-              <div className="size-10 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
-                 <span className="material-symbols-outlined">assignment_ind</span>
-              </div>
-              <div>
-                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">CHỜ DUYỆT</p>
-                 <h4 className="text-xl font-black text-gray-900">
-                  {loading ? '...' : pendingUsers.length}
-                 </h4>
-              </div>
-           </div>
-           <div className="bg-white p-4 rounded-[28px] border border-gray-100 shadow-sm flex items-center gap-4 pr-10">
-              <div className="size-10 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
-                 <span className="material-symbols-outlined">verified_user</span>
-              </div>
-              <div>
-                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ĐÃ DUYỆT HÔM NAY</p>
-                 <h4 className="text-xl font-black text-gray-900">15</h4>
-              </div>
-           </div>
+          <div className="bg-white p-4 rounded-[28px] border border-gray-100 shadow-sm flex items-center gap-4 pr-10">
+            <div className="size-10 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
+              <span className="material-symbols-outlined">assignment_ind</span>
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">CHỜ DUYỆT</p>
+              <h4 className="text-xl font-black text-gray-900">
+                {loading ? '...' : pendingUsers.length}
+              </h4>
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-[28px] border border-gray-100 shadow-sm flex items-center gap-4 pr-10">
+            <div className="size-10 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
+              <span className="material-symbols-outlined">verified_user</span>
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ĐÃ DUYỆT HÔM NAY</p>
+              <h4 className="text-xl font-black text-gray-900">15</h4>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -89,25 +104,20 @@ const KYCApproval: React.FC = () => {
 
       <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-10 py-8 border-b border-gray-50 flex items-center justify-between">
-           <div className="flex items-center gap-4">
-              <h4 className="font-black text-gray-800 uppercase tracking-tight">Danh sách hồ sơ</h4>
-              <span className="px-3 py-1 bg-gray-100 text-gray-400 text-[10px] font-black rounded-full">
-                Hiện có {pendingUsers.length} hồ sơ
-              </span>
-           </div>
-           <div className="flex items-center gap-4">
-              <button className="size-10 flex items-center justify-center text-gray-300 hover:text-gray-900"><span className="material-symbols-outlined">filter_list</span></button>
-              <button className="size-10 flex items-center justify-center text-gray-300 hover:text-gray-900"><span className="material-symbols-outlined">more_vert</span></button>
-           </div>
+          <div className="flex items-center gap-4">
+            <h4 className="font-black text-gray-800 uppercase tracking-tight">Danh sách hồ sơ cần duyệt</h4>
+            <span className="px-3 py-1 bg-gray-100 text-gray-400 text-[10px] font-black rounded-full uppercase">
+              {pendingUsers.length} hồ sơ
+            </span>
+          </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-left border-collapse">
             <thead className="bg-gray-50/50">
               <tr>
-                <th className="px-10 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Nông dân</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Khu vực</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Sản phẩm chủ lực</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Ngày gửi</th>
+                <th className="px-10 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Người dùng / Vai trò</th>
+                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Thông tin liên hệ</th>
+                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Hồ sơ / Chứng chỉ</th>
                 <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Trạng thái</th>
                 <th className="px-10 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Thao tác</th>
               </tr>
@@ -115,14 +125,20 @@ const KYCApproval: React.FC = () => {
             <tbody className="divide-y divide-gray-50">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-10 py-8 text-sm text-gray-500">
-                    Đang tải danh sách hồ sơ...
+                  <td colSpan={5} className="px-10 py-20 text-center">
+                    <div className="flex flex-col items-center gap-4">
+                      <Search className="size-10 text-gray-200 animate-pulse" />
+                      <p className="text-sm text-gray-400 font-bold uppercase tracking-widest">Đang tải danh sách hồ sơ...</p>
+                    </div>
                   </td>
                 </tr>
               ) : pendingUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-10 py-8 text-sm text-gray-400 text-center font-medium">
-                    Hiện chưa có hồ sơ KYC nào cần duyệt.
+                  <td colSpan={5} className="px-10 py-20 text-sm text-gray-400 text-center font-medium">
+                    <div className="flex flex-col items-center gap-4">
+                      <CheckCircle className="size-10 text-emerald-100" />
+                      <p className="uppercase font-black tracking-widest text-xs">Phù! Đã xử lý hết tất cả hồ sơ.</p>
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -130,46 +146,64 @@ const KYCApproval: React.FC = () => {
                   <tr key={u.id ?? index} className="hover:bg-gray-50/30 transition-colors">
                     <td className="px-10 py-6">
                       <div className="flex items-center gap-4">
-                        <div className="size-11 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
-                          <UserCheck className="size-5" />
-                        </div>
+                        <img src={getImageUrl(u.logoUrl)} className="size-12 rounded-2xl object-cover shadow-sm bg-gray-100" alt="Avatar" />
                         <div>
-                          <p className="text-sm font-black text-gray-900">
-                            {u.fullName || u.email}
+                          <p className="text-sm font-black text-gray-900 leading-none mb-1">
+                            {u.fullName || 'N/A'}
                           </p>
-                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                            {u.email}
-                          </p>
+                          <span className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-widest ${u.role?.name === 'SHOP_OWNER' ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'
+                            }`}>
+                            {u.role?.name === 'SHOP_OWNER' ? 'Nhà vườn' : 'Shipper'}
+                          </span>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-6 text-sm font-bold text-gray-600">
-                      {u.address || '—'}
+                    <td className="px-6 py-6">
+                      <p className="text-xs font-bold text-gray-700">{u.email}</p>
+                      <p className="text-[10px] text-gray-400 font-medium mt-1">{u.phoneNumber || 'Không có phone'}</p>
+                      <p className="text-[10px] text-gray-400 font-medium line-clamp-1">{u.address || 'Không có địa chỉ'}</p>
                     </td>
                     <td className="px-6 py-6 text-center">
-                      <span className="px-4 py-1.5 bg-green-50 text-emerald-600 text-[10px] font-black rounded-full uppercase tracking-tight">
-                        {u.shopName || 'Nhà vườn'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-6 text-[11px] font-bold text-gray-400">
-                      {/* BE chưa trả createdAt, tạm để trống */}
-                      —
+                      <div className="flex flex-col items-center gap-2">
+                        {u.achievement ? (
+                          <a
+                            href={getImageUrl(u.achievement)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-3 py-1.5 bg-primary/5 text-primary text-[10px] font-black rounded-lg hover:bg-primary/10 transition-all uppercase"
+                          >
+                            <FileText className="size-3" /> Xem chứng chỉ
+                          </a>
+                        ) : (
+                          <span className="text-[10px] text-gray-300 font-bold italic">Chưa tải lên</span>
+                        )}
+                        {u.logoUrl && (
+                          <a
+                            href={getImageUrl(u.logoUrl)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[9px] text-gray-400 hover:text-primary underline font-bold"
+                          >
+                            Xem ảnh đại diện gốc
+                          </a>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-6">
                       <div className="flex items-center gap-2">
-                        <span className="size-2 rounded-full bg-current text-blue-600" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-600">
-                          CHỜ DUYỆT
+                        <span className="size-2 rounded-full bg-yellow-400 animate-pulse" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-yellow-600">
+                          {u.status === 'INACTIVE' ? 'CHỜ KÍCH HOẠT' : u.status}
                         </span>
                       </div>
                     </td>
                     <td className="px-10 py-6 text-right">
                       <button
-                        onClick={() => u.id && handleApprove(u.id)}
-                        disabled={approvingId === u.id}
-                        className="px-6 py-2.5 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-xl uppercase tracking-widest hover:bg-emerald-100 transition-colors disabled:bg-gray-100 disabled:text-gray-400"
+                        onClick={() => u.id && u.role?.name && handleApprove(u.id, u.role.name)}
+                        disabled={!!approvingId}
+                        className="px-6 py-3 bg-emerald-600 text-white text-[10px] font-black rounded-xl uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
                       >
-                        {approvingId === u.id ? 'ĐANG DUYỆT...' : 'Duyệt hồ sơ'}
+                        {approvingId === u.id ? 'ĐANG XỬ LÝ...' : 'DUYỆT NGAY'}
                       </button>
                     </td>
                   </tr>
@@ -178,55 +212,60 @@ const KYCApproval: React.FC = () => {
             </tbody>
           </table>
         </div>
-        <div className="p-8 bg-white border-t border-gray-50 flex items-center justify-between">
-           <p className="text-xs text-gray-400 font-medium italic">* Ưu tiên xử lý các hồ sơ đã chờ trên 24 giờ.</p>
-           <div className="flex items-center gap-3">
-              <button className="px-4 py-2 border border-gray-100 rounded-xl text-xs font-bold text-gray-400">Trước</button>
-              <button className="size-9 bg-[#38703d] text-white rounded-xl text-xs font-black">1</button>
-              <button className="size-9 border border-gray-100 rounded-xl text-xs font-black text-gray-400">2</button>
-              <button className="px-4 py-2 border border-gray-100 rounded-xl text-xs font-bold text-gray-400">Sau</button>
-           </div>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-         <div className="lg:col-span-1 rounded-[40px] overflow-hidden relative shadow-lg h-[400px]">
-            <img src="https://picsum.photos/seed/farmer_evidence/800/800" className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-            <div className="absolute bottom-10 left-10 right-10">
-               <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-lg text-[10px] font-black text-white uppercase tracking-widest">Ảnh thực tế khiếu nại (Tham khảo)</span>
+        <div className="lg:col-span-2 bg-white rounded-[40px] border border-gray-100 shadow-sm p-12 relative overflow-hidden">
+          <div className="flex items-center gap-4 mb-10">
+            <div className="size-14 bg-orange-50 text-orange-600 rounded-3xl flex items-center justify-center shadow-inner">
+              <Info className="size-7" />
             </div>
-         </div>
-         <div className="lg:col-span-2 bg-white rounded-[40px] border border-gray-100 shadow-sm p-12">
-            <div className="flex items-center gap-4 mb-8">
-               <div className="size-12 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center">
-                  <Info className="size-6" />
-               </div>
-               <div className="flex-1">
-                 <h4 className="text-xl font-black text-gray-900 uppercase tracking-tight">Lưu ý khi duyệt nông dân</h4>
-                 <button className="text-[10px] font-black text-blue-600 uppercase tracking-widest mt-1">QUY CHUẨN HỆ THỐNG</button>
-               </div>
+            <div className="flex-1">
+              <h4 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Quy trình xác minh (KYC)</h4>
+              <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">HƯỚNG DẪN CHO ADMIN</p>
             </div>
-            
-            <div className="space-y-8">
-               <div className="p-8 bg-gray-50/50 rounded-[32px] border border-gray-100">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">KIỂM TRA CHỨNG TỪ</p>
-                  <p className="text-sm font-medium text-gray-600 leading-relaxed italic">
-                    "Yêu cầu ảnh chụp CMND/CCCD và Giấy chứng nhận quyền sử dụng đất hoặc xác nhận hộ nông dân từ địa phương."
-                  </p>
-               </div>
-               <div className="p-8 bg-gray-50/50 rounded-[32px] border border-gray-100">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">MÔ TẢ SẢN PHẨM</p>
-                  <p className="text-sm font-medium text-gray-600 leading-relaxed italic">
-                    "Sản phẩm nông sản 'Xấu Mã' vẫn phải đảm bảo an toàn vệ sinh thực phẩm và không bị hư hỏng, thối rữa bên trong."
-                  </p>
-               </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="p-8 bg-gray-50/30 rounded-[32px] border border-gray-100/50 hover:bg-white hover:shadow-md transition-all group">
+              <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-4 flex items-center gap-2">
+                <ShieldCheck className="size-4" /> BƯỚC 1: ĐỐI CHIẾU
+              </p>
+              <p className="text-sm font-medium text-gray-500 leading-relaxed italic group-hover:text-gray-700 transition-colors">
+                Kiểm tra sự trùng khớp giữa Tên hiển thị, Số điện thoại và các thông tin trên Chứng chỉ/Giấy phép đã tải lên.
+              </p>
             </div>
-         </div>
+            <div className="p-8 bg-gray-50/30 rounded-[32px] border border-gray-100/50 hover:bg-white hover:shadow-md transition-all group">
+              <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-4 flex items-center gap-2">
+                <UserCheck className="size-4" /> BƯỚC 2: QUYẾT ĐỊNH
+              </p>
+              <p className="text-sm font-medium text-gray-500 leading-relaxed italic group-hover:text-gray-700 transition-colors">
+                Nếu hồ sơ hợp lệ, bấm "DUYỆT NGAY" để cấp quyền bán hàng hoặc vận chuyển cho người dùng trên hệ thống.
+              </p>
+            </div>
+          </div>
+          <div className="absolute -top-20 -right-20 size-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+        </div>
+
+        <div className="lg:col-span-1 rounded-[40px] bg-gray-900 p-10 flex flex-col justify-between text-white relative overflow-hidden shadow-2xl group">
+          <div className="relative z-10">
+            <Landmark className="size-12 text-primary mb-6 group-hover:scale-110 transition-transform duration-500" />
+            <h3 className="text-3xl font-black font-display leading-[1.1] mb-4">Cam kết chất lượng nông sản</h3>
+            <p className="text-gray-400 text-sm font-medium leading-relaxed">
+              Hệ thống XẤU MÃ chỉ chấp nhận những nhà vườn cam kết quy trình trồng sạch, dù ngoại hình nông sản có thể không đạt chuẩn siêu thị.
+            </p>
+          </div>
+          <div className="pt-10 relative z-10">
+            <div className="flex items-center gap-2 text-primary">
+              <CheckCircle className="size-4" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Đã xác minh 1,240 nhà vườn</span>
+            </div>
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-transparent opacity-50" />
+        </div>
       </div>
     </div>
   );
 };
 
-// Add fix: Export default
 export default KYCApproval;

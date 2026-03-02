@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AppRole } from '../../types/index';
-import { Leaf, User, Phone, Lock, ArrowRight, ShieldCheck, Chrome, Facebook, Info, ArrowLeft, Bike } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { authService } from '../../services';
 import OTPVerification from '../../components/auth/OTPVerification';
 
@@ -9,6 +9,29 @@ interface RegisterProps {
   onGoToLogin: () => void;
   onGoToShipperRegister?: () => void;
 }
+
+// Reusable compact input component
+const InputField = ({
+  icon, type = 'text', placeholder, value, onChange, required = false, disabled = false,
+}: {
+  icon: string; type?: string; placeholder: string; value: string;
+  onChange: (v: string) => void; required?: boolean; disabled?: boolean;
+}) => (
+  <div className="relative group">
+    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-350 group-focus-within:text-primary transition-colors text-xl z-10 pointer-events-none select-none">
+      {icon}
+    </span>
+    <input
+      type={type}
+      placeholder={placeholder}
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      required={required}
+      disabled={disabled}
+      className="w-full pl-12 pr-4 py-3.5 rounded-2xl border-2 border-cream bg-white focus:ring-0 focus:border-primary transition-all outline-none font-semibold text-slate-700 placeholder:text-slate-300 text-[15px]"
+    />
+  </div>
+);
 
 const Register: React.FC<RegisterProps> = ({ onRegister, onGoToLogin, onGoToShipperRegister }) => {
   const [selectedRole, setSelectedRole] = useState<AppRole>(AppRole.FARMER);
@@ -23,27 +46,34 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onGoToLogin, onGoToShip
   const [success, setSuccess] = useState<string | null>(null);
   const [showOtpVerification, setShowOtpVerification] = useState(false);
   const [pendingRegistration, setPendingRegistration] = useState<any>(null);
+  const [farmerStep, setFarmerStep] = useState<1 | 2>(1);
 
-  // Nếu đang ở bước OTP verification
+  // Shop Owner specific fields
+  const [shopName, setShopName] = useState('');
+  const [address, setAddress] = useState('');
+  const [description, setDescription] = useState('');
+  const [bankAccount, setBankAccount] = useState('');
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [achievementFile, setAchievementFile] = useState<File | null>(null);
+
   if (showOtpVerification) {
     return (
       <OTPVerification
         email={email}
         onVerified={async () => {
-          // Sau khi verify OTP thành công, thực hiện đăng ký
           if (pendingRegistration) {
             setIsLoading(true);
             try {
-              const response = await authService.register(pendingRegistration);
-              
+              const response = await authService.register(
+                pendingRegistration.data,
+                pendingRegistration.logoFile,
+                pendingRegistration.achievementFile
+              );
               if (response.result) {
                 setSuccess('Đăng ký thành công! Đang chuyển hướng...');
-                setTimeout(() => {
-                  onRegister(selectedRole);
-                }, 1500);
+                setTimeout(() => { onRegister(selectedRole); }, 1500);
               }
             } catch (err: any) {
-              console.error('Register failed:', err);
               setError(err?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.');
               setShowOtpVerification(false);
             } finally {
@@ -51,271 +81,349 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onGoToLogin, onGoToShip
             }
           }
         }}
-        onBack={() => {
-          setShowOtpVerification(false);
-          setPendingRegistration(null);
-        }}
+        onBack={() => { setShowOtpVerification(false); setPendingRegistration(null); }}
       />
     );
   }
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    // Common validations for Step 1
+    if (!fullName || !email || !phone || !password || !confirmPassword) {
+      setError('Vui lòng điền đầy đủ thông tin'); return;
+    }
+    if (password !== confirmPassword) {
+      setError('Mật khẩu xác nhận không khớp'); return;
+    }
+    if (password.length < 8) {
+      setError('Mật khẩu phải có ít nhất 8 ký tự'); return;
+    }
+
+    if (selectedRole === AppRole.FARMER) {
+      if (farmerStep === 1) {
+        setFarmerStep(2);
+        return; // Advance to step 2 instead of submitting
+      } else {
+        // Validation for step 2
+        if (!shopName || !address || !bankAccount) {
+          setError('Vui lòng điền đầy đủ trường bắt buộc của cửa hàng'); return;
+        }
+        if (!agreed) {
+          setError('Vui lòng đồng ý với điều khoản'); return;
+        }
+      }
+    } else {
+      // Buyer validation
+      if (!agreed) {
+        setError('Vui lòng đồng ý với điều khoản'); return;
+      }
+    }
+
+    const roleMap: Record<AppRole, string> = {
+      [AppRole.BUYER]: 'BUYER',
+      [AppRole.FARMER]: 'SHOP_OWNER',
+      [AppRole.SHIPPER]: 'SHIPPER',
+      [AppRole.ADMIN]: 'ADMIN',
+    };
+
+    const registrationData: any = {
+      email, password, fullName, phoneNumber: phone, roleName: roleMap[selectedRole],
+    };
+    if (selectedRole === AppRole.FARMER) {
+      registrationData.shopName = shopName;
+      registrationData.address = address;
+      registrationData.description = description;
+      registrationData.bankAccount = bankAccount;
+    }
+
+    setPendingRegistration({
+      data: registrationData,
+      logoFile,
+      achievementFile
+    });
+    setShowOtpVerification(true);
+  };
+
+  const isFarmer = selectedRole === AppRole.FARMER;
+
   return (
-    <div className="h-screen bg-[#f8faf8] flex items-center justify-center p-4 overflow-hidden font-sans">
-      <div className="w-full max-w-[1000px] h-[min(95vh,750px)] bg-white rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.05)] overflow-hidden flex border border-gray-100">
-        
-        {/* Left Side: Brand Identity */}
-        <div className="hidden md:flex w-[380px] bg-[#5c8d5e] p-10 text-white flex-col justify-between relative shrink-0">
-          <div className="relative z-10">
-            <button 
-              onClick={onGoToLogin} 
-              className="group flex items-center gap-2 text-white/60 hover:text-white mb-6 transition-all font-bold text-xs uppercase tracking-widest"
+    <div className="flex h-screen w-screen overflow-hidden bg-background-light font-sans">
+
+      {/* ── LEFT ── Brand image panel */}
+      <div className="hidden lg:block lg:w-1/2 relative h-full shrink-0">
+        <div className="absolute inset-0 bg-black/20 z-10" />
+        <img
+          alt="Nông sản tươi sạch"
+          className="absolute inset-0 w-full h-full object-cover"
+          src="https://lh3.googleusercontent.com/aida-public/AB6AXuBAw_xXxVDDIwzdg7n_0cCpoahHsxdorA_yeN2hG9i7SiheR_1AB2x3P0ItoJzgOrqPBsP-Std_CyB2X-6LJXRVUTh98oI3GSmmrCGPL1B1N0CnJEnDgMo4t9t-RPv7zIu9SfLOCwvs1jn7Ou2ADuIjsQ4s3G0L5rbQxCX1JG9rnxMBh0mcPDpiUJuK-i--i8PHCjyX6Zje9FnOyhRZSP2zCVs4TLiu_nFT8sYdux441OYF8SOlGU1HxNAFJgIoI2SbjnHNathWZnIl"
+        />
+        <div className="absolute inset-0 z-20 p-10 flex flex-col justify-between">
+          {/* Top bar */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onGoToLogin}
+              className="group flex items-center justify-center w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl text-white hover:bg-white/30 transition-all shadow-lg"
+              title="Quay lại"
             >
-              <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform" /> Quay lại
+              <ArrowLeft className="size-4 group-hover:-translate-x-0.5 transition-transform" />
             </button>
-            <div className="size-12 bg-white rounded-xl flex items-center justify-center text-[#5c8d5e] mb-6 shadow-xl">
-              <Leaf className="size-7 fill-current" />
+            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg">
+              <span className="material-symbols-outlined text-white text-xl">eco</span>
             </div>
-            <h1 className="text-4xl font-black leading-none mb-2 tracking-tight">XẤU MÃ</h1>
-            <h2 className="text-3xl font-bold text-white/40 leading-none mb-4">Tử tế từ tâm.</h2>
-            <p className="text-sm text-white/80 font-medium max-w-[240px] leading-relaxed">
-              Gia nhập mạng lưới nông sản mộc mạc lớn nhất Việt Nam.
+            <span className="display-font text-xl font-bold text-white drop-shadow-md">Xấu Mã</span>
+          </div>
+          {/* Bottom tagline */}
+          <div className="max-w-sm">
+            <h2 className="display-font text-4xl font-extrabold text-white mb-4 leading-tight drop-shadow-lg">
+              Ngon lành, <br />
+              <span className="text-secondary italic">tử tế</span> & <br />
+              tiết kiệm.
+            </h2>
+            <p className="text-white/85 text-base font-medium drop-shadow-sm leading-relaxed">
+              Đồng hành cùng nông dân Việt Nam giải cứu nông sản &ldquo;kém sắc&rdquo; nhưng vẹn nguyên dinh dưỡng.
             </p>
           </div>
-          
-          {/* Shipper CTA */}
-          {onGoToShipperRegister && (
-            <button
-              onClick={onGoToShipperRegister}
-              className="relative z-10 bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20 hover:bg-white/20 transition-all group text-left"
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <Bike className="size-5 text-white group-hover:scale-110 transition-transform" />
-                <span className="text-sm font-black text-white">Đăng ký Shipper</span>
-              </div>
-              <p className="text-xs text-white/70 font-medium">Thu nhập 8-12tr/tháng</p>
-            </button>
-          )}
-
-          {/* Abstract Decorations */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-black/10 rounded-full -ml-16 -mb-16 blur-3xl" />
         </div>
+      </div>
 
-        {/* Right Side: Registration Form */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-white">
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
-            <div className="max-w-[440px] mx-auto">
-              <div className="mb-6">
-                <h2 className="text-2xl font-black text-gray-900 mb-1 uppercase tracking-tight">Tạo tài khoản</h2>
-                <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Bắt đầu hành trình của bạn</p>
+      {/* ── RIGHT ── Registration form */}
+      <div className="w-full lg:w-1/2 h-full overflow-y-auto custom-scrollbar bg-background-light flex flex-col">
+        <div className="w-full max-w-[460px] m-auto px-8 py-10 flex-shrink-0">
+
+          {/* Header */}
+          <div className="mb-6">
+            <h1 className="display-font text-5xl font-extrabold text-primary tracking-tight">Đăng ký</h1>
+            <p className="text-slate-500 text-base font-medium mt-1">Bắt đầu hành trình của bạn trên Xấu Mã.</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+
+            {/* ── Role selector ── */}
+            <div className="grid grid-cols-2 gap-3 relative z-10 transition-transform duration-500" style={{ transform: isFarmer && farmerStep === 2 ? 'translateY(-20px) opacity(0)' : 'none', opacity: isFarmer && farmerStep === 2 ? 0 : 1, pointerEvents: isFarmer && farmerStep === 2 ? 'none' : 'auto', height: isFarmer && farmerStep === 2 ? 0 : 'auto', marginBottom: isFarmer && farmerStep === 2 ? 0 : '1rem' }}>
+              {[
+                { role: AppRole.BUYER, icon: 'person', label: 'Người mua' },
+                { role: AppRole.FARMER, icon: 'storefront', label: 'Người bán' },
+              ].map(item => (
+                <button
+                  key={item.role}
+                  type="button"
+                  onClick={() => { setSelectedRole(item.role); setFarmerStep(1); }}
+                  className={`h-13 py-3 rounded-2xl border-2 flex items-center justify-center gap-2.5 transition-all font-bold text-base ${selectedRole === item.role
+                    ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                    : 'border-cream bg-white text-slate-400 hover:border-primary/30'
+                    }`}
+                >
+                  <span className="material-symbols-outlined text-xl">{item.icon}</span>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+
+            {/* ── Error / Success ── */}
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl overflow-hidden">
+                <p className="text-xs text-red-600 font-semibold break-words whitespace-pre-wrap">{error}</p>
               </div>
+            )}
+            {success && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-xl overflow-hidden">
+                <p className="text-xs text-green-600 font-semibold break-words whitespace-pre-wrap">{success}</p>
+              </div>
+            )}
 
-              <form className="space-y-3.5" onSubmit={async (e) => {
-                e.preventDefault();
-                setError(null);
-                setSuccess(null);
-                
-                // Validation
-                if (!fullName || !email || !phone || !password || !confirmPassword) {
-                  setError('Vui lòng điền đầy đủ thông tin');
-                  return;
-                }
-                
-                if (password !== confirmPassword) {
-                  setError('Mật khẩu xác nhận không khớp');
-                  return;
-                }
-                
-                if (password.length < 8) {
-                  setError('Mật khẩu phải có ít nhất 8 ký tự');
-                  return;
-                }
-                
-                if (!agreed) {
-                  setError('Vui lòng đồng ý với điều khoản và chính sách');
-                  return;
-                }
-                
-                // Chuẩn bị dữ liệu đăng ký
-                const roleMap: Record<AppRole, 'BUYER' | 'SHOP_OWNER' | 'SHIPPER' | 'ADMIN'> = {
-                  [AppRole.BUYER]: 'BUYER',
-                  [AppRole.FARMER]: 'SHOP_OWNER',
-                  [AppRole.SHIPPER]: 'SHIPPER',
-                  [AppRole.ADMIN]: 'ADMIN',
-                };
-                
-                const registrationData = {
-                  email,
-                  password,
-                  fullName,
-                  phoneNumber: phone,
-                  roleName: roleMap[selectedRole],
-                };
-                
-                // Lưu dữ liệu và chuyển sang bước OTP
-                setPendingRegistration(registrationData);
-                setShowOtpVerification(true);
-              }}>
-                {/* Role Selection */}
-                <div className="bg-gray-50 p-1 rounded-xl flex gap-1">
-                  {( [ [AppRole.BUYER, 'Người mua'], [AppRole.FARMER, 'Người bán'] ] as const).map(([role, label]) => (
-                    <button 
-                      key={role}
-                      type="button"
-                      onClick={() => setSelectedRole(role)}
-                      className={`flex-1 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
-                        selectedRole === role ? 'bg-white text-[#5c8d5e] shadow-sm' : 'text-gray-400 hover:text-gray-500'
-                      }`}
+            {/* MULTI-STEP SLIDER WRAPPER */}
+            <div className="overflow-hidden relative w-full">
+              <div
+                className="flex transition-transform duration-500 ease-in-out items-start"
+                style={{
+                  width: isFarmer ? '200%' : '100%',
+                  transform: isFarmer && farmerStep === 2 ? 'translateX(-50%)' : 'translateX(0%)'
+                }}
+              >
+
+                {/* ── PART 1: Basic Info ── */}
+                <div className="w-full shrink-0 px-1" style={{ width: isFarmer ? '50%' : '100%' }}>
+                  <div className="space-y-3">
+                    <InputField icon="badge" placeholder="Họ và tên" value={fullName} onChange={setFullName} required disabled={isLoading} />
+                    <div className="grid grid-cols-2 gap-3">
+                      <InputField icon="mail" type="email" placeholder="Email" value={email} onChange={setEmail} required disabled={isLoading} />
+                      <InputField icon="call" placeholder="Số điện thoại" value={phone} onChange={setPhone} required disabled={isLoading} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <InputField icon="lock" type="password" placeholder="Mật khẩu" value={password} onChange={setPassword} required disabled={isLoading} />
+                      <InputField icon="verified_user" type="password" placeholder="Xác nhận MK" value={confirmPassword} onChange={setConfirmPassword} required disabled={isLoading} />
+                    </div>
+                  </div>
+
+                  {/* ── Social login (Buyer only) ── */}
+                  {!isFarmer && onGoToShipperRegister && (
+                    <div className="space-y-2.5 mt-5">
+                      <div className="relative flex items-center gap-3">
+                        <div className="h-px bg-cream flex-1" />
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hoặc đăng ký với</span>
+                        <div className="h-px bg-cream flex-1" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <button type="button" className="flex items-center justify-center gap-2 py-2.5 bg-white border-2 border-cream rounded-xl hover:bg-cream/30 transition-all font-bold text-slate-600 text-sm">
+                          <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-4 h-4" /> Google
+                        </button>
+                        <button type="button" className="flex items-center justify-center gap-2 py-2.5 bg-white border-2 border-cream rounded-xl hover:bg-cream/30 transition-all font-bold text-slate-600 text-sm">
+                          Facebook
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Buttons Step 1 ── */}
+                  <div className="space-y-3 pt-5 w-full">
+                    {!isFarmer && (
+                      <label className="flex items-center gap-3 cursor-pointer mb-3">
+                        <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} className="w-5 h-5 rounded border-cream text-primary focus:ring-primary/20 cursor-pointer" />
+                        <span className="text-[15px] font-bold text-slate-500">Tôi đồng ý với <a href="#" className="text-primary hover:underline">Điều khoản</a> &amp; <a href="#" className="text-primary hover:underline">Bảo mật</a></span>
+                      </label>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={isLoading || (!isFarmer && !agreed)}
+                      className="w-full py-4 bg-primary text-white font-extrabold rounded-2xl hover:bg-primary/90 hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl shadow-primary/20 text-base tracking-wide flex items-center justify-center gap-2"
                     >
-                      {label}
+                      {isFarmer ? (
+                        <>THÔNG TIN CỬA HÀNG <span className="material-symbols-outlined text-[22px]">arrow_forward</span></>
+                      ) : isLoading ? 'ĐANG TẠO...' : 'TẠO TÀI KHOẢN'}
                     </button>
-                  ))}
-                </div>
 
-                {/* Error/Success Messages */}
-                {error && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
-                    <p className="text-xs text-red-600 font-semibold">{error}</p>
-                  </div>
-                )}
-                
-                {success && (
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-xl">
-                    <p className="text-xs text-green-600 font-semibold">{success}</p>
-                  </div>
-                )}
+                    {/* ── Shipper CTA Banner ── */}
+                    {onGoToShipperRegister && (
+                      <button
+                        type="button"
+                        onClick={onGoToShipperRegister}
+                        className="mt-2 w-full group flex items-center gap-4 rounded-2xl border-2 border-cream bg-white px-4 py-3 hover:border-primary/30 hover:bg-primary/5 transition-all hover:scale-[1.005] active:scale-[0.99] shadow-sm text-left"
+                      >
+                        {/* Icon */}
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 group-hover:bg-primary/10 transition-colors">
+                          <span className="material-symbols-outlined text-slate-500 group-hover:text-primary transition-colors text-xl">two_wheeler</span>
+                        </div>
+                        {/* Text */}
+                        <div className="flex-1">
+                          <p className="text-sm font-extrabold text-slate-700 leading-tight">Trở thành Shipper của Xấu Mã</p>
+                          <p className="text-xs font-semibold text-slate-400 mt-0.5">Thu nhập 8 – 15 triệu/tháng · Chủ động giờ làm</p>
+                        </div>
+                        {/* Arrow */}
+                        <span className="material-symbols-outlined text-slate-300 group-hover:text-primary text-xl group-hover:translate-x-1 transition-all shrink-0">arrow_forward</span>
+                      </button>
+                    )}
 
-                {/* Input Fields - Compact Layout */}
-                <div className="space-y-3">
-                  <div className="relative">
-                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
-                    <input 
-                      type="text" 
-                      placeholder="Họ và tên" 
-                      className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-transparent rounded-xl focus:bg-white focus:border-[#5c8d5e] focus:ring-2 focus:ring-[#5c8d5e]/10 outline-none text-sm font-semibold transition-all"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      required
-                      disabled={isLoading}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="relative">
-                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
-                      <input 
-                        type="email" 
-                        placeholder="Email" 
-                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-transparent rounded-xl focus:bg-white focus:border-[#5c8d5e] focus:ring-2 focus:ring-[#5c8d5e]/10 outline-none text-sm font-semibold transition-all"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        disabled={isLoading}
-                      />
-                    </div>
-
-                    <div className="relative">
-                      <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
-                      <input 
-                        type="text" 
-                        placeholder="Số điện thoại" 
-                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-transparent rounded-xl focus:bg-white focus:border-[#5c8d5e] focus:ring-2 focus:ring-[#5c8d5e]/10 outline-none text-sm font-semibold transition-all"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        required
-                        disabled={isLoading}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="relative">
-                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
-                      <input 
-                        type="password" 
-                        placeholder="Mật khẩu" 
-                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-transparent rounded-xl focus:bg-white focus:border-[#5c8d5e] outline-none text-sm font-semibold transition-all"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        disabled={isLoading}
-                      />
-                    </div>
-                    <div className="relative">
-                      <ShieldCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
-                      <input 
-                        type="password" 
-                        placeholder="Xác nhận" 
-                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-transparent rounded-xl focus:bg-white focus:border-[#5c8d5e] outline-none text-sm font-semibold transition-all"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        required
-                        disabled={isLoading}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* KYC Notice - Only for Farmer */}
-                {selectedRole === AppRole.FARMER && (
-                  <div className="p-3 bg-orange-50 rounded-xl border border-orange-100 flex gap-2.5">
-                    <Info className="size-4 text-orange-500 shrink-0 mt-0.5" />
-                    <p className="text-xs text-orange-800 font-semibold leading-snug">
-                      Cần xác thực KYC để bắt đầu bán hàng
+                    {/* Footer link in Step 1 */}
+                    <p className="mt-4 text-center text-[15px] font-bold text-slate-500">
+                      Đã có tài khoản?{' '}
+                      <button type="button" onClick={onGoToLogin} className="text-primary font-black hover:underline">
+                        Đăng nhập
+                      </button>
                     </p>
                   </div>
+                </div>
+
+                {/* ── PART 2: Shop Info (FARMER only) ── */}
+                {isFarmer && (
+                  <div className="w-1/2 shrink-0 px-1 opacity-100 transition-opacity">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-sm">storefront</span>
+                          Thông tin cửa hàng
+                        </p>
+                        <button type="button" onClick={() => setFarmerStep(1)} className="text-xs font-bold text-primary hover:underline flex items-center gap-1">
+                          <span className="material-symbols-outlined text-sm">edit</span> Sửa hồ sơ
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <InputField icon="storefront" placeholder="Tên nông trại / cửa hàng *" value={shopName} onChange={setShopName} required={isFarmer && farmerStep === 2} disabled={isLoading} />
+                        <InputField icon="account_balance_wallet" placeholder="Số tài khoản NH *" value={bankAccount} onChange={setBankAccount} required={isFarmer && farmerStep === 2} disabled={isLoading} />
+                      </div>
+
+                      <div className="relative group">
+                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-350 group-focus-within:text-primary transition-colors text-xl z-10 pointer-events-none">location_on</span>
+                        <input type="text" placeholder="Địa chỉ chi tiết (điểm lấy hàng) *" value={address} onChange={e => setAddress(e.target.value)} required={isFarmer && farmerStep === 2} disabled={isLoading} className="w-full pl-12 pr-4 py-3.5 rounded-2xl border-2 border-cream bg-white focus:ring-0 focus:border-primary transition-all outline-none font-semibold text-slate-700 placeholder:text-slate-300 text-[15px]" />
+                      </div>
+
+                      <div className="relative group">
+                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-350 group-focus-within:text-primary transition-colors text-xl z-10 pointer-events-none">description</span>
+                        <input type="text" placeholder="Mô tả ngắn về nông trại (không bắt buộc)" value={description} onChange={e => setDescription(e.target.value)} disabled={isLoading} className="w-full pl-12 pr-4 py-3.5 rounded-2xl border-2 border-cream bg-white focus:ring-0 focus:border-primary transition-all outline-none font-semibold text-slate-700 placeholder:text-slate-300 text-[15px]" />
+                      </div>
+
+                      {/* File Uploads */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <input type="file" id="logoUpload" accept="image/*" onChange={e => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              if (file.size > 30 * 1024 * 1024) {
+                                setError('Ảnh Logo không được vượt quá 30MB');
+                                e.target.value = '';
+                                setLogoFile(null);
+                                return;
+                              }
+                              setLogoFile(file);
+                            }
+                          }} className="hidden" disabled={isLoading} />
+                          <label htmlFor="logoUpload" className={`block p-2 rounded-2xl border-2 border-dashed cursor-pointer flex flex-col items-center justify-center gap-1 transition-all h-full min-h-[72px] ${logoFile ? 'border-primary bg-primary/5' : 'border-cream hover:border-primary/50 hover:bg-slate-50'} ${isLoading ? 'opacity-50' : ''}`}>
+                            <span className={`material-symbols-outlined text-xl ${logoFile ? 'text-primary' : 'text-slate-400'}`}>{logoFile ? 'check_circle' : 'add_photo_alternate'}</span>
+                            <span className="text-[11px] font-bold text-slate-500 text-center leading-tight">{logoFile ? 'Đã tải ảnh Logo' : 'Ảnh đại diện (Tùy chọn)'}</span>
+                          </label>
+                        </div>
+                        <div>
+                          <input type="file" id="achievementUpload" accept="image/*, application/pdf" onChange={e => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              if (file.size > 30 * 1024 * 1024) {
+                                setError('File chứng chỉ không được vượt quá 30MB');
+                                e.target.value = '';
+                                setAchievementFile(null);
+                                return;
+                              }
+                              setAchievementFile(file);
+                            }
+                          }} className="hidden" disabled={isLoading} />
+                          <label htmlFor="achievementUpload" className={`block p-2 rounded-2xl border-2 border-dashed cursor-pointer flex flex-col items-center justify-center gap-1 transition-all h-full min-h-[72px] ${achievementFile ? 'border-primary bg-primary/5' : 'border-cream hover:border-primary/50 hover:bg-slate-50'} ${isLoading ? 'opacity-50' : ''}`}>
+                            <span className={`material-symbols-outlined text-xl ${achievementFile ? 'text-primary' : 'text-slate-400'}`}>{achievementFile ? 'check_circle' : 'workspace_premium'}</span>
+                            <span className="text-[11px] font-bold text-slate-500 text-center leading-tight px-1">{achievementFile ? 'Đã tải chứng chỉ' : 'Chứng chỉ VietGAP / Hữu cơ'}</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 p-3 bg-orange-50 border-2 border-orange-100 rounded-2xl">
+                        <span className="material-symbols-outlined text-orange-500 text-xl shrink-0">info</span>
+                        <p className="text-sm text-orange-800 font-bold">Hồ sơ có chứng chỉ sẽ được duyệt nhanh hơn</p>
+                      </div>
+
+                      {/* ── Buttons Step 2 ── */}
+                      <div className="space-y-3 pt-3 flex flex-col">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} className="w-5 h-5 rounded border-cream text-primary focus:ring-primary/20 cursor-pointer" />
+                          <span className="text-[15px] font-bold text-slate-500">Tôi đồng ý với <a href="#" className="text-primary hover:underline">Điều khoản</a> &amp; <a href="#" className="text-primary hover:underline">Bảo mật</a></span>
+                        </label>
+                        <div className="flex gap-3 w-full">
+                          <button type="button" onClick={() => setFarmerStep(1)} className="px-5 py-4 bg-white border-2 border-cream text-slate-500 font-extrabold rounded-2xl hover:bg-slate-50 transition-all flex items-center justify-center">
+                            <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+                          </button>
+                          <button type="submit" disabled={!agreed || isLoading} className="flex-1 py-4 bg-primary text-white font-extrabold rounded-2xl hover:bg-primary/90 hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl shadow-primary/20 text-base tracking-wide flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                            {isLoading ? 'ĐANG TẠO...' : <>TẠO TÀI KHOẢN <span className="material-symbols-outlined text-[22px]">check_circle</span></>}
+                          </button>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
                 )}
 
-                {/* Terms Agreement */}
-                <label className="flex items-start gap-2.5 cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={agreed}
-                    onChange={(e) => setAgreed(e.target.checked)}
-                    className="mt-0.5 size-4 rounded border-gray-300 text-[#5c8d5e] focus:ring-[#5c8d5e]" 
-                  />
-                  <span className="text-xs font-medium text-gray-500 leading-tight">
-                    Tôi đồng ý với <a href="#" className="text-[#5c8d5e] font-bold">Điều khoản</a> và <a href="#" className="text-[#5c8d5e] font-bold">Bảo mật</a>
-                  </span>
-                </label>
-
-                {/* Submit Button */}
-                <button 
-                  type="submit"
-                  disabled={!agreed || isLoading}
-                  className={`w-full py-3.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all ${
-                    agreed && !isLoading ? 'bg-[#5c8d5e] text-white shadow-lg shadow-[#5c8d5e]/20 hover:bg-[#4a724b]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  }`}
-                >
-                  {isLoading ? 'ĐANG TẠO...' : 'TẠO TÀI KHOẢN'} <ArrowRight className="size-4" />
-                </button>
-
-                {/* Social Login */}
-                <div className="relative flex items-center gap-4 py-1">
-                  <div className="h-px bg-gray-200 flex-1" />
-                  <span className="text-[9px] font-black text-gray-300 uppercase tracking-widest">Hoặc</span>
-                  <div className="h-px bg-gray-200 flex-1" />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <button type="button" className="py-2.5 border border-gray-200 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-50 transition-all font-bold text-xs text-gray-600">
-                    <Chrome className="size-3.5 text-red-500" /> Google
-                  </button>
-                  <button type="button" className="py-2.5 border border-gray-200 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-50 transition-all font-bold text-xs text-gray-600">
-                    <Facebook className="size-3.5 text-blue-600 fill-current" /> Facebook
-                  </button>
-                </div>
-              </form>
-
-              {/* Footer Links */}
-              <div className="mt-6 text-center space-y-2">
-                <p className="text-xs font-bold text-gray-400">
-                  Đã có tài khoản?{' '}
-                  <button onClick={onGoToLogin} className="text-[#5c8d5e] font-black hover:underline">Đăng nhập</button>
-                </p>
               </div>
             </div>
-          </div>
+          </form>
         </div>
       </div>
     </div>

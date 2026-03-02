@@ -61,9 +61,9 @@ const App: React.FC = () => {
     avatar: role === AppRole.FARMER ? 'https://picsum.photos/seed/farmer_ba/100/100' : 'https://picsum.photos/seed/app_avatar/100/100'
   } : null;
 
-  // Prevent body scroll when modal is open (but NOT for full page views like ProductDetail)
+  // Prevent body scroll when modal is open (but NOT for full page views like ProductDetail or News)
   useEffect(() => {
-    const isModalOpen = isCartOpen || isCheckoutOpen || isSuccessOpen || isTrackingOpen || isNewsOpen;
+    const isModalOpen = isCartOpen || isCheckoutOpen || isSuccessOpen || isTrackingOpen;
     if (isModalOpen) {
       document.documentElement.style.overflow = 'hidden';
       document.body.style.overflow = 'hidden';
@@ -75,7 +75,7 @@ const App: React.FC = () => {
       document.documentElement.style.overflow = 'unset';
       document.body.style.overflow = 'unset';
     };
-  }, [isCartOpen, isCheckoutOpen, isSuccessOpen, isTrackingOpen, isNewsOpen]);
+  }, [isCartOpen, isCheckoutOpen, isSuccessOpen, isTrackingOpen]);
 
   // Reset order prep when navigating away from Orders
   useEffect(() => {
@@ -192,18 +192,18 @@ const App: React.FC = () => {
   }
 
   if (authMode === 'SHIPPER_REGISTER') {
-    return <ShipperRegister 
+    return <ShipperRegister
       onComplete={() => {
         setAuthMode('LOGIN');
-      }} 
-      onBack={() => setAuthMode('REGISTER')} 
+      }}
+      onBack={() => setAuthMode('REGISTER')}
     />;
   }
 
   if (authMode === 'REGISTER') {
-    return <Register 
-      onRegister={handleRegister} 
-      onGoToLogin={() => setAuthMode('LOGIN')} 
+    return <Register
+      onRegister={handleRegister}
+      onGoToLogin={() => setAuthMode('LOGIN')}
       onGoToShipperRegister={() => setAuthMode('SHIPPER_REGISTER')}
     />;
   }
@@ -215,7 +215,7 @@ const App: React.FC = () => {
   const renderFarmerContent = () => {
     // Show order preparation if selected
     if (selectedOrderIdForPrep) {
-      return <OrderPreparation 
+      return <OrderPreparation
         orderId={selectedOrderIdForPrep}
         onBack={() => setSelectedOrderIdForPrep(null)}
         onComplete={() => setSelectedOrderIdForPrep(null)}
@@ -257,32 +257,32 @@ const App: React.FC = () => {
       case AppRole.BUYER:
         return (
           <div className="flex flex-col min-h-screen">
-            <Header 
-              user={currentUser} 
+            <Header
+              user={currentUser}
               isAuthenticated={isAuthenticated}
-              onRoleSwitch={setRole} 
-              onOpenCart={handleOpenCart} 
+              onRoleSwitch={setRole}
+              onOpenCart={handleOpenCart}
               onLogout={handleLogout}
-              onOpenNews={handleOpenNews} 
+              onOpenNews={handleOpenNews}
               onGoHome={handleCloseBuyerSpecialPages}
               onOpenLogin={() => setAuthMode('LOGIN')}
               onOpenRegister={() => setAuthMode('REGISTER')}
             />
             <div className="flex-1">
               {isTrackingOpen ? <Tracking onBack={handleCloseBuyerSpecialPages} /> :
-               isSuccessOpen ? <Success onTrackOrder={handleOpenTracking} onGoHome={handleCloseBuyerSpecialPages} /> :
-               isCheckoutOpen ? <Checkout onComplete={handlePaymentSuccess} onBack={handleOpenCart} /> :
-               isCartOpen ? <Cart onProceedToCheckout={handleProceedToCheckout} onBackToShopping={handleCloseBuyerSpecialPages} /> :
-               isNewsOpen ? <News /> :
-               selectedProductId ? <ProductDetail 
-                 productId={selectedProductId} 
-                 onBack={() => setSelectedProductId(null)}
-                 isAuthenticated={isAuthenticated}
-                 onOpenLogin={() => setAuthMode('LOGIN')}
-               /> :
-               <Home onSelectProduct={(id) => {
-                 setSelectedProductId(id);
-               }} />}
+                isSuccessOpen ? <Success onTrackOrder={handleOpenTracking} onGoHome={handleCloseBuyerSpecialPages} /> :
+                  isCheckoutOpen ? <Checkout onComplete={handlePaymentSuccess} onBack={handleOpenCart} /> :
+                    isCartOpen ? <Cart onProceedToCheckout={handleProceedToCheckout} onBackToShopping={handleCloseBuyerSpecialPages} /> :
+                      isNewsOpen ? <News /> :
+                        selectedProductId ? <ProductDetail
+                          productId={selectedProductId}
+                          onBack={() => setSelectedProductId(null)}
+                          isAuthenticated={isAuthenticated}
+                          onOpenLogin={() => setAuthMode('LOGIN')}
+                        /> :
+                          <Home onSelectProduct={(id) => {
+                            setSelectedProductId(id);
+                          }} />}
             </div>
             <Footer />
           </div>

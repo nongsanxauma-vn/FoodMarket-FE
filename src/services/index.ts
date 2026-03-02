@@ -11,6 +11,10 @@ export { userService } from './user.service';
 export { shipperService } from './shipper.service';
 export { notificationService } from './notification.service';
 export { mysteryBoxService } from './mysteryBox.service';
+export { productService } from './product.service';
+export { orderService } from './order.service';
+export { walletService } from './wallet.service';
+export { blogService } from './blog.service';
 export { httpClient } from './http.client';
 
 // Export types
@@ -20,6 +24,10 @@ export type { ResetPasswordRequest, ResetPasswordResponse } from './password.ser
 export type { ShipperRegisterRequest, ShipperRegisterResponse } from './shipper.service';
 export type { NotificationItem, AdminSendNotificationRequest } from './notification.service';
 export type { MysteryBox } from './mysteryBox.service';
+export type { ProductResponse, ProductCreationRequest } from './product.service';
+export type { OrderResponse, OrderCreationRequest } from './order.service';
+export type { WalletResponse, WithdrawRequestResponse } from './wallet.service';
+export type { BlogResponse, BlogCreationRequest } from './blog.service';
 export type { ApiResponse, RequestConfig } from './http.client';
 
 // Export constants

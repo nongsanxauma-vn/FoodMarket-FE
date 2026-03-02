@@ -1,0 +1,56 @@
+import { httpClient, ApiResponse } from './http.client';
+
+export interface OrderItemRequest {
+    productId: number;
+    quantity: number;
+}
+
+export interface OrderCreationRequest {
+    recipientName: string;
+    recipientPhone: string;
+    shippingAddress: string;
+    note?: string;
+    paymentMethod: string;
+    items: OrderItemRequest[];
+}
+
+export interface OrderItemResponse {
+    productId: number;
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+}
+
+export interface OrderResponse {
+    id: number;
+    recipientName: string;
+    recipientPhone: string;
+    shippingAddress: string;
+    paymentMethod: string;
+    note: string;
+    shippingFee: number;
+    totalAmount: number;
+    status: string;
+    createdAt: string;
+    items: OrderItemResponse[];
+}
+
+class OrderService {
+    async getAllOrders(): Promise<ApiResponse<OrderResponse[]>> {
+        return httpClient.get<OrderResponse[]>('/orders');
+    }
+
+    async createOrder(data: OrderCreationRequest): Promise<ApiResponse<OrderResponse>> {
+        return httpClient.post<OrderResponse>('/orders', data);
+    }
+
+    async updateOrder(id: number, data: any): Promise<ApiResponse<OrderResponse>> {
+        return httpClient.patch<OrderResponse>(`/orders/${id}`, data);
+    }
+
+    async deleteOrder(id: number): Promise<ApiResponse<string>> {
+        return httpClient.delete<string>(`/orders/${id}`);
+    }
+}
+
+export const orderService = new OrderService();

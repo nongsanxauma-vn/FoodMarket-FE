@@ -17,6 +17,12 @@ import {
   ChevronLeft,
   ChevronRight,
   AlertCircle,
+  X,
+  Mail,
+  Phone,
+  MapPin,
+  CreditCard,
+  FileText,
 } from 'lucide-react';
 import { userService, UserResponse } from '../../services';
 
@@ -26,6 +32,8 @@ const ShipperManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<number | null>(null);
+  const [selectedShipper, setSelectedShipper] = useState<UserResponse | null>(null);
+  const [modalLoading, setModalLoading] = useState(false);
 
   useEffect(() => {
     const fetchShippers = async () => {
@@ -67,6 +75,25 @@ const ShipperManagement: React.FC = () => {
     } finally {
       setApprovingId(null);
     }
+  };
+
+  const handleViewProfile = async (userId: number) => {
+    setModalLoading(true);
+    setSelectedShipper(null);
+    try {
+      const response = await userService.getUserById(userId);
+      setSelectedShipper(response.result || null);
+    } catch (err) {
+      console.error('Failed to load shipper profile', err);
+      setError('Không thể tải hồ sơ shipper. Vui lòng thử lại.');
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const closeModal = () => {
+    setSelectedShipper(null);
+    setModalLoading(false);
   };
 
   return (
@@ -117,10 +144,10 @@ const ShipperManagement: React.FC = () => {
       <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-10 py-6 border-b border-gray-50 flex items-center justify-between">
           <div className="flex items-center gap-3">
-             <div className="size-10 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500">
-                <ClipboardCheck className="size-5" />
-             </div>
-             <h4 className="font-black text-gray-800 uppercase tracking-tight">Hàng đợi duyệt Shipper mới</h4>
+            <div className="size-10 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500">
+              <ClipboardCheck className="size-5" />
+            </div>
+            <h4 className="font-black text-gray-800 uppercase tracking-tight">Hàng đợi duyệt Shipper mới</h4>
           </div>
           <span className="bg-orange-50 text-orange-600 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
             {pendingShippers.length} hồ sơ mới
@@ -172,7 +199,10 @@ const ShipperManagement: React.FC = () => {
                     </td>
                     <td className="px-10 py-5 text-right">
                       <div className="flex items-center justify-end gap-6">
-                        <button className="text-xs font-black text-gray-400 hover:text-primary transition-colors uppercase">
+                        <button
+                          onClick={() => shipper.id && handleViewProfile(shipper.id)}
+                          className="text-xs font-black text-gray-400 hover:text-primary transition-colors uppercase"
+                        >
                           Xem hồ sơ
                         </button>
                         <button
@@ -205,10 +235,10 @@ const ShipperManagement: React.FC = () => {
               <option>Tất cả khu vực</option>
             </select>
             <div className="relative">
-               <select className="px-8 py-3 bg-gray-50 border border-transparent rounded-2xl text-xs font-black text-gray-600 outline-none cursor-pointer appearance-none pr-12">
-                 <option>Trạng thái</option>
-               </select>
-               <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-gray-400 rotate-90" />
+              <select className="px-8 py-3 bg-gray-50 border border-transparent rounded-2xl text-xs font-black text-gray-600 outline-none cursor-pointer appearance-none pr-12">
+                <option>Trạng thái</option>
+              </select>
+              <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-gray-400 rotate-90" />
             </div>
           </div>
         </div>
@@ -280,13 +310,12 @@ const ShipperManagement: React.FC = () => {
                     </td>
                     <td className="px-6 py-6">
                       <div
-                        className={`px-4 py-1.5 rounded-full flex items-center gap-2 w-fit ${
-                          shipper.status === 'ACTIVE'
-                            ? 'text-green-500 bg-green-50'
-                            : shipper.status === 'INACTIVE'
+                        className={`px-4 py-1.5 rounded-full flex items-center gap-2 w-fit ${shipper.status === 'ACTIVE'
+                          ? 'text-green-500 bg-green-50'
+                          : shipper.status === 'INACTIVE'
                             ? 'text-gray-400 bg-gray-50'
                             : 'text-red-500 bg-red-50'
-                        }`}
+                          }`}
                       >
                         <span className="size-2 bg-current rounded-full" />
                         <span className="text-[10px] font-black uppercase tracking-wider">
@@ -318,17 +347,210 @@ const ShipperManagement: React.FC = () => {
         </div>
 
         <div className="p-10 bg-white border-t border-gray-50 flex items-center justify-between">
-           <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Hiển thị 10 trong tổng số 156 đối tác</p>
-           <div className="flex items-center gap-3">
-              <button className="size-10 border border-gray-100 rounded-2xl flex items-center justify-center text-gray-300 hover:bg-gray-50">
-                 <ChevronLeft className="size-6" />
-              </button>
-              <button className="size-10 border border-gray-100 rounded-2xl flex items-center justify-center text-gray-300 hover:bg-gray-50">
-                 <ChevronRight className="size-6" />
-              </button>
-           </div>
+          <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Hiển thị 10 trong tổng số 156 đối tác</p>
+          <div className="flex items-center gap-3">
+            <button className="size-10 border border-gray-100 rounded-2xl flex items-center justify-center text-gray-300 hover:bg-gray-50">
+              <ChevronLeft className="size-6" />
+            </button>
+            <button className="size-10 border border-gray-100 rounded-2xl flex items-center justify-center text-gray-300 hover:bg-gray-50">
+              <ChevronRight className="size-6" />
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Shipper Profile Modal */}
+      {(selectedShipper || modalLoading) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Overlay */}
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closeModal} />
+
+          {/* Modal Content */}
+          <div className="relative bg-white rounded-[32px] shadow-2xl w-full max-w-lg mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {modalLoading ? (
+              <div className="p-16 text-center">
+                <div className="inline-block size-10 border-4 border-gray-200 border-t-primary rounded-full animate-spin mb-4" />
+                <p className="text-sm font-bold text-gray-400">Đang tải hồ sơ...</p>
+              </div>
+            ) : selectedShipper && (
+              <>
+                {/* Header */}
+                <div className="relative bg-gradient-to-br from-indigo-600 to-violet-600 px-8 pt-8 pb-12">
+                  <button
+                    onClick={closeModal}
+                    className="absolute top-4 right-4 size-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-colors"
+                  >
+                    <X className="size-4" />
+                  </button>
+                  <div className="flex items-center gap-4">
+                    <div className="size-16 rounded-2xl bg-white/20 flex items-center justify-center text-white">
+                      <Users className="size-8" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-white">
+                        {selectedShipper.fullName || 'Chưa cập nhật'}
+                      </h3>
+                      <p className="text-sm text-white/70 font-medium">ID: {selectedShipper.id}</p>
+                    </div>
+                  </div>
+                  <div className="absolute -bottom-4 right-8">
+                    <span
+                      className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider shadow-lg ${selectedShipper.status === 'ACTIVE'
+                        ? 'bg-green-500 text-white'
+                        : selectedShipper.status === 'INACTIVE'
+                          ? 'bg-gray-400 text-white'
+                          : 'bg-orange-500 text-white'
+                        }`}
+                    >
+                      {selectedShipper.status}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Body */}
+                <div className="px-8 pt-8 pb-6 space-y-5">
+                  {/* Email */}
+                  <div className="flex items-center gap-4">
+                    <div className="size-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500 shrink-0">
+                      <Mail className="size-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Email</p>
+                      <p className="text-sm font-bold text-gray-800">{selectedShipper.email || '—'}</p>
+                    </div>
+                  </div>
+
+                  {/* Phone */}
+                  <div className="flex items-center gap-4">
+                    <div className="size-10 bg-green-50 rounded-xl flex items-center justify-center text-green-500 shrink-0">
+                      <Phone className="size-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Số điện thoại</p>
+                      <p className="text-sm font-bold text-gray-800">{selectedShipper.phoneNumber || '—'}</p>
+                    </div>
+                  </div>
+
+                  {/* Address */}
+                  <div className="flex items-center gap-4">
+                    <div className="size-10 bg-purple-50 rounded-xl flex items-center justify-center text-purple-500 shrink-0">
+                      <MapPin className="size-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Khu vực hoạt động</p>
+                      <p className="text-sm font-bold text-gray-800">{selectedShipper.address || '—'}</p>
+                    </div>
+                  </div>
+
+                  <hr className="border-gray-100" />
+
+                  {/* License */}
+                  <div className="flex items-center gap-4">
+                    <div className="size-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-500 shrink-0">
+                      <FileText className="size-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Số bằng lái xe</p>
+                      <p className="text-sm font-bold text-gray-800">{selectedShipper.license || '—'}</p>
+                    </div>
+                  </div>
+
+                  {/* Vehicle */}
+                  <div className="flex items-center gap-4">
+                    <div className="size-10 bg-rose-50 rounded-xl flex items-center justify-center text-rose-500 shrink-0">
+                      <Bike className="size-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Biển số xe</p>
+                      <p className="text-sm font-bold text-gray-800">{selectedShipper.vehicleNumber || '—'}</p>
+                    </div>
+                  </div>
+
+                  {/* Bank Account */}
+                  {selectedShipper.bankAccount && (
+                    <div className="flex items-center gap-4">
+                      <div className="size-10 bg-teal-50 rounded-xl flex items-center justify-center text-teal-500 shrink-0">
+                        <CreditCard className="size-5" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tài khoản ngân hàng</p>
+                        <p className="text-sm font-bold text-gray-800">{selectedShipper.bankAccount}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Description */}
+                  {selectedShipper.description && (
+                    <div className="bg-gray-50 rounded-2xl p-4">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Mô tả</p>
+                      <p className="text-sm text-gray-700 leading-relaxed">{selectedShipper.description}</p>
+                    </div>
+                  )}
+
+                  {/* Document Images */}
+                  {(selectedShipper.logoUrl || selectedShipper.achievement) && (
+                    <>
+                      <hr className="border-gray-100" />
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Giấy tờ đã nộp</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {/* Portrait - logoUrl */}
+                        {selectedShipper.logoUrl && (
+                          <div className="space-y-2">
+                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Ảnh chân dung</p>
+                            <a href={selectedShipper.logoUrl} target="_blank" rel="noopener noreferrer">
+                              <img
+                                src={selectedShipper.logoUrl}
+                                alt="Ảnh chân dung"
+                                className="w-full h-36 object-cover rounded-2xl border-2 border-gray-100 hover:border-primary/50 transition-colors cursor-pointer"
+                              />
+                            </a>
+                          </div>
+                        )}
+                        {/* Driver License - achievement */}
+                        {selectedShipper.achievement && (
+                          <div className="space-y-2">
+                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Bằng lái xe</p>
+                            <a href={selectedShipper.achievement} target="_blank" rel="noopener noreferrer">
+                              <img
+                                src={selectedShipper.achievement}
+                                alt="Bằng lái xe"
+                                className="w-full h-36 object-cover rounded-2xl border-2 border-gray-100 hover:border-primary/50 transition-colors cursor-pointer"
+                              />
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Footer Actions */}
+                <div className="px-8 pb-8 flex gap-3">
+                  {selectedShipper.status !== 'ACTIVE' && (
+                    <button
+                      onClick={() => {
+                        if (selectedShipper.id) {
+                          handleApproveShipper(selectedShipper.id);
+                          closeModal();
+                        }
+                      }}
+                      className="flex-1 py-3 bg-indigo-600 text-white text-xs font-black rounded-2xl shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all uppercase tracking-widest"
+                    >
+                      Duyệt hồ sơ
+                    </button>
+                  )}
+                  <button
+                    onClick={closeModal}
+                    className="flex-1 py-3 bg-gray-100 text-gray-600 text-xs font-black rounded-2xl hover:bg-gray-200 transition-colors uppercase tracking-widest"
+                  >
+                    Đóng
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

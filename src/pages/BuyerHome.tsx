@@ -1,18 +1,17 @@
-
-import React, { useState, useEffect } from 'react';
-import { MOCK_PRODUCTS } from '../constants.tsx';
-import { 
-  Star, 
-  MapPin, 
-  ShoppingCart, 
-  ArrowRight, 
-  Zap, 
-  Award, 
-  Leaf, 
-  Utensils, 
-  Apple, 
-  LayoutGrid, 
-  Grape 
+import { productService, ProductResponse } from '../services';
+import {
+  Star,
+  MapPin,
+  ShoppingCart,
+  ArrowRight,
+  Zap,
+  Award,
+  Leaf,
+  Utensils,
+  Apple,
+  LayoutGrid,
+  Grape,
+  Loader2
 } from 'lucide-react';
 // import { generateProduceStory } from '../services/geminiService';
 
@@ -22,6 +21,9 @@ interface BuyerHomeProps {
 
 const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct }) => {
   const [featuredStory, setFeaturedStory] = useState<string>('Đang tải câu chuyện nông sản...');
+  const [products, setProducts] = useState<ProductResponse[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const categories = [
     { name: 'Rau ăn lá', icon: Leaf },
@@ -34,6 +36,23 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct }) => {
   useEffect(() => {
     // generateProduceStory('Cà chua bi hữu cơ').then(setFeaturedStory);
     setFeaturedStory('Nông sản từ vườn đến bàn ăn, giữ trọn hương vị tự nhiên và tâm huyết của người nông dân.');
+
+    const fetchProducts = async () => {
+      try {
+        setIsLoading(true);
+        const response = await productService.getAll();
+        if (response.result) {
+          setProducts(response.result);
+        }
+      } catch (err) {
+        console.error('Failed to fetch products:', err);
+        setError('Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProducts();
   }, []);
 
   return (
@@ -44,7 +63,7 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct }) => {
         <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent flex items-center px-12">
           <div className="max-w-xl text-white">
             <span className="inline-block bg-primary px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-4">Từ Nông Trại Đến Bàn Ăn</span>
-            <h1 className="text-5xl md:text-6xl font-black mb-6 leading-[1.1] font-display uppercase tracking-tight">Nông sản mộc mạc,<br/><span className="text-primary italic">Giá trị thật.</span></h1>
+            <h1 className="text-5xl md:text-6xl font-black mb-6 leading-[1.1] font-display uppercase tracking-tight">Nông sản mộc mạc,<br /><span className="text-primary italic">Giá trị thật.</span></h1>
             <p className="text-lg text-gray-200 mb-8 max-w-md leading-relaxed">
               {featuredStory}
             </p>
@@ -89,12 +108,12 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct }) => {
           ].map((box, idx) => (
             <div key={idx} className="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all border border-gray-100 flex flex-col group p-4">
               <div className="h-48 rounded-xl bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center mb-6 relative">
-                 <ShoppingCart className="size-20 text-green-200 group-hover:scale-110 transition-transform duration-500" />
-                 <span className="absolute text-3xl font-black text-primary/40">?</span>
-                 <div className="absolute top-3 right-3 bg-white/90 backdrop-blur px-2 py-1 rounded-full shadow-sm flex items-center gap-1">
-                    <Award className="size-3 text-green-600" />
-                    <span className="text-[10px] font-bold">CAM KẾT TƯƠI</span>
-                 </div>
+                <ShoppingCart className="size-20 text-green-200 group-hover:scale-110 transition-transform duration-500" />
+                <span className="absolute text-3xl font-black text-primary/40">?</span>
+                <div className="absolute top-3 right-3 bg-white/90 backdrop-blur px-2 py-1 rounded-full shadow-sm flex items-center gap-1">
+                  <Award className="size-3 text-green-600" />
+                  <span className="text-[10px] font-bold">CAM KẾT TƯƠI</span>
+                </div>
               </div>
               <div className="flex flex-col gap-3">
                 <div className="flex justify-between items-start">
@@ -117,46 +136,56 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct }) => {
       {/* Featured Products */}
       <div className="mb-20">
         <h2 className="text-3xl font-black mb-8 px-2 uppercase font-display text-gray-900">Dành cho bạn hôm nay</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {MOCK_PRODUCTS.map((product) => (
-            <div 
-              key={product.id} 
-              onClick={() => onSelectProduct(product.id)}
-              className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all border border-gray-100 flex flex-col cursor-pointer group"
-            >
-              <div className="relative aspect-[4/3] w-full overflow-hidden">
-                <img className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" src={product.image} alt={product.name} />
-                <button className="absolute bottom-4 right-4 size-10 bg-primary text-white rounded-full shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100">
-                  <ShoppingCart className="size-5" />
-                </button>
-                {product.originalPrice && (
-                   <span className="absolute top-4 left-4 bg-red-500 text-white text-[10px] font-black uppercase px-2 py-1 rounded-md shadow-sm">Giảm 15%</span>
-                )}
-              </div>
-              <div className="p-5 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-primary text-[10px] font-bold uppercase">{product.category}</span>
-                  <div className="flex items-center gap-1 text-gray-400 text-[10px] font-bold">
-                    <MapPin className="size-3" /> {product.distance}
+
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <Loader2 className="size-10 text-primary animate-spin" />
+            <p className="text-gray-400 font-bold">Đang tải sản phẩm tươi sạch...</p>
+          </div>
+        ) : error ? (
+          <div className="bg-red-50 p-10 rounded-[32px] text-center border border-red-100">
+            <p className="text-red-500 font-bold">{error}</p>
+            <button onClick={() => window.location.reload()} className="mt-4 text-primary font-black underline">Tải lại trang</button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {products.map((product) => (
+              <div
+                key={product.id}
+                onClick={() => onSelectProduct(product.id.toString())}
+                className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all border border-gray-100 flex flex-col cursor-pointer group"
+              >
+                <div className="relative aspect-[4/3] w-full overflow-hidden">
+                  <img className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" src={product.imageUrl || 'https://picsum.photos/seed/product/400/300'} alt={product.productName} />
+                  <button className="absolute bottom-4 right-4 size-10 bg-primary text-white rounded-full shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100">
+                    <ShoppingCart className="size-5" />
+                  </button>
+                </div>
+                <div className="p-5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-primary text-[10px] font-bold uppercase">Nông sản</span>
+                    <div className="flex items-center gap-1 text-gray-400 text-[10px] font-bold">
+                      <MapPin className="size-3" /> Vườn nhà
+                    </div>
+                  </div>
+                  <h3 className="text-gray-900 font-extrabold text-lg line-clamp-1">{product.productName}</h3>
+                  <div className="flex items-center gap-1 text-yellow-500">
+                    <Star className="size-4 fill-current" />
+                    <span className="text-xs font-bold text-gray-900">4.9</span>
+                    <span className="text-gray-400 text-[10px]">(100+)</span>
+                  </div>
+                  <div className="flex items-end justify-between mt-2">
+                    <div className="flex flex-col">
+                      <span className="text-primary font-black text-2xl">{product.sellingPrice.toLocaleString('vi-VN')}đ</span>
+                      <span className="text-[10px] text-gray-400 font-bold uppercase">Mỗi {product.unit}</span>
+                    </div>
+                    <span className="bg-green-100 text-green-700 text-[10px] font-black px-2 py-1 rounded-md">TƯƠI SẠCH</span>
                   </div>
                 </div>
-                <h3 className="text-gray-900 font-extrabold text-lg line-clamp-1">{product.name}</h3>
-                <div className="flex items-center gap-1 text-yellow-500">
-                  <Star className="size-4 fill-current" />
-                  <span className="text-xs font-bold text-gray-900">{product.rating}</span>
-                  <span className="text-gray-400 text-[10px]">({product.soldCount})</span>
-                </div>
-                <div className="flex items-end justify-between mt-2">
-                  <div className="flex flex-col">
-                    <span className="text-primary font-black text-2xl">{product.price.toLocaleString('vi-VN')}đ</span>
-                    <span className="text-[10px] text-gray-400 font-bold uppercase">Mỗi {product.unit}</span>
-                  </div>
-                  <span className="bg-green-100 text-green-700 text-[10px] font-black px-2 py-1 rounded-md">TƯƠI SẠCH</span>
-                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </main>
   );

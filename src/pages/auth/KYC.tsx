@@ -10,7 +10,7 @@ interface KYCProps {
 
 const KYC: React.FC<KYCProps> = ({ onComplete, onBack, role }) => {
   const [step, setStep] = useState(2);
-  const [isSubmitted, setIsSubmitted] = useState(false); // Trạng thái đã gửi đơn
+  const [isSubmitted, setIsSubmitted] = useState(role === 'FARMER'); // Nông dân đã upload ở bước đăng ký nên chuyển sang trạng thái chờ duyệt luôn
 
   const handleSubmit = () => {
     // Ở đây bạn sẽ gọi API để gửi dữ liệu lên server
@@ -24,7 +24,7 @@ const KYC: React.FC<KYCProps> = ({ onComplete, onBack, role }) => {
         <Hourglass className="size-12 text-orange-500 animate-spin-slow" />
         <div className="absolute -top-1 -right-1 size-6 bg-orange-500 border-4 border-white rounded-full"></div>
       </div>
-      
+
       <h3 className="text-2xl font-black text-gray-800 mb-4">Hồ sơ đang được chờ duyệt!</h3>
       <p className="text-gray-500 max-w-md mx-auto mb-10 leading-relaxed">
         Cảm ơn bạn đã hoàn thành hồ sơ năng lực. Đội ngũ quản trị viên của <span className="font-bold text-primary">Xấu Mã</span> sẽ xem xét và phê duyệt tài khoản của bạn trong vòng <span className="text-gray-800 font-bold">24h - 48h</span> làm việc.
@@ -48,14 +48,14 @@ const KYC: React.FC<KYCProps> = ({ onComplete, onBack, role }) => {
       </div>
 
       <div className="mt-12 flex flex-col sm:flex-row items-center gap-4">
-        <button 
+        <button
           onClick={() => window.location.href = '/'} // Hoặc điều hướng về trang chủ
           className="flex items-center gap-2 px-8 py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-black transition-all shadow-lg shadow-gray-200"
         >
           <Home className="size-4" /> Về trang chủ
         </button>
-        <button 
-          onClick={onComplete}
+        <button
+          onClick={() => setIsSubmitted(false)}
           className="text-sm font-bold text-gray-400 hover:text-primary transition-colors"
         >
           Xem lại hồ sơ đã gửi
@@ -83,7 +83,7 @@ const KYC: React.FC<KYCProps> = ({ onComplete, onBack, role }) => {
               </div>
               <p className="text-sm font-bold text-gray-800">VietGAP / GlobalGAP</p>
               <button className="w-full py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50 flex items-center justify-center gap-2">
-                 <Send className="size-3 -rotate-90" /> Tải lên
+                <Send className="size-3 -rotate-90" /> Tải lên
               </button>
             </div>
             <div className="border-2 border-dashed border-gray-200 rounded-2xl p-6 flex flex-col items-center text-center gap-4 hover:border-primary/30 transition-colors group">
@@ -92,27 +92,27 @@ const KYC: React.FC<KYCProps> = ({ onComplete, onBack, role }) => {
               </div>
               <p className="text-sm font-bold text-gray-800">Chứng nhận Hữu cơ</p>
               <button className="w-full py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50 flex items-center justify-center gap-2">
-                 <Send className="size-3 -rotate-90" /> Tải lên
+                <Send className="size-3 -rotate-90" /> Tải lên
               </button>
             </div>
           </div>
 
           <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-4 flex items-start gap-3">
-             <div className="size-5 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">i</div>
-             <p className="text-[11px] text-gray-500 font-medium leading-relaxed">
-               Hồ sơ có chứng chỉ nông nghiệp sẽ được ưu tiên duyệt sớm và có nhãn "Người bán uy tín" sau khi hoạt động.
-             </p>
+            <div className="size-5 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">i</div>
+            <p className="text-[11px] text-gray-500 font-medium leading-relaxed">
+              Hồ sơ có chứng chỉ nông nghiệp sẽ được ưu tiên duyệt sớm và có nhãn "Người bán uy tín" sau khi hoạt động.
+            </p>
           </div>
         </div>
 
         <div className="bg-gray-50 rounded-3xl p-8 flex flex-col items-center text-center border border-gray-100">
-           <div className="size-14 bg-white shadow-sm rounded-2xl flex items-center justify-center mb-4">
-              <ShieldCheck className="size-7 text-primary" />
-           </div>
-           <h4 className="text-sm font-black text-gray-800 mb-2">Cam kết bảo mật</h4>
-           <p className="text-[10px] text-gray-400 font-medium leading-relaxed">
-              Thông tin của bạn chỉ dùng cho mục đích xác thực nội bộ.
-           </p>
+          <div className="size-14 bg-white shadow-sm rounded-2xl flex items-center justify-center mb-4">
+            <ShieldCheck className="size-7 text-primary" />
+          </div>
+          <h4 className="text-sm font-black text-gray-800 mb-2">Cam kết bảo mật</h4>
+          <p className="text-[10px] text-gray-400 font-medium leading-relaxed">
+            Thông tin của bạn chỉ dùng cho mục đích xác thực nội bộ.
+          </p>
         </div>
       </div>
 
@@ -120,8 +120,8 @@ const KYC: React.FC<KYCProps> = ({ onComplete, onBack, role }) => {
         <button onClick={onBack} className="flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-gray-800">
           <ArrowLeft className="size-4" /> Quay lại
         </button>
-        <button 
-          onClick={handleSubmit} 
+        <button
+          onClick={handleSubmit}
           className="bg-primary text-white px-10 py-3 rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all flex items-center gap-2"
         >
           Hoàn thành & Gửi duyệt <Send className="size-4" />
@@ -138,15 +138,15 @@ const KYC: React.FC<KYCProps> = ({ onComplete, onBack, role }) => {
           <div className="flex items-center justify-between mb-10">
             <div>
               <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
-                  <span>Đăng ký</span>
-                  <span className="text-gray-300">/</span>
-                  <span className="text-primary">Xác thực hồ sơ</span>
+                <span>Đăng ký</span>
+                <span className="text-gray-300">/</span>
+                <span className="text-primary">Xác thực hồ sơ</span>
               </div>
               <h1 className="text-4xl font-black font-display text-gray-900 tracking-tight">Xác Thực Nông Dân</h1>
             </div>
             <div className="bg-gray-100 text-gray-500 px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 border border-gray-200">
-               <span className="size-2 bg-gray-300 rounded-full"></span>
-               GIAI ĐOẠN CUỐI
+              <span className="size-2 bg-gray-300 rounded-full"></span>
+              GIAI ĐOẠN CUỐI
             </div>
           </div>
         )}
@@ -155,13 +155,13 @@ const KYC: React.FC<KYCProps> = ({ onComplete, onBack, role }) => {
           {/* Chỉ hiển thị Stepper khi chưa gửi đơn */}
           {!isSubmitted && (
             <div className="px-10 border-b border-gray-50 bg-white">
-              <Stepper 
-                currentStep={step} 
-                steps={['Thông tin cá nhân', 'Chứng chỉ & Năng lực']} 
+              <Stepper
+                currentStep={step}
+                steps={['Thông tin cá nhân', 'Chứng chỉ & Năng lực']}
               />
             </div>
           )}
-          
+
           <div className="p-12">
             {isSubmitted ? renderPendingStatus() : renderCertificatesStep()}
           </div>
@@ -169,7 +169,7 @@ const KYC: React.FC<KYCProps> = ({ onComplete, onBack, role }) => {
 
         {!isSubmitted && (
           <div className="mt-12 text-center">
-              <p className="text-xs text-gray-400 font-medium">Bạn cần hỗ trợ? <a href="#" className="text-primary font-bold underline underline-offset-4">Liên hệ hỗ trợ 24/7</a></p>
+            <p className="text-xs text-gray-400 font-medium">Bạn cần hỗ trợ? <a href="#" className="text-primary font-bold underline underline-offset-4">Liên hệ hỗ trợ 24/7</a></p>
           </div>
         )}
       </div>

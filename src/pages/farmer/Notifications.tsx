@@ -25,7 +25,7 @@ const mapNotificationToUi = (notification: NotificationItem): UiNotification => 
     uiType = 'info';
   }
 
-  const createdAt = notification.createdAt;
+  const createdAt = notification.createAt;
   const timeLabel = createdAt ? new Date(createdAt).toLocaleString('vi-VN') : 'Vừa xong';
 
   return {
@@ -99,15 +99,14 @@ const FarmerNotifications: React.FC = () => {
             )}
 
             <div
-              className={`size-16 rounded-[24px] flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 duration-500 ${
-                n.uiType === 'order'
+              className={`size-16 rounded-[24px] flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 duration-500 ${n.uiType === 'order'
                   ? 'bg-blue-50 text-blue-500'
                   : n.uiType === 'market'
-                  ? 'bg-orange-50 text-orange-500'
-                  : n.uiType === 'system'
-                  ? 'bg-emerald-50 text-emerald-500'
-                  : 'bg-gray-50 text-gray-400'
-              }`}
+                    ? 'bg-orange-50 text-orange-500'
+                    : n.uiType === 'system'
+                      ? 'bg-emerald-50 text-emerald-500'
+                      : 'bg-gray-50 text-gray-400'
+                }`}
             >
               {n.uiType === 'order' && <ShoppingCart className="size-8" />}
               {n.uiType === 'market' && <TrendingUp className="size-8" />}
@@ -123,7 +122,7 @@ const FarmerNotifications: React.FC = () => {
                 </span>
               </div>
               <p className="text-sm font-medium text-gray-500 leading-relaxed mb-6">
-                {n.content}
+                {n.message}
               </p>
               <div className="flex items-center gap-6">
                 <button className="px-6 py-2.5 bg-white border border-gray-100 rounded-xl text-[10px] font-black text-gray-600 uppercase tracking-widest shadow-sm hover:bg-gray-50 transition-colors flex items-center gap-2">

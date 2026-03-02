@@ -3,15 +3,18 @@ import { httpClient, ApiResponse } from './http.client';
 export interface NotificationItem {
   id: number;
   title: string;
-  content: string;
-  createdAt: string;
+  message: string;
+  evidence?: string;
+  createAt: string;
   receiverType?: string;
   isRead?: boolean;
+  adminId?: number;
+  adminName?: string;
 }
 
 export interface AdminSendNotificationRequest {
   title: string;
-  content: string;
+  message: string;
   receiverTypes: string[];
 }
 

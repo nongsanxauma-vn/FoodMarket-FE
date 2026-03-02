@@ -4,7 +4,7 @@
  */
 
 import { httpClient, ApiResponse } from './http.client';
-import { TOKEN_KEY, REFRESH_TOKEN_KEY, USER_INFO_KEY } from './api.config';
+import { API_BASE_URL, TOKEN_KEY, REFRESH_TOKEN_KEY, USER_INFO_KEY } from './api.config';
 
 /**
  * Request/Response Types
@@ -25,6 +25,11 @@ export interface RegisterRequest {
   fullName: string;
   phoneNumber: string;
   roleName: 'BUYER' | 'SHOP_OWNER' | 'SHIPPER' | 'ADMIN';
+  // Shop Owner specific
+  address?: string;
+  shopName?: string;
+  description?: string;
+  bankAccount?: string;
 }
 
 export interface UserResponse {
@@ -79,12 +84,12 @@ class AuthService {
   async login(credentials: LoginRequest): Promise<ApiResponse<LoginResponse>> {
     try {
       const response = await httpClient.post<LoginResponse>('/auth/login', credentials);
-      
+
       // Lưu token vào localStorage
       if (response.result?.token) {
         this.setToken(response.result.token);
       }
-      
+
       return response;
     } catch (error) {
       console.error('Login error:', error);
@@ -94,11 +99,32 @@ class AuthService {
 
   /**
    * Đăng ký tài khoản mới
+   * BE endpoint dùng multipart/form-data với @RequestPart("data")
    */
-  async register(userData: RegisterRequest): Promise<ApiResponse<UserResponse>> {
+  async register(userData: RegisterRequest, logoUrl?: File, achievement?: File): Promise<ApiResponse<UserResponse>> {
     try {
-      const response = await httpClient.post<UserResponse>('/users/register', userData);
-      return response;
+      const formData = new FormData();
+      // BE expects "data" part as a JSON string
+      formData.append('data', JSON.stringify(userData));
+      if (logoUrl) formData.append('logoUrl', logoUrl);
+      if (achievement) formData.append('achievement', achievement);
+
+      const response = await fetch(`${API_BASE_URL}/users/register`, {
+        method: 'POST',
+        body: formData,
+        // Không set Content-Type header, để browser tự động set multipart/form-data với boundary
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw {
+          status: response.status,
+          data: responseData,
+        };
+      }
+
+      return responseData;
     } catch (error) {
       console.error('Register error:', error);
       throw error;
@@ -140,12 +166,12 @@ class AuthService {
   async refreshToken(token: string): Promise<ApiResponse<LoginResponse>> {
     try {
       const response = await httpClient.post<LoginResponse>('/auth/refresh', { token });
-      
+
       // Cập nhật token mới
       if (response.result?.token) {
         this.setToken(response.result.token);
       }
-      
+
       return response;
     } catch (error) {
       console.error('Refresh token error:', error);
@@ -159,12 +185,12 @@ class AuthService {
   async getMyInfo(): Promise<ApiResponse<UserResponse>> {
     try {
       const response = await httpClient.get<UserResponse>('/users/me');
-      
+
       // Lưu thông tin user vào localStorage
       if (response.result) {
         this.setUserInfo(response.result);
       }
-      
+
       return response;
     } catch (error) {
       console.error('Get my info error:', error);
@@ -178,12 +204,12 @@ class AuthService {
   async updateMyInfo(userData: Partial<UserResponse>): Promise<ApiResponse<UserResponse>> {
     try {
       const response = await httpClient.put<UserResponse>('/users/me', userData);
-      
+
       // Cập nhật thông tin user trong localStorage
       if (response.result) {
         this.setUserInfo(response.result);
       }
-      
+
       return response;
     } catch (error) {
       console.error('Update my info error:', error);

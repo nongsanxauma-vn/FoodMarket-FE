@@ -44,7 +44,7 @@ class HttpClient {
       '/otp-verification/verify-otp',
       '/forgot-password/reset',
     ];
-    
+
     return publicEndpoints.some(endpoint => url.includes(endpoint));
   }
 
@@ -72,12 +72,12 @@ class HttpClient {
    */
   private buildQueryString(params?: Record<string, any>): string {
     if (!params) return '';
-    
+
     const queryString = Object.entries(params)
       .filter(([_, value]) => value !== undefined && value !== null)
       .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
       .join('&');
-    
+
     return queryString ? `?${queryString}` : '';
   }
 
@@ -91,20 +91,30 @@ class HttpClient {
     config?: RequestConfig
   ): Promise<ApiResponse<T>> {
     const fullUrl = `${this.baseURL}${url}${this.buildQueryString(config?.params)}`;
-    
-    const headers = {
+
+    const isFormData = data instanceof FormData;
+
+    // Tạo headers hoàn chỉnh
+    const headers: Record<string, string> = {
       ...this.getDefaultHeaders(url),
       ...config?.headers,
     };
+
+    // Nếu là FormData, ta để trình duyệt tự quyết định Content-Type (bao gồm boundary)
+    if (isFormData) {
+      delete headers['Content-Type'];
+    }
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), config?.timeout || this.timeout);
 
     try {
+      const body = isFormData ? data : (data ? JSON.stringify(data) : undefined);
+
       const response = await fetch(fullUrl, {
         method,
         headers,
-        body: data ? JSON.stringify(data) : undefined,
+        body,
         signal: controller.signal,
       });
 
@@ -122,7 +132,7 @@ class HttpClient {
       return responseData;
     } catch (error: any) {
       clearTimeout(timeoutId);
-      
+
       if (error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
