@@ -368,7 +368,6 @@ const NewsManagement: React.FC = () => {
             </div>
 
             <div className="p-10 bg-white border-t border-gray-50 flex items-center justify-between">
-               <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Hiển thị bài viết 1-3 trên tổng số 42 bài</p>
                <div className="flex items-center gap-2">
                   <button className="size-10 border border-gray-100 rounded-2xl flex items-center justify-center text-gray-300 hover:bg-gray-50 transition-colors">
                      <ChevronLeft className="size-5" />
