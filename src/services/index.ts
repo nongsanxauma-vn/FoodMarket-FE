@@ -15,6 +15,7 @@ export { productService } from './product.service';
 export { orderService } from './order.service';
 export { walletService } from './wallet.service';
 export { blogService } from './blog.service';
+export { paymentService } from './payment.service';
 export { httpClient } from './http.client';
 
 // Export types
@@ -23,12 +24,14 @@ export type { SendOtpRequest, SendOtpResponse, VerifyOtpRequest, VerifyOtpRespon
 export type { ResetPasswordRequest, ResetPasswordResponse } from './password.service';
 export type { ShipperRegisterRequest, ShipperRegisterResponse } from './shipper.service';
 export type { NotificationItem, AdminSendNotificationRequest } from './notification.service';
-export type { MysteryBox } from './mysteryBox.service';
+export type { MysteryBox, MysteryBoxCreationRequest, MysteryBoxUpdateRequest } from './mysteryBox.service';
 export type { ProductResponse, ProductCreationRequest } from './product.service';
 export type { OrderResponse, OrderCreationRequest } from './order.service';
 export type { WalletResponse, WithdrawRequestResponse } from './wallet.service';
 export type { BlogResponse, BlogCreationRequest } from './blog.service';
+export type { PaymentResponse, CreatePaymentRequest } from './payment.service';
 export type { ApiResponse, RequestConfig } from './http.client';
+export type { UserUpdateRequest } from './user.service';
 
 // Export constants
 export { API_BASE_URL, TOKEN_KEY, USER_INFO_KEY } from './api.config';

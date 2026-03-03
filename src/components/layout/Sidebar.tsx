@@ -1,17 +1,17 @@
 
 import React from 'react';
 import { AppRole } from '../../types/index';
-import { 
-  LayoutDashboard, 
-  Package, 
-  ShoppingCart, 
-  Wallet, 
-  UserCircle, 
-  Gift, 
-  ShieldCheck, 
-  Store, 
-  Gavel, 
-  Users, 
+import {
+  LayoutDashboard,
+  Package,
+  ShoppingCart,
+  Wallet,
+  UserCircle,
+  Gift,
+  ShieldCheck,
+  Store,
+  Gavel,
+  Users,
   Truck,
   Leaf,
   CheckCircle,
@@ -43,7 +43,6 @@ const Sidebar: React.FC<SidebarProps> = ({ role, currentPath, onNavigate, onLogo
   const adminMenu = [
     { name: 'Bảng điều khiển', icon: LayoutDashboard, id: 'admin-overview' },
     { name: 'Duyệt KYC', icon: ShieldCheck, id: 'admin-kyc' },
-    { name: 'Duyệt Sản Phẩm', icon: Package, id: 'admin-products' },
     { name: 'Quản lý tin tức', icon: Newspaper, id: 'admin-news' },
     { name: 'Quản lý thông báo', icon: Send, id: 'admin-notifications' },
     { name: 'Giám sát cửa hàng', icon: Store, id: 'admin-stores' },
@@ -78,11 +77,10 @@ const Sidebar: React.FC<SidebarProps> = ({ role, currentPath, onNavigate, onLogo
             <button
               key={item.id}
               onClick={() => onNavigate(item.id)}
-              className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 group ${
-                isActive 
-                  ? 'bg-primary/5 text-primary border border-primary/10' 
+              className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 group ${isActive
+                  ? 'bg-primary/5 text-primary border border-primary/10'
                   : 'text-gray-400 hover:bg-gray-50'
-              }`}
+                }`}
             >
               <item.icon className={`size-5 shrink-0 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:translate-x-1'}`} />
               <span className={`text-sm font-black ${isActive ? 'text-primary' : 'text-gray-500'}`}>{item.name}</span>
@@ -96,13 +94,13 @@ const Sidebar: React.FC<SidebarProps> = ({ role, currentPath, onNavigate, onLogo
       <div className="p-8 border-t border-gray-50 bg-white space-y-6">
         <div className="bg-gray-50/80 rounded-3xl p-4 border border-gray-100 flex items-center gap-4 group">
           <div className="relative shrink-0">
-            <img 
-              className="size-10 rounded-xl border-2 border-white shadow-sm object-cover" 
-              src={role === AppRole.FARMER ? "https://picsum.photos/seed/farmer_ba/100/100" : "https://picsum.photos/seed/admin_avatar/100/100"} 
-              alt="User" 
+            <img
+              className="size-10 rounded-xl border-2 border-white shadow-sm object-cover"
+              src={role === AppRole.FARMER ? "https://picsum.photos/seed/farmer_ba/100/100" : "https://picsum.photos/seed/admin_avatar/100/100"}
+              alt="User"
             />
             <div className="absolute -bottom-1 -right-1 size-4 bg-primary rounded-full border-2 border-white flex items-center justify-center">
-               <CheckCircle className="size-2 text-white fill-current" />
+              <CheckCircle className="size-2 text-white fill-current" />
             </div>
           </div>
           <div className="flex flex-col min-w-0">
@@ -111,11 +109,11 @@ const Sidebar: React.FC<SidebarProps> = ({ role, currentPath, onNavigate, onLogo
           </div>
         </div>
 
-        <button 
+        <button
           onClick={onLogout}
           className="w-full py-4 px-6 text-xs font-black text-red-500 bg-red-50 border border-red-100 rounded-2xl hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-3 group shadow-sm shadow-red-100"
         >
-          <LogOut className="size-4 transition-transform group-hover:-translate-x-1" /> 
+          <LogOut className="size-4 transition-transform group-hover:-translate-x-1" />
           <span>ĐĂNG XUẤT HỆ THỐNG</span>
         </button>
       </div>

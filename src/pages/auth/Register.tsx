@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AppRole } from '../../types/index';
 import { ArrowLeft } from 'lucide-react';
-import { authService } from '../../services';
+import { authService, otpService } from '../../services';
 import OTPVerification from '../../components/auth/OTPVerification';
 
 interface RegisterProps {
@@ -144,7 +144,16 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onGoToLogin, onGoToShip
       logoFile,
       achievementFile
     });
-    setShowOtpVerification(true);
+
+    setIsLoading(true);
+    try {
+      await otpService.sendOtp(email);
+      setShowOtpVerification(true);
+    } catch (err: any) {
+      setError(err?.data?.message || 'Không thể gửi OTP. Vui lòng thử lại.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const isFarmer = selectedRole === AppRole.FARMER;
@@ -368,6 +377,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onGoToLogin, onGoToShip
                                 setLogoFile(null);
                                 return;
                               }
+                              setError(null); // Clear previous errors if the file is valid
                               setLogoFile(file);
                             }
                           }} className="hidden" disabled={isLoading} />
@@ -386,6 +396,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onGoToLogin, onGoToShip
                                 setAchievementFile(null);
                                 return;
                               }
+                              setError(null); // Clear previous errors if the file is valid
                               setAchievementFile(file);
                             }
                           }} className="hidden" disabled={isLoading} />

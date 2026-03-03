@@ -1,37 +1,102 @@
 
 import React, { useEffect, useState } from 'react';
-import { Sparkles, Info, ArrowRight, Package, Box, Zap, Gift, Trash2, Sprout, AlertCircle, Clock } from 'lucide-react';
-import { mysteryBoxService, MysteryBox } from '../../services';
+import { Sparkles, Info, ArrowRight, Package, Box, Zap, Gift, Trash2, Sprout, AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
+import { mysteryBoxService, MysteryBox, MysteryBoxCreationRequest, authService, productService, ProductResponse } from '../../services';
+import { ImagePlus } from 'lucide-react';
 
 const BlindBoxTool: React.FC = () => {
   const [price, setPrice] = useState(59000);
   const [runningBoxes, setRunningBoxes] = useState<MysteryBox[]>([]);
   const [loadingBoxes, setLoadingBoxes] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const items = [
-    { id: 1, name: 'Bắp cải', image: 'https://picsum.photos/seed/cabbage/100/100', surplus: '15kg' },
-    { id: 2, name: 'Cà chua', image: 'https://picsum.photos/seed/tomato/100/100', surplus: '8kg' },
-    { id: 3, name: 'Khoai tây', image: 'https://picsum.photos/seed/potato/100/100', surplus: '20kg' },
-    { id: 4, name: 'Cà rốt', image: 'https://picsum.photos/seed/carrot/100/100', surplus: '5kg' },
-  ];
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [boxImage, setBoxImage] = useState<File | null>(null);
+  const [boxImagePreview, setBoxImagePreview] = useState<string | null>(null);
+  const [realItems, setRealItems] = useState<ProductResponse[]>([]);
+  const [boxType, setBoxType] = useState('3 - 5 loại nông sản');
+  const [selectedItems, setSelectedItems] = useState<number[]>([]);
+
+  const fetchMyBoxes = async () => {
+    setLoadingBoxes(true);
+    setError(null);
+    try {
+      const response = await mysteryBoxService.getMyBoxes();
+      setRunningBoxes(response.result || []);
+    } catch (err) {
+      console.error('Failed to load mystery boxes', err);
+      setError('Không thể tải danh sách túi mù. Vui lòng đảm bảo bạn đã đăng nhập với vai trò nhà vườn.');
+    } finally {
+      setLoadingBoxes(false);
+    }
+  };
+
+  const fetchRealProducts = async () => {
+    setLoadingProducts(true);
+    try {
+      const user = await authService.getMyInfo();
+      if (user.result) {
+        const products = await productService.getByShopId(user.result.id);
+        if (products.result) {
+          setRealItems(products.result);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch real products', err);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchMyBoxes = async () => {
-      setLoadingBoxes(true);
-      setError(null);
-      try {
-        const response = await mysteryBoxService.getMyBoxes();
-        setRunningBoxes(response.result || []);
-      } catch (err) {
-        console.error('Failed to load mystery boxes', err);
-        setError('Không thể tải danh sách túi mù. Vui lòng đảm bảo bạn đã đăng nhập với vai trò nhà vườn.');
-      } finally {
-        setLoadingBoxes(false);
-      }
-    };
-
     fetchMyBoxes();
+    fetchRealProducts();
   }, []);
+
+  const handleCreateBox = async () => {
+    setCreating(true);
+    setError(null);
+    setSuccessMsg(null);
+    try {
+      const data: MysteryBoxCreationRequest = {
+        boxType: boxType,
+        price: price,
+        description: `Túi mù gồm ${boxType} ngẫu nhiên từ nông trại`,
+        note: selectedItems.length > 0 ? `Các sản phẩm liên quan: ${selectedItems.map(id => realItems.find(i => i.id === id)?.productName).join(', ')}` : undefined,
+      };
+      await mysteryBoxService.createMysteryBox(data, boxImage || undefined);
+      setSuccessMsg('Đã tạo túi mù thành công!');
+      setBoxImage(null);
+      setBoxImagePreview(null);
+      await fetchMyBoxes();
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err: any) {
+      console.error('Failed to create mystery box', err);
+      setError('Không thể tạo túi mù. Vui lòng thử lại.');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleDeleteBox = async (id: number) => {
+    setDeletingId(id);
+    setError(null);
+    try {
+      await mysteryBoxService.deleteMysteryBox(id);
+      setRunningBoxes(prev => prev.filter(box => box.id !== id));
+    } catch (err: any) {
+      console.error('Failed to delete mystery box', err);
+      setError('Không thể xóa túi mù. Vui lòng thử lại.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const toggleItemSelection = (id: number) => {
+    setSelectedItems(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
 
   return (
     <div className="flex flex-col gap-8 p-8 animate-in fade-in duration-500 pb-20">
@@ -41,8 +106,8 @@ const BlindBoxTool: React.FC = () => {
           <p className="text-gray-400 font-medium text-sm mt-1">Giải cứu nông sản dư thừa bằng cách tạo các túi quà bí ẩn hấp dẫn.</p>
         </div>
         <div className="bg-primary/10 text-primary px-4 py-2 rounded-xl border border-primary/20 flex items-center gap-2">
-           <Zap className="size-4 fill-primary" />
-           <span className="text-xs font-black uppercase tracking-widest">Tiết kiệm rác thải: 42kg tháng này</span>
+          <Zap className="size-4 fill-primary" />
+          <span className="text-xs font-black uppercase tracking-widest">Tiết kiệm rác thải: 42kg tháng này</span>
         </div>
       </div>
 
@@ -57,25 +122,28 @@ const BlindBoxTool: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-               {items.map((item) => (
-                 <div key={item.id} className="flex flex-col gap-3 group cursor-pointer">
-                    <div className="relative aspect-square rounded-[32px] overflow-hidden border-2 border-transparent group-hover:border-primary transition-all shadow-sm">
-                       <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                       <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-all" />
-                       <div className="absolute top-3 right-3 bg-white/90 backdrop-blur size-6 rounded-full flex items-center justify-center border border-gray-100 shadow-sm">
-                          <input type="checkbox" className="size-3 accent-primary" />
-                       </div>
+              {loadingProducts ? (
+                <div className="col-span-full py-10 text-center text-gray-400 font-bold uppercase tracking-widest text-[10px]">Đang tải sản phẩm của bạn...</div>
+              ) : realItems.map((item) => (
+                <div key={item.id} className="flex flex-col gap-3 group cursor-pointer" onClick={() => toggleItemSelection(item.id)}>
+                  <div className={`relative aspect-square rounded-[32px] overflow-hidden border-2 transition-all shadow-sm ${selectedItems.includes(item.id) ? 'border-primary' : 'border-transparent group-hover:border-primary'}`}>
+                    <img src={item.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                    <div className={`absolute inset-0 transition-all ${selectedItems.includes(item.id) ? 'bg-primary/10' : 'bg-black/10 group-hover:bg-transparent'}`} />
+                    <div className="absolute top-3 right-3 bg-white/90 backdrop-blur size-6 rounded-full flex items-center justify-center border border-gray-100 shadow-sm">
+                      <input type="checkbox" className="size-3 accent-primary" checked={selectedItems.includes(item.id)} onChange={() => { }} />
                     </div>
-                    <div className="text-center">
-                       <p className="text-xs font-black text-gray-800 uppercase">{item.name}</p>
-                       <p className="text-[10px] text-primary font-bold">Dư: {item.surplus}</p>
-                    </div>
-                 </div>
-               ))}
-               <button className="aspect-square rounded-[32px] border-2 border-dashed border-gray-100 flex flex-col items-center justify-center gap-2 text-gray-300 hover:border-primary/20 hover:text-primary transition-all">
-                  <span className="material-symbols-outlined text-3xl">add_circle</span>
-                  <span className="text-[10px] font-black uppercase">Thêm món</span>
-               </button>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs font-black text-gray-800 uppercase truncate px-2">{item.productName}</p>
+                    <p className="text-[10px] text-primary font-bold">Tồn: {item.stockQuantity} {item.unit}</p>
+                  </div>
+                </div>
+              ))}
+              {!loadingProducts && realItems.length === 0 && (
+                <div className="col-span-full py-10 text-center text-gray-400 font-bold uppercase tracking-widest text-[10px]">
+                  Bạn chưa đăng sản phẩm nào. Hãy đăng sản phẩm để tạo túi mù!
+                </div>
+              )}
             </div>
           </div>
 
@@ -88,142 +156,173 @@ const BlindBoxTool: React.FC = () => {
             </div>
 
             <div className="space-y-12">
-               <div className="flex flex-col gap-6">
-                  <div className="flex justify-between items-center">
-                     <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Mức giá túi mù (VND)</label>
-                     <span className="text-3xl font-black text-primary">{price.toLocaleString('vi-VN')}đ</span>
-                  </div>
-                  <input 
-                    type="range" 
-                    min="29000" 
-                    max="199000" 
-                    step="1000"
-                    value={price}
-                    onChange={(e) => setPrice(parseInt(e.target.value))}
-                    className="w-full h-2 bg-gray-100 rounded-full appearance-none accent-primary cursor-pointer" 
-                  />
-                  <div className="flex justify-between text-[10px] font-black text-gray-400 uppercase">
-                     <span>29.000đ</span>
-                     <span>199.000đ</span>
-                  </div>
-               </div>
+              <div className="flex flex-col gap-6">
+                <div className="flex justify-between items-center">
+                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Mức giá túi mù (VND)</label>
+                  <span className="text-3xl font-black text-primary">{price.toLocaleString('vi-VN')}đ</span>
+                </div>
+                <input
+                  type="range"
+                  min="29000"
+                  max="199000"
+                  step="1000"
+                  value={price}
+                  onChange={(e) => setPrice(parseInt(e.target.value))}
+                  className="w-full h-2 bg-gray-100 rounded-full appearance-none accent-primary cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] font-black text-gray-400 uppercase">
+                  <span>29.000đ</span>
+                  <span>199.000đ</span>
+                </div>
+              </div>
 
-               <div className="grid grid-cols-2 gap-8">
-                  <div className="flex flex-col gap-3">
-                     <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Số lượng vật phẩm</label>
-                     <select className="w-full p-4 bg-gray-50 border border-transparent rounded-[24px] text-sm font-black outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all appearance-none cursor-pointer">
-                        <option>3 - 5 loại nông sản</option>
-                        <option>5 - 8 loại nông sản</option>
-                        <option>Gói tiết kiệm (10kg+)</option>
-                     </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                <div className="flex flex-col gap-3">
+                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Số lượng vật phẩm</label>
+                  <select value={boxType} onChange={(e) => setBoxType(e.target.value)} className="w-full p-4 bg-gray-50 border border-transparent rounded-[24px] text-sm font-black outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all appearance-none cursor-pointer">
+                    <option>3 - 5 loại nông sản</option>
+                    <option>5 - 8 loại nông sản</option>
+                    <option>Gói tiết kiệm (10kg+)</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Hình ảnh túi mù</label>
+                  <div className="relative group">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setBoxImage(file);
+                          const reader = new FileReader();
+                          reader.onloadend = () => setBoxImagePreview(reader.result as string);
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="hidden"
+                      id="box-image-upload"
+                    />
+                    <label htmlFor="box-image-upload" className="w-full p-4 bg-gray-50 border border-dashed border-gray-200 rounded-[24px] flex items-center gap-3 cursor-pointer hover:bg-white hover:border-primary/30 transition-all">
+                      <ImagePlus className="size-5 text-gray-400" />
+                      <span className="text-xs font-bold text-gray-500 truncate">{boxImage ? boxImage.name : 'Tải lên ảnh bìa túi mù...'}</span>
+                    </label>
                   </div>
-                  <div className="flex flex-col gap-3">
-                     <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Trạng thái công khai</label>
-                     <div className="flex items-center gap-2 h-full px-4">
-                        <div className="relative inline-block w-12 h-6 rounded-full bg-primary/20">
-                           <div className="absolute left-1 top-1 size-4 bg-primary rounded-full transition-all translate-x-6" />
-                        </div>
-                        <span className="text-xs font-bold text-gray-600">Hiển thị ngay trên cửa hàng</span>
-                     </div>
-                  </div>
-               </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         <div className="flex flex-col gap-8">
-           <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-10 flex flex-col gap-8">
-              <div className="size-20 bg-primary/5 rounded-[32px] flex items-center justify-center mx-auto text-primary">
-                 <Gift className="size-10" />
+          <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-10 flex flex-col gap-8">
+            <div className="size-20 bg-primary/5 rounded-[32px] flex items-center justify-center mx-auto text-primary overflow-hidden border border-primary/10">
+              {boxImagePreview ? (
+                <img src={boxImagePreview} className="w-full h-full object-cover" />
+              ) : (
+                <Gift className="size-10" />
+              )}
+            </div>
+            <div className="text-center">
+              <h4 className="text-xl font-black text-gray-900 mb-2">Xem trước túi mù</h4>
+              <p className="text-[11px] text-gray-400 font-medium">Khách hàng sẽ thấy túi này như một hộp quà bất ngờ.</p>
+            </div>
+
+            <div className="p-6 bg-gray-50/50 rounded-[32px] border border-gray-100 flex flex-col gap-4">
+              <div className="flex justify-between items-center text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                <span>Cửa hàng:</span>
+                <span className="text-gray-900">Nông Trại Xanh</span>
               </div>
-              <div className="text-center">
-                 <h4 className="text-xl font-black text-gray-900 mb-2">Xem trước túi mù</h4>
-                 <p className="text-[11px] text-gray-400 font-medium">Khách hàng sẽ thấy túi này như một hộp quà bất ngờ.</p>
+              <div className="flex justify-between items-center text-sm font-black text-gray-900">
+                <span>Giá niêm yết:</span>
+                <span className="text-primary">{price.toLocaleString('vi-VN')}đ</span>
               </div>
-
-              <div className="p-6 bg-gray-50/50 rounded-[32px] border border-gray-100 flex flex-col gap-4">
-                 <div className="flex justify-between items-center text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                    <span>Cửa hàng:</span>
-                    <span className="text-gray-900">Nông Trại Xanh</span>
-                 </div>
-                 <div className="flex justify-between items-center text-sm font-black text-gray-900">
-                    <span>Giá niêm yết:</span>
-                    <span className="text-primary">{price.toLocaleString('vi-VN')}đ</span>
-                 </div>
-                 <div className="flex justify-between items-center text-[11px] font-bold text-gray-500 italic">
-                    <span>Gồm:</span>
-                    <span>3-5 món ngẫu nhiên</span>
-                 </div>
+              <div className="flex justify-between items-center text-[11px] font-bold text-gray-500 italic">
+                <span>Gồm:</span>
+                <span>{boxType}</span>
               </div>
-
-              <div className="p-6 bg-primary/5 rounded-[32px] border border-primary/10 flex items-start gap-3">
-                 <Info className="size-4 text-primary shrink-0 mt-1" />
-                 <p className="text-[10px] text-gray-500 font-medium leading-relaxed">
-                   Thuật toán sẽ tự động phân phối nông sản dựa trên số lượng tồn kho của bạn để đảm bảo không món nào bị hư hỏng.
-                 </p>
-              </div>
-
-              <button className="w-full py-5 bg-primary text-white font-black rounded-[32px] flex items-center justify-center gap-3 shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all transform active:scale-[0.98]">
-                 <Sparkles className="size-5" /> TẠO COMBO RANDOM
-              </button>
-           </div>
-
-           <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-8 flex flex-col gap-6">
-              <h5 className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                Túi đang chạy ({runningBoxes.length})
-              </h5>
-
-              {loadingBoxes && (
-                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-center gap-3">
-                  <Clock className="size-4 text-primary" />
-                  <p className="text-[11px] text-gray-600 font-medium">Đang tải danh sách túi mù...</p>
+              {selectedItems.length > 0 && (
+                <div className="flex justify-between items-center text-[11px] font-bold text-gray-500 italic">
+                  <span>Đã chọn:</span>
+                  <span className="truncate ml-4 max-w-[120px]">{selectedItems.map(id => realItems.find(i => i.id === id)?.productName).join(', ')}</span>
                 </div>
               )}
+            </div>
 
-              {error && !loadingBoxes && (
-                <div className="p-4 bg-red-50 rounded-2xl border border-red-100 flex items-center gap-3">
-                  <AlertCircle className="size-4 text-red-500" />
-                  <p className="text-[11px] text-red-700 font-medium">{error}</p>
-                </div>
-              )}
+            <div className="p-6 bg-primary/5 rounded-[32px] border border-primary/10 flex items-start gap-3">
+              <Info className="size-4 text-primary shrink-0 mt-1" />
+              <p className="text-[10px] text-gray-500 font-medium leading-relaxed">
+                Thuật toán sẽ tự động phân phối nông sản dựa trên số lượng tồn kho của bạn để đảm bảo không món nào bị hư hỏng.
+              </p>
+            </div>
 
-              {!loadingBoxes && !error && (
-                <div className="space-y-4">
-                  {runningBoxes.map((box) => (
-                    <div
-                      key={box.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Sprout className="size-5 text-primary" />
-                        <div>
-                          <p className="text-xs font-black text-gray-800 uppercase">
-                            {box.boxType || `Túi mù #${box.id}`}
-                          </p>
-                          <p className="text-[10px] text-gray-400 font-bold">
-                            Giá: {box.price?.toLocaleString('vi-VN')}đ
-                          </p>
-                        </div>
+            {successMsg && (
+              <div className="p-4 bg-green-50 rounded-2xl border border-green-100 flex items-center gap-3">
+                <CheckCircle2 className="size-4 text-green-500" />
+                <p className="text-[11px] text-green-700 font-medium">{successMsg}</p>
+              </div>
+            )}
+
+            <button onClick={handleCreateBox} disabled={creating} className="w-full py-5 bg-primary text-white font-black rounded-[32px] flex items-center justify-center gap-3 shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed">
+              <Sparkles className="size-5" /> {creating ? 'ĐANG TẠO...' : 'TẠO COMBO RANDOM'}
+            </button>
+          </div>
+
+          <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-8 flex flex-col gap-6">
+            <h5 className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">
+              Túi đang chạy ({runningBoxes.length})
+            </h5>
+
+            {loadingBoxes && (
+              <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-center gap-3">
+                <Clock className="size-4 text-primary" />
+                <p className="text-[11px] text-gray-600 font-medium">Đang tải danh sách túi mù...</p>
+              </div>
+            )}
+
+            {error && !loadingBoxes && (
+              <div className="p-4 bg-red-50 rounded-2xl border border-red-100 flex items-center gap-3">
+                <AlertCircle className="size-4 text-red-500" />
+                <p className="text-[11px] text-red-700 font-medium">{error}</p>
+              </div>
+            )}
+
+            {!loadingBoxes && !error && (
+              <div className="space-y-4">
+                {runningBoxes.map((box) => (
+                  <div
+                    key={box.id}
+                    className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Sprout className="size-5 text-primary" />
+                      <div>
+                        <p className="text-xs font-black text-gray-800 uppercase">
+                          {box.boxType || `Túi mù #${box.id}`}
+                        </p>
+                        <p className="text-[10px] text-gray-400 font-bold">
+                          Giá: {box.price?.toLocaleString('vi-VN')}đ
+                        </p>
                       </div>
-                      <button className="text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Trash2 className="size-4" />
-                      </button>
                     </div>
-                  ))}
+                    <button onClick={() => handleDeleteBox(box.id)} disabled={deletingId === box.id} className="text-red-400 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50">
+                      {deletingId === box.id ? <Clock className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+                    </button>
+                  </div>
+                ))}
 
-                  {!runningBoxes.length && (
-                    <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] text-center">
-                      Bạn chưa có túi mù nào đang chạy
-                    </p>
-                  )}
-                </div>
-              )}
-           </div>
+                {!runningBoxes.length && (
+                  <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] text-center">
+                    Bạn chưa có túi mù nào đang chạy
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-// Add fix: Export default
 export default BlindBoxTool;

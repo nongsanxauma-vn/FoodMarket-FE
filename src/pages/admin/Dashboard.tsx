@@ -1,56 +1,106 @@
 
-import React from 'react';
-import { 
-  ShieldCheck, 
-  AlertTriangle, 
-  Gavel, 
-  TrendingDown, 
-  UserCheck, 
-  Search, 
-  Bell, 
-  Clock, 
+import React, { useEffect, useState } from 'react';
+import {
+  ShieldCheck,
+  AlertTriangle,
+  Gavel,
+  TrendingDown,
+  UserCheck,
+  Search,
+  Bell,
+  Clock,
   Lock,
   ChevronRight,
   UserX,
   CheckCircle2,
   XCircle,
-  LogOut
+  LogOut,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
+import { userService, orderService, productService, UserResponse, OrderResponse, ProductResponse } from '../../services';
 
 const AdminDashboard: React.FC = () => {
+  const [users, setUsers] = useState<UserResponse[]>([]);
+  const [orders, setOrders] = useState<OrderResponse[]>([]);
+  const [products, setProducts] = useState<ProductResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [usersRes, ordersRes, productsRes] = await Promise.all([
+          userService.getAllUsers(),
+          orderService.getAllOrders(),
+          productService.getAll(),
+        ]);
+        if (usersRes.result) setUsers(Array.isArray(usersRes.result) ? usersRes.result : [usersRes.result]);
+        if (ordersRes.result) setOrders(Array.isArray(ordersRes.result) ? ordersRes.result : [ordersRes.result]);
+        if (productsRes.result) setProducts(Array.isArray(productsRes.result) ? productsRes.result : [productsRes.result]);
+      } catch (err) {
+        console.error('Failed to load admin dashboard', err);
+        setError('Không thể tải dữ liệu admin dashboard.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const pendingKyc = users.filter(u => u.status === 'PENDING' || u.kycStatus === 'PENDING');
+  const shopOwners = users.filter(u => u.roleName === 'SHOP_OWNER' || u.roleName === 'FARMER');
+  const buyers = users.filter(u => u.roleName === 'BUYER');
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[600px] gap-4">
+        <Loader2 className="size-10 text-primary animate-spin" />
+        <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Đang tải admin dashboard...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-8 p-8 animate-in fade-in duration-500">
       {/* Top Admin Action Bar */}
       <div className="flex justify-between items-center bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
         <div className="flex items-center gap-6 flex-1 max-w-xl">
-           <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
-              <input type="text" placeholder="Tìm kiếm nhanh đơn hàng, tài khoản, khiếu nại..." className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-transparent rounded-2xl text-sm font-medium outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all" />
-           </div>
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
+            <input type="text" placeholder="Tìm kiếm nhanh đơn hàng, tài khoản, khiếu nại..." className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-transparent rounded-2xl text-sm font-medium outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all" />
+          </div>
         </div>
         <div className="flex items-center gap-4">
-           <button className="size-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 hover:text-primary transition-all relative">
-              <Bell className="size-6" />
-              <span className="absolute top-3 right-3 size-2.5 bg-red-500 border-2 border-white rounded-full"></span>
-           </button>
-           <div className="h-8 w-px bg-gray-100 mx-2" />
-           <div className="flex items-center gap-4">
-              <div className="text-right hidden sm:block">
-                 <p className="text-xs font-black text-gray-900">Admin Hệ Thống</p>
-                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Root Access</p>
-              </div>
-              <img src="https://picsum.photos/seed/admin_avatar/100/100" className="size-11 rounded-2xl object-cover border-2 border-white shadow-sm" alt="avatar" />
-           </div>
+          <button className="size-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 hover:text-primary transition-all relative">
+            <Bell className="size-6" />
+            <span className="absolute top-3 right-3 size-2.5 bg-red-500 border-2 border-white rounded-full"></span>
+          </button>
+          <div className="h-8 w-px bg-gray-100 mx-2" />
+          <div className="flex items-center gap-4">
+            <div className="text-right hidden sm:block">
+              <p className="text-xs font-black text-gray-900">Admin Hệ Thống</p>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Root Access</p>
+            </div>
+            <img src="https://picsum.photos/seed/admin_avatar/100/100" className="size-11 rounded-2xl object-cover border-2 border-white shadow-sm" alt="avatar" />
+          </div>
         </div>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-center gap-3 text-red-600 font-bold text-sm">
+          <AlertCircle className="size-5" /> {error}
+        </div>
+      )}
 
       {/* Top Bar Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {[
-          { label: 'CHỜ DUYỆT KYC', value: '42', trend: '+12% tăng so với tháng trước', icon: UserCheck, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'CẢNH BÁO SHOP', value: '18', trend: '+4 mới cần xử lý ngay', icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-50' },
-          { label: 'TRANH CHẤP MỞ', value: '07', trend: '-30% giảm đáng kể', icon: Gavel, color: 'text-red-500', bg: 'bg-red-50' },
-          { label: 'TỈ LỆ HOÀN HÀNG', value: '2.4%', trend: 'Ổn định trong ngưỡng an toàn', icon: TrendingDown, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+          { label: 'CHỜ DUYỆT KYC', value: pendingKyc.length.toString().padStart(2, '0'), trend: `${users.length} tổng tài khoản`, icon: UserCheck, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'TỔNG CỬA HÀNG', value: shopOwners.length.toString().padStart(2, '0'), trend: `${shopOwners.filter(s => s.status === 'ACTIVE').length} đang hoạt động`, icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-50' },
+          { label: 'TỔNG ĐƠN HÀNG', value: orders.length.toString().padStart(2, '0'), trend: `${products.length} sản phẩm`, icon: Gavel, color: 'text-red-500', bg: 'bg-red-50' },
+          { label: 'TỔNG NGƯỜI MUA', value: buyers.length.toString(), trend: 'Đang hoạt động', icon: TrendingDown, color: 'text-emerald-500', bg: 'bg-emerald-50' },
         ].map((stat, i) => (
           <div key={i} className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm relative group">
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{stat.label}</p>
@@ -64,7 +114,7 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* KYC Queue & Dispute Spotlight */}
+        {/* KYC Queue */}
         <div className="lg:col-span-2 flex flex-col gap-8">
           <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
             <div className="px-10 py-6 border-b border-gray-50 flex items-center justify-between">
@@ -75,35 +125,30 @@ const AdminDashboard: React.FC = () => {
               <thead className="bg-gray-50/50">
                 <tr>
                   <th className="px-10 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Nông dân</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Khu vực</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Chứng từ</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Email</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Trạng thái</th>
                   <th className="px-10 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {[
-                  { name: 'Nguyễn Văn An', id: '068092xxxx', area: 'Lâm Đồng', docs: ['id', 'file'] },
-                  { name: 'Trần Thị Bé', id: '072095xxxx', area: 'Tiền Giang', docs: ['file'] },
-                ].map((item, i) => (
-                  <tr key={i} className="hover:bg-gray-50/30 transition-colors">
+                {pendingKyc.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-10 py-8 text-center text-gray-400 font-bold text-sm">Không có yêu cầu KYC nào đang chờ.</td>
+                  </tr>
+                ) : pendingKyc.slice(0, 5).map((item, i) => (
+                  <tr key={item.id || i} className="hover:bg-gray-50/30 transition-colors">
                     <td className="px-10 py-5">
                       <div className="flex items-center gap-4">
-                        <img src={`https://picsum.photos/seed/k${i}/80/80`} className="size-10 rounded-full object-cover" />
-                        <span className="text-sm font-bold text-gray-900">{item.name}</span>
+                        <img src={item.logoUrl || `https://picsum.photos/seed/k${i}/80/80`} className="size-10 rounded-full object-cover" />
+                        <span className="text-sm font-bold text-gray-900">{item.fullName || 'N/A'}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-5 text-xs font-bold text-gray-600">{item.area}</td>
+                    <td className="px-6 py-5 text-xs font-bold text-gray-600">{item.email || 'N/A'}</td>
                     <td className="px-6 py-5">
-                      <div className="flex gap-2">
-                        {item.docs.map(d => (
-                          <div key={d} className="size-8 bg-orange-50 text-orange-500 rounded-lg flex items-center justify-center">
-                            <span className="material-symbols-outlined text-lg">{d === 'id' ? 'badge' : 'description'}</span>
-                          </div>
-                        ))}
-                      </div>
+                      <span className="px-3 py-1 bg-orange-50 text-orange-500 text-[10px] font-bold rounded-full">{item.status || 'PENDING'}</span>
                     </td>
                     <td className="px-10 py-5 text-right">
-                       <button className="px-6 py-2 bg-blue-50 text-blue-600 text-xs font-black rounded-xl hover:bg-blue-100 transition-colors">Duyệt</button>
+                      <button onClick={async () => { try { await userService.approveShopOwner(item.id); setUsers(prev => prev.map(u => u.id === item.id ? { ...u, status: 'ACTIVE', kycStatus: 'APPROVED' } : u)); } catch (e) { console.error(e); } }} className="px-6 py-2 bg-blue-50 text-blue-600 text-xs font-black rounded-xl hover:bg-blue-100 transition-colors">Duyệt</button>
                     </td>
                   </tr>
                 ))}
@@ -111,111 +156,88 @@ const AdminDashboard: React.FC = () => {
             </table>
           </div>
 
-          <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden flex flex-col md:flex-row h-[420px]">
-            <div className="md:w-1/2 relative">
-               <img src="https://picsum.photos/seed/dispute1/600/600" className="w-full h-full object-cover" />
-               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-               <div className="absolute bottom-6 left-6 text-white">
-                  <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-lg text-[10px] font-black uppercase tracking-widest">Ảnh thực tế khiếu nại</span>
-                  <p className="text-[10px] font-bold mt-2 opacity-80 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-sm">photo_camera</span> Bằng chứng nhận hàng - Đơn #AG-9921
-                  </p>
-               </div>
+          {/* Recent Orders */}
+          <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
+            <div className="px-10 py-6 border-b border-gray-50">
+              <h4 className="font-black text-gray-800 uppercase tracking-tight">Đơn hàng gần đây</h4>
             </div>
-            <div className="md:w-1/2 p-10 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2 text-orange-600">
-                    <Gavel className="size-5" />
-                    <span className="text-xs font-black uppercase tracking-widest">Xử lý tranh chấp</span>
-                  </div>
-                  <span className="px-2 py-0.5 bg-orange-50 text-orange-600 text-[10px] font-black rounded-md">ƯU TIÊN CAO</span>
-                </div>
-                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Sản phẩm</h4>
-                <h3 className="text-xl font-black text-gray-900 mb-4">Sầu Riêng Ri6 - Loại 1 (5kg)</h3>
-                <div className="p-5 bg-gray-50 rounded-2xl border border-gray-100">
-                  <p className="text-xs font-medium text-gray-500 italic leading-relaxed">
-                    "Trái bị nứt vỏ và có dấu hiệu dập nát, mùi chua nồng ngay khi mở thùng. Yêu cầu hoàn tiền do chất lượng không đạt 'Loại 1'."
-                  </p>
-                </div>
-                <div className="mt-4">
-                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Số tiền hoàn</p>
-                   <p className="text-2xl font-black text-red-500">1,250,000đ</p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <button className="flex-1 py-4 bg-[#38703d] text-white font-black rounded-2xl text-sm shadow-xl shadow-[#38703d]/20">Phê duyệt hoàn tiền</button>
-                <button className="flex-1 py-4 bg-red-50 text-red-500 font-black rounded-2xl text-sm border border-red-100">Từ chối</button>
-              </div>
-            </div>
+            <table className="w-full text-left">
+              <thead className="bg-gray-50/50">
+                <tr>
+                  <th className="px-10 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Mã đơn</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Tổng tiền</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {orders.slice(0, 5).map((order, i) => (
+                  <tr key={order.id || i} className="hover:bg-gray-50/30 transition-colors">
+                    <td className="px-10 py-5 text-sm font-black text-gray-900">#{order.id}</td>
+                    <td className="px-6 py-5 text-center text-sm font-bold text-gray-700">{(order.totalAmount || 0).toLocaleString('vi-VN')}đ</td>
+                    <td className="px-6 py-5 text-center">
+                      <span className={`px-3 py-1 rounded-lg text-[10px] font-black ${order.status === 'COMPLETED' || order.status === 'DELIVERED' ? 'bg-green-50 text-green-600' : order.status === 'CANCELLED' ? 'bg-red-50 text-red-500' : 'bg-orange-50 text-orange-500'}`}>
+                        {order.status || 'N/A'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {orders.length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="px-10 py-8 text-center text-gray-400 font-bold text-sm">Chưa có đơn hàng nào.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
         {/* Side Widgets */}
         <div className="flex flex-col gap-8">
-           <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-10">
-              <div className="flex items-center gap-3 mb-8">
-                 <AlertTriangle className="size-6 text-red-500" />
-                 <h4 className="font-black text-gray-800 uppercase tracking-tight">Giám sát shop (Tín nhiệm thấp)</h4>
-              </div>
-              <div className="space-y-6">
-                {[
-                  { name: 'Nông Sản Sạch Ba Rịa', reason: '58/50 đánh giá 1 sao', time: '01 : 42 : 05', progress: 85 },
-                  { name: 'Trái Cây Miền Tây Export', reason: '52/50 đánh giá 1 sao', time: '04 : 12 : 30', progress: 95 },
-                ].map((shop, i) => (
-                  <div key={i} className="p-6 bg-gray-50/50 rounded-[32px] border border-gray-100 relative group">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <p className="text-sm font-black text-gray-900">{shop.name}</p>
-                        <p className="text-[10px] text-red-500 font-black mt-1 uppercase">{shop.reason}</p>
-                      </div>
-                      <div className="size-10 bg-red-500 text-white rounded-xl flex items-center justify-center">
-                         <Lock className="size-5" />
-                      </div>
+          <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-10">
+            <div className="flex items-center gap-3 mb-8">
+              <AlertTriangle className="size-6 text-red-500" />
+              <h4 className="font-black text-gray-800 uppercase tracking-tight">Giám sát shop (Tín nhiệm thấp)</h4>
+            </div>
+            <div className="space-y-6">
+              {shopOwners.filter(s => s.status === 'INACTIVE' || s.status === 'DEACTIVATED').length === 0 ? (
+                <p className="text-sm text-gray-400 font-medium text-center py-4">Không có shop nào vi phạm.</p>
+              ) : shopOwners.filter(s => s.status === 'INACTIVE' || s.status === 'DEACTIVATED').slice(0, 3).map((shop, i) => (
+                <div key={i} className="p-6 bg-gray-50/50 rounded-[32px] border border-gray-100 relative group">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="text-sm font-black text-gray-900">{shop.shopName || shop.fullName || 'Shop N/A'}</p>
+                      <p className="text-[10px] text-red-500 font-black mt-1 uppercase">{shop.status}</p>
                     </div>
-                    <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden mb-3">
-                       <div className="h-full bg-red-500" style={{ width: `${shop.progress}%` }} />
-                    </div>
-                    <div className="flex justify-between items-center">
-                       <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tự động khóa sau</span>
-                       <span className="text-sm font-black text-red-500 font-mono tracking-widest">{shop.time}</span>
+                    <div className="size-10 bg-red-500 text-white rounded-xl flex items-center justify-center">
+                      <Lock className="size-5" />
                     </div>
                   </div>
-                ))}
-              </div>
-           </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
-           <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-10">
-              <h4 className="font-black text-gray-800 uppercase tracking-tight mb-8">Danh sách "Bom hàng"</h4>
-              <div className="space-y-6">
-                {[
-                  { name: 'van_hau_99', phone: '0392xxxx88', count: '08' },
-                  { name: 'lan_anh_sg', phone: '0901xxxx22', count: '05' },
-                ].map((user, i) => (
-                  <div key={i} className="flex items-center justify-between group">
-                    <div className="flex items-center gap-4">
-                      <div className="size-10 bg-gray-100 rounded-full" />
-                      <div>
-                        <p className="text-sm font-black text-gray-900">{user.name}</p>
-                        <p className="text-[10px] text-gray-400 font-bold">SĐT: {user.phone}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                       <span className="size-8 bg-red-50 text-red-500 text-xs font-black rounded-lg flex items-center justify-center">{user.count}</span>
-                       <button className="text-[10px] font-black text-red-500 hover:underline uppercase tracking-widest">Chặn</button>
-                    </div>
-                  </div>
-                ))}
+          <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-10">
+            <h4 className="font-black text-gray-800 uppercase tracking-tight mb-8">Tổng quan hệ thống</h4>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl">
+                <span className="text-xs font-bold text-gray-600">Tổng tài khoản</span>
+                <span className="text-sm font-black text-gray-900">{users.length}</span>
               </div>
-              <p className="text-[10px] text-gray-400 font-medium italic mt-8 border-t border-gray-50 pt-6 leading-relaxed">
-                * Hệ thống tự động gắn cờ tài khoản khi tỉ lệ nhận &lt; 70% trong 3 tháng gần nhất.
-              </p>
-           </div>
+              <div className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl">
+                <span className="text-xs font-bold text-gray-600">Tổng sản phẩm</span>
+                <span className="text-sm font-black text-gray-900">{products.length}</span>
+              </div>
+              <div className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl">
+                <span className="text-xs font-bold text-gray-600">Tổng đơn hàng</span>
+                <span className="text-sm font-black text-gray-900">{orders.length}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-// Add fix: Export default
 export default AdminDashboard;

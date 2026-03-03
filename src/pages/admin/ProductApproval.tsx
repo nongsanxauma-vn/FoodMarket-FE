@@ -1,124 +1,120 @@
-import React, { useState } from 'react';
-import { CheckCircle, Search, Filter, MoreVertical, Eye, Trash2, Check, X, ArrowLeft, AlertCircle } from 'lucide-react';
-
-interface Product {
-  id: string;
-  name: string;
-  farmer: string;
-  farmerId: string;
-  image: string;
-  farmerImage: string;
-  category: string;
-  price: string;
-  stock: string;
-  date: string;
-  status: string;
-  color: string;
-  description?: string;
-  expiry?: string;
-  unit?: string;
-  origin?: string;
-}
+import React, { useState, useEffect } from 'react';
+import { CheckCircle, Search, Filter, MoreVertical, Eye, Trash2, Check, X, ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
+import { productService, ProductResponse } from '../../services';
 
 const ProductApproval: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>([
-    { 
-      id: 'SP-88912', 
-      name: 'Cam hữu cơ Đà Lạt', 
-      farmer: 'Nguyễn Văn An',
-      farmerId: 'ND-88912',
-      image: 'https://picsum.photos/seed/1/200/200',
-      farmerImage: 'https://picsum.photos/seed/k1/80/80',
-      category: 'Rau quả tươi',
-      price: '45,000đ/kg',
-      stock: '150kg',
-      date: '14/10/2023 09:30',
-      status: 'CHỜ DUYỆT',
-      color: 'text-blue-600',
-      description: 'Cam hữu cơ được canh tác theo tiêu chuẩn nghiêm ngặt, đảm bảo độ tươi ngon và an toàn tuyệt đối cho sức khỏe gia đình bạn. Không sử dụng hóa chất bảo vệ thực vật có hại.',
-      expiry: '20/10/2023',
-      unit: 'kg',
-      origin: 'Lâm Đồng, Đà Lạt'
-    },
-    { 
-      id: 'SP-22105', 
-      name: 'Xà lách xoăn Đà Lạt',
-      farmer: 'Trần Thị Bé',
-      farmerId: 'ND-22105',
-      image: 'https://picsum.photos/seed/2/200/200',
-      farmerImage: 'https://picsum.photos/seed/k2/80/80',
-      category: 'Rau ăn lá',
-      price: '25,000đ/kg',
-      stock: '200kg',
-      date: '14/10/2023 08:15',
-      status: 'ĐANG XEM XÉT',
-      color: 'text-orange-500',
-      description: 'Xà lách xoăn tươi, màu sắc xanh tự nhiên, không bị héo. Được trồng trên nền đất giàu dinh dưỡng và tưới nước sạch theo tiêu chuẩn hữu cơ.',
-      expiry: '16/10/2023',
-      unit: 'kg',
-      origin: 'Lâm Đồng, Đà Lạt'
-    },
-    { 
-      id: 'SP-00122', 
-      name: 'Cà phê Tây Nguyên',
-      farmer: 'Lê Hoàng Nam',
-      farmerId: 'ND-00122',
-      image: 'https://picsum.photos/seed/3/200/200',
-      farmerImage: 'https://picsum.photos/seed/k3/80/80',
-      category: 'Cà phê hạt',
-      price: '85,000đ/kg',
-      stock: '500kg',
-      date: '13/10/2023 16:45',
-      status: 'CHỜ DUYỆT',
-      color: 'text-blue-600',
-      description: 'Cà phê Arabica chọn lọc từ Tây Nguyên, hương vị đắng nhẹ với vị ngọt tự nhiên. Được chứng nhận hữu cơ và bền vững.',
-      expiry: '13/04/2024',
-      unit: 'kg',
-      origin: 'Đắk Lắk, Tây Nguyên'
-    },
-  ]);
+  const [products, setProducts] = useState<ProductResponse[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<ProductResponse | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(false);
-  const [rejectingProductId, setRejectingProductId] = useState<string | null>(null);
+  const [rejectingProductId, setRejectingProductId] = useState<number | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleApprove = (productId: string) => {
-    setProducts(products.map(p => 
-      p.id === productId ? { ...p, status: 'ĐÃ DUYỆT', color: 'text-emerald-600' } : p
-    ));
-    setSelectedProduct(null);
+  const fetchProducts = async () => {
+    try {
+      setIsLoading(true);
+      const response = await productService.getAll();
+      if (response.result) {
+        setProducts(response.result);
+      }
+    } catch (err) {
+      console.error('Failed to fetch products', err);
+      setError('Mất kết nối tải dữ liệu. Vui lòng thử lại sau.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleRejectClick = (productId: string) => {
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const handleApprove = async (product: ProductResponse) => {
+    if (!window.confirm(`Bạn có chắc muốn duyệt sản phẩm "${product.productName}"?`)) return;
+
+    try {
+      setIsProcessing(true);
+      await productService.updateProduct(product.id, {
+        productName: product.productName,
+        sellingPrice: product.sellingPrice,
+        stockQuantity: product.stockQuantity,
+        unit: product.unit,
+        description: product.description,
+        imageUrl: product.imageUrl,
+        // The backend expects "status" in some form if it accepts it. We pass it as ANY because the interface might complain.
+        status: 'AVAILABLE'
+      } as any);
+
+      alert(`Đã duyệt sản phẩm ${product.productName}`);
+      setSelectedProduct(null);
+      fetchProducts(); // Reload list
+    } catch (err: any) {
+      alert(err?.data?.message || 'Có lỗi khi duyệt sản phẩm');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRejectClick = (productId: number) => {
     setRejectingProductId(productId);
     setShowRejectModal(true);
   };
 
-  const confirmReject = () => {
+  const confirmReject = async () => {
     if (!rejectReason.trim()) {
       alert('Vui lòng nhập lý do từ chối');
       return;
     }
-    
-    if (rejectingProductId) {
-      setProducts(products.map(p => 
-        p.id === rejectingProductId ? { ...p, status: 'BỊ TỪ CHỐI', color: 'text-red-600' } : p
-      ));
+
+    if (!rejectingProductId) return;
+
+    try {
+      setIsProcessing(true);
+      const product = products.find(p => p.id === rejectingProductId);
+      if (product) {
+        await productService.updateProduct(rejectingProductId, {
+          productName: product.productName,
+          sellingPrice: product.sellingPrice,
+          stockQuantity: product.stockQuantity,
+          unit: product.unit,
+          description: `[TỪ CHỐI: ${rejectReason}] ${product.description}`,
+          imageUrl: product.imageUrl,
+          status: 'OUT_OF_STOCK'
+        } as any);
+
+        alert(`Đã từ chối sản phẩm #${rejectingProductId}`);
+      }
+
+      setShowRejectModal(false);
+      setRejectReason('');
+      setRejectingProductId(null);
+      setSelectedProduct(null);
+      fetchProducts(); // Reload
+    } catch (err: any) {
+      alert(err?.data?.message || 'Có lỗi khi từ chối sản phẩm');
+    } finally {
+      setIsProcessing(false);
     }
-    
-    setShowRejectModal(false);
-    setRejectReason('');
-    setRejectingProductId(null);
-    setSelectedProduct(null);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[600px] gap-4">
+        <Loader2 className="size-10 text-primary animate-spin" />
+        <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Đang tải danh sách sản phẩm...</p>
+      </div>
+    );
+  }
 
   // Nếu có sản phẩm được chọn, hiển thị modal chi tiết
   if (selectedProduct) {
     return (
       <div className="flex flex-col gap-8 p-8 animate-in fade-in duration-500">
         <div className="flex items-center gap-4 mb-6">
-          <button 
+          <button
             onClick={() => setSelectedProduct(null)}
             className="size-11 bg-white border border-gray-100 rounded-2xl flex items-center justify-center text-gray-400 hover:text-gray-900 transition-all shadow-sm"
           >
@@ -134,7 +130,7 @@ const ProductApproval: React.FC = () => {
           {/* Hình ảnh sản phẩm */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden p-8">
-              <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-auto rounded-2xl object-cover mb-6" />
+              <img src={selectedProduct.imageUrl || 'https://picsum.photos/seed/product/400/400'} alt={selectedProduct.productName} className="w-full h-auto rounded-2xl object-cover mb-6 border border-gray-100 bg-gray-50" />
               <div className="space-y-4">
                 <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
                   <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-2">ID SẢN PHẨM</p>
@@ -142,7 +138,7 @@ const ProductApproval: React.FC = () => {
                 </div>
                 <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
                   <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">DANH MỤC</p>
-                  <p className="text-sm font-bold text-gray-900">{selectedProduct.category}</p>
+                  <p className="text-sm font-bold text-gray-900">Nông sản</p>
                 </div>
               </div>
             </div>
@@ -156,51 +152,21 @@ const ProductApproval: React.FC = () => {
               <div className="space-y-6">
                 <div>
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Tên sản phẩm</label>
-                  <p className="text-lg font-black text-gray-900">{selectedProduct.name}</p>
+                  <p className="text-lg font-black text-gray-900">{selectedProduct.productName}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-6">
                   <div>
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Giá bán</label>
-                    <p className="text-lg font-black text-orange-600">{selectedProduct.price}</p>
+                    <p className="text-lg font-black text-orange-600">{(selectedProduct.sellingPrice || 0).toLocaleString('vi-VN')}đ / {selectedProduct.unit}</p>
                   </div>
                   <div>
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Tồn kho</label>
-                    <p className="text-lg font-black text-gray-900">{selectedProduct.stock}</p>
+                    <p className="text-lg font-black text-gray-900">{selectedProduct.stockQuantity}</p>
                   </div>
                 </div>
                 <div>
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Mô tả sản phẩm</label>
-                  <p className="text-sm text-gray-600 leading-relaxed">{selectedProduct.description}</p>
-                </div>
-                <div className="grid grid-cols-3 gap-6">
-                  <div>
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Nguồn gốc</label>
-                    <p className="text-sm font-bold text-gray-900">{selectedProduct.origin}</p>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Hạn sử dụng</label>
-                    <p className="text-sm font-bold text-gray-900">{selectedProduct.expiry}</p>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Đơn vị</label>
-                    <p className="text-sm font-bold text-gray-900">{selectedProduct.unit}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Thông tin nông dân */}
-            <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm p-8">
-              <h3 className="text-2xl font-black text-gray-900 mb-6">Thông Tin Nông Dân</h3>
-              <div className="flex items-center gap-6">
-                <img src={selectedProduct.farmerImage} alt={selectedProduct.farmer} className="size-20 rounded-2xl object-cover" />
-                <div className="flex-1">
-                  <p className="text-sm font-black text-gray-900">{selectedProduct.farmer}</p>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{selectedProduct.farmerId}</p>
-                  <div className="mt-3 flex gap-2">
-                    <span className="px-3 py-1.5 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-full">KYC APPROVED</span>
-                    <span className="px-3 py-1.5 bg-blue-50 text-blue-600 text-[10px] font-black rounded-full">VERIFIED</span>
-                  </div>
+                  <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{selectedProduct.description}</p>
                 </div>
               </div>
             </div>
@@ -212,20 +178,22 @@ const ProductApproval: React.FC = () => {
                   <h3 className="text-lg font-black text-gray-900">Quyết Định</h3>
                   <p className="text-sm text-gray-400 mt-1">Duyệt hoặc từ chối sản phẩm này</p>
                 </div>
-                <div className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest ${selectedProduct.color === 'text-emerald-600' ? 'bg-emerald-50 text-emerald-600' : selectedProduct.color === 'text-red-600' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
-                  {selectedProduct.status}
+                <div className="px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-blue-50 text-blue-600">
+                  {selectedProduct.status || 'PENDING'}
                 </div>
               </div>
               <div className="flex gap-4">
-                <button 
-                  onClick={() => handleApprove(selectedProduct.id)}
-                  className="flex-1 px-6 py-4 bg-emerald-50 text-emerald-600 text-sm font-black rounded-2xl uppercase tracking-widest hover:bg-emerald-100 transition-colors flex items-center justify-center gap-3 border border-emerald-200"
+                <button
+                  disabled={isProcessing}
+                  onClick={() => handleApprove(selectedProduct)}
+                  className="flex-1 px-6 py-4 bg-emerald-50 text-emerald-600 text-sm font-black rounded-2xl uppercase tracking-widest hover:bg-emerald-100 transition-colors flex items-center justify-center gap-3 border border-emerald-200 disabled:opacity-50"
                 >
                   <Check className="size-5" /> Duyệt Sản Phẩm
                 </button>
-                <button 
+                <button
+                  disabled={isProcessing}
                   onClick={() => handleRejectClick(selectedProduct.id)}
-                  className="flex-1 px-6 py-4 bg-red-50 text-red-600 text-sm font-black rounded-2xl uppercase tracking-widest hover:bg-red-100 transition-colors flex items-center justify-center gap-3 border border-red-200"
+                  className="flex-1 px-6 py-4 bg-red-50 text-red-600 text-sm font-black rounded-2xl uppercase tracking-widest hover:bg-red-100 transition-colors flex items-center justify-center gap-3 border border-red-200 disabled:opacity-50"
                 >
                   <X className="size-5" /> Từ Chối
                 </button>
@@ -265,18 +233,20 @@ const ProductApproval: React.FC = () => {
 
               <div className="space-y-3 pt-4 border-t border-gray-100">
                 <button
+                  disabled={isProcessing}
                   onClick={confirmReject}
-                  className="w-full px-6 py-4 bg-red-600 text-white text-sm font-black rounded-2xl uppercase tracking-widest hover:bg-red-700 transition-colors flex items-center justify-center gap-3"
+                  className="w-full px-6 py-4 bg-red-600 text-white text-sm font-black rounded-2xl uppercase tracking-widest hover:bg-red-700 transition-colors flex items-center justify-center gap-3 disabled:opacity-50"
                 >
                   <X className="size-5" /> Xác Nhận Từ Chối
                 </button>
                 <button
+                  disabled={isProcessing}
                   onClick={() => {
                     setShowRejectModal(false);
                     setRejectReason('');
                     setRejectingProductId(null);
                   }}
-                  className="w-full px-6 py-4 bg-gray-50 text-gray-600 text-sm font-black rounded-2xl uppercase tracking-widest hover:bg-gray-100 transition-colors"
+                  className="w-full px-6 py-4 bg-gray-50 text-gray-600 text-sm font-black rounded-2xl uppercase tracking-widest hover:bg-gray-100 transition-colors disabled:opacity-50"
                 >
                   Hủy
                 </button>
@@ -286,119 +256,115 @@ const ProductApproval: React.FC = () => {
         </div>
       )}
 
-      <div className="flex flex-col gap-8 p-8 animate-in fade-in duration-500">
+      <div className="flex flex-col gap-8 p-8 animate-in fade-in duration-500 relative">
         <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl font-black font-display text-gray-900">Duyệt Sản Phẩm Nông Dân</h2>
-          <p className="text-gray-400 font-medium text-sm mt-1">Quản lý và phê duyệt các sản phẩm mà nông dân đăng lên hệ thống XẤU MÃ.</p>
-        </div>
-        <div className="flex items-center gap-4">
-           <div className="bg-white p-4 rounded-[28px] border border-gray-100 shadow-sm flex items-center gap-4 pr-10">
+          <div>
+            <h2 className="text-3xl font-black font-display text-gray-900">Duyệt Sản Phẩm Nông Dân</h2>
+            <p className="text-gray-400 font-medium text-sm mt-1">Quản lý và phê duyệt các sản phẩm mà nông dân đăng lên hệ thống XẤU MÃ.</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="bg-white p-4 rounded-[28px] border border-gray-100 shadow-sm flex items-center gap-4 pr-10">
               <div className="size-10 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
-                 <span className="material-symbols-outlined">pending_actions</span>
+                <span className="material-symbols-outlined">pending_actions</span>
               </div>
               <div>
-                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">CHỜ DUYỆT</p>
-                 <h4 className="text-xl font-black text-gray-900">28</h4>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">TỔNG SẢN PHẨM</p>
+                <h4 className="text-xl font-black text-gray-900">{products.length}</h4>
               </div>
-           </div>
-           <div className="bg-white p-4 rounded-[28px] border border-gray-100 shadow-sm flex items-center gap-4 pr-10">
-              <div className="size-10 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
-                 <span className="material-symbols-outlined">check_circle</span>
-              </div>
-              <div>
-                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ĐÃ DUYỆT HÔM NAY</p>
-                 <h4 className="text-xl font-black text-gray-900">12</h4>
-              </div>
-           </div>
+            </div>
+            <button onClick={fetchProducts} className="size-12 bg-white rounded-[24px] border border-gray-100 shadow-sm flex items-center justify-center text-gray-400 hover:text-primary transition-colors">
+              <span className="material-symbols-outlined">refresh</span>
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-10 py-8 border-b border-gray-50 flex items-center justify-between">
-           <div className="flex items-center gap-4">
+        {error && (
+          <div className="bg-red-50 border border-red-100 p-6 rounded-3xl flex items-center gap-4 text-red-600 font-bold">
+            <AlertCircle className="size-6" />
+            {error}
+          </div>
+        )}
+
+        <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-10 py-8 border-b border-gray-50 flex items-center justify-between">
+            <div className="flex items-center gap-4">
               <h4 className="font-black text-gray-800 uppercase tracking-tight">Danh sách sản phẩm</h4>
               <span className="px-3 py-1 bg-gray-100 text-gray-400 text-[10px] font-black rounded-full">Hiện có {products.length} sản phẩm</span>
-           </div>
-           <div className="flex items-center gap-4">
+            </div>
+            <div className="flex items-center gap-4">
               <button className="size-10 flex items-center justify-center text-gray-300 hover:text-gray-900"><Filter className="size-5" /></button>
               <button className="size-10 flex items-center justify-center text-gray-300 hover:text-gray-900"><MoreVertical className="size-5" /></button>
-           </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-gray-50/50">
-              <tr>
-                <th className="px-10 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Sản phẩm</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Nông dân</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Danh mục</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Giá / Tồn kho</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Ngày đăng</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Trạng thái</th>
-                <th className="px-10 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {products.map((product) => (
-                <tr key={product.id} className="hover:bg-gray-50/30 transition-colors">
-                  <td className="px-10 py-6">
-                    <div className="flex items-center gap-4">
-                      <img src={product.image} className="size-11 rounded-lg object-cover" alt={product.name} />
-                      <div>
-                        <p className="text-sm font-black text-gray-900">{product.name}</p>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">ID: {product.id}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-6">
-                    <div className="flex items-center gap-3">
-                      <img src={product.farmerImage} className="size-8 rounded-full object-cover" />
-                      <div>
-                        <p className="text-sm font-bold text-gray-800">{product.farmer}</p>
-                        <p className="text-[10px] text-gray-400">{product.farmerId}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-6">
-                    <span className="px-3 py-1.5 bg-purple-50 text-purple-600 text-[10px] font-black rounded-full">{product.category}</span>
-                  </td>
-                  <td className="px-6 py-6 text-center">
-                    <div className="flex flex-col gap-1">
-                      <p className="text-sm font-bold text-orange-600">{product.price}</p>
-                      <p className="text-[10px] text-gray-400">{product.stock}</p>
-                    </div>
-                  </td>
-                  <td className="px-6 py-6 text-[11px] font-bold text-gray-400">{product.date}</td>
-                  <td className="px-6 py-6">
-                    <div className="flex items-center gap-2">
-                       <span className={`size-2 rounded-full bg-current ${product.color}`} />
-                       <span className={`text-[10px] font-black uppercase tracking-widest ${product.color}`}>{product.status}</span>
-                    </div>
-                  </td>
-                  <td className="px-10 py-6 text-right">
-                    <div className="flex items-center justify-end gap-3">
-                      <button 
-                        onClick={() => setSelectedProduct(product)}
-                        className="px-4 py-2 bg-blue-50 text-blue-600 text-[10px] font-black rounded-xl uppercase tracking-widest hover:bg-blue-100 transition-colors flex items-center gap-2" title="Xem chi tiết">
-                        <Eye className="size-4" /> Xem
-                      </button>
-                    </div>
-                  </td>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-gray-50/50">
+                <tr>
+                  <th className="px-10 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Sản phẩm</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Nông dân ID</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Danh mục</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Giá / Tồn kho</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Trạng thái</th>
+                  <th className="px-10 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Thao tác</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {products.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-10 py-10 text-center text-gray-400 font-bold">Chưa có sản phẩm nào.</td>
+                  </tr>
+                ) : products.map((product) => (
+                  <tr key={product.id} className="hover:bg-gray-50/30 transition-colors">
+                    <td className="px-10 py-6">
+                      <div className="flex items-center gap-4">
+                        <img src={product.imageUrl || 'https://picsum.photos/seed/product/80/80'} className="size-11 rounded-lg object-cover border border-gray-100 bg-gray-50" alt={product.productName} />
+                        <div>
+                          <p className="text-sm font-black text-gray-900 break-words max-w-[200px] line-clamp-1">{product.productName}</p>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">ID: {product.id}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-6">
+                      <div className="flex items-center gap-3">
+                        <div>
+                          <p className="text-sm font-bold text-gray-800">
+                            {product.shopOwnerId ? `Shop ID: ${product.shopOwnerId}` : 'Chưa có thông tin'}
+                          </p>
+                          {!product.shopOwnerId && <p className="text-[10px] text-red-400 font-bold uppercase mt-1">Lỗi BE: Thiếu shopOwnerId</p>}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-6">
+                      <span className="px-3 py-1.5 bg-purple-50 text-purple-600 text-[10px] font-black rounded-full">Nông sản</span>
+                    </td>
+                    <td className="px-6 py-6 text-center">
+                      <div className="flex flex-col gap-1">
+                        <p className="text-sm font-bold text-orange-600">{(product.sellingPrice || 0).toLocaleString('vi-VN')}đ</p>
+                        <p className="text-[10px] text-gray-400">{product.stockQuantity || 0} {product.unit}</p>
+                      </div>
+                    </td>
+                    <td className="px-6 py-6">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${product.status === 'AVAILABLE' ? 'text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md' :
+                          product.status === 'OUT_OF_STOCK' ? 'text-red-600 bg-red-50 px-2 py-1 rounded-md' : 'text-blue-600 bg-blue-50 px-2 py-1 rounded-md'
+                          }`}>{product.status === 'AVAILABLE' ? 'HOẠT ĐỘNG' : product.status === 'OUT_OF_STOCK' ? 'HẾT HÀNG' : 'CHỜ DUYỆT'}</span>
+                      </div>
+                    </td>
+                    <td className="px-10 py-6 text-right">
+                      <div className="flex items-center justify-end gap-3">
+                        <button
+                          onClick={() => setSelectedProduct(product)}
+                          className="px-4 py-2 bg-blue-50 text-blue-600 text-[10px] font-black rounded-xl uppercase tracking-widest hover:bg-blue-100 transition-colors flex items-center gap-2" title="Xem chi tiết">
+                          <Eye className="size-4" /> Xem
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-        <div className="p-8 bg-white border-t border-gray-50 flex items-center justify-between">
-           <p className="text-xs text-gray-400 font-medium italic">* Ưu tiên xử lý các sản phẩm đã chờ trên 12 giờ để bảo đảm tính kịp thời.</p>
-           <div className="flex items-center gap-3">
-              <button className="px-4 py-2 border border-gray-100 rounded-xl text-xs font-bold text-gray-400">Trước</button>
-              <button className="size-9 bg-[#38703d] text-white rounded-xl text-xs font-black">1</button>
-              <button className="size-9 border border-gray-100 rounded-xl text-xs font-black text-gray-400">2</button>
-              <button className="px-4 py-2 border border-gray-100 rounded-xl text-xs font-bold text-gray-400">Sau</button>
-           </div>
-        </div>
-      </div>
       </div>
     </>
   );

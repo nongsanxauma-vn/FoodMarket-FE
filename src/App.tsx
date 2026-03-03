@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import Sidebar from './components/layout/Sidebar';
-import Home from './pages/Home/Home';
+import BuyerHome from './pages/BuyerHome';
 import ProductDetail from './pages/Product/ProductDetail';
 import Cart from './pages/auth/Cart';
 import Checkout from './pages/auth/Checkout';
@@ -34,7 +34,7 @@ import BadBuyers from './pages/admin/BadBuyers';
 import AdminWallet from './pages/admin/AdminWallet';
 import NotificationManagement from './pages/admin/NotificationManagement';
 import NewsManagement from './pages/admin/NewsManagement';
-import ProductApproval from './pages/admin/ProductApproval';
+// import ProductApproval from './pages/admin/ProductApproval';
 import { AppRole, User, KYCStatus } from './types/index';
 
 const App: React.FC = () => {
@@ -51,6 +51,7 @@ const App: React.FC = () => {
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [isTrackingOpen, setIsTrackingOpen] = useState(false);
   const [isNewsOpen, setIsNewsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const currentUser: User | null = isAuthenticated ? {
     id: 'user-123',
@@ -75,7 +76,7 @@ const App: React.FC = () => {
       document.documentElement.style.overflow = 'unset';
       document.body.style.overflow = 'unset';
     };
-  }, [isCartOpen, isCheckoutOpen, isSuccessOpen, isTrackingOpen]);
+  }, [isCartOpen, isCheckoutOpen, isSuccessOpen, isTrackingOpen, isProfileOpen]);
 
   // Reset order prep when navigating away from Orders
   useEffect(() => {
@@ -84,12 +85,7 @@ const App: React.FC = () => {
     }
   }, [farmerSubPage]);
 
-  // Reset order prep when navigating away from admin Orders
-  useEffect(() => {
-    if (adminSubPage !== 'admin-orders') {
-      setSelectedOrderIdForPrep(null);
-    }
-  }, [adminSubPage]);
+
 
   // Scroll to top when page changes
   useEffect(() => {
@@ -131,6 +127,7 @@ const App: React.FC = () => {
     setIsSuccessOpen(false);
     setIsTrackingOpen(false);
     setIsNewsOpen(false);
+    setIsProfileOpen(false);
     setRole(AppRole.BUYER);
   };
 
@@ -138,6 +135,7 @@ const App: React.FC = () => {
     setIsKYCRequired(false);
     setIsAuthenticated(true);
     setFarmerSubPage('overview');
+    setIsProfileOpen(false);
   };
 
   const handleOpenCart = () => {
@@ -183,12 +181,22 @@ const App: React.FC = () => {
     setIsSuccessOpen(false);
     setIsTrackingOpen(false);
     setIsNewsOpen(false);
+    setIsProfileOpen(false);
     setSelectedProductId(null);
   };
 
   // Rendering logic for Auth Screens
   if (isKYCRequired && (role === AppRole.FARMER || role === AppRole.SHIPPER)) {
-    return <KYC role={role as any} onComplete={handleKYCComplete} onBack={() => setIsKYCRequired(false)} />;
+    return (
+      <KYC
+        role={role as any}
+        onComplete={handleKYCComplete}
+        onBack={() => {
+          setIsKYCRequired(false);
+          setRole(AppRole.BUYER); // Reset role so they see the Marketplace, not the Dashboard
+        }}
+      />
+    );
   }
 
   if (authMode === 'SHIPPER_REGISTER') {
@@ -240,7 +248,7 @@ const App: React.FC = () => {
     switch (adminSubPage) {
       case 'admin-overview': return <AdminDashboard />;
       case 'admin-kyc': return <KYCApproval />;
-      case 'admin-products': return <ProductApproval />;
+      // case 'admin-products': return <ProductApproval />;
       case 'admin-news': return <NewsManagement />;
       case 'admin-notifications': return <NotificationManagement />;
       case 'admin-stores': return <ShopMonitoring />;
@@ -267,6 +275,7 @@ const App: React.FC = () => {
               onGoHome={handleCloseBuyerSpecialPages}
               onOpenLogin={() => setAuthMode('LOGIN')}
               onOpenRegister={() => setAuthMode('REGISTER')}
+              onOpenProfile={() => setIsProfileOpen(true)}
             />
             <div className="flex-1">
               {isTrackingOpen ? <Tracking onBack={handleCloseBuyerSpecialPages} /> :
@@ -280,9 +289,10 @@ const App: React.FC = () => {
                           isAuthenticated={isAuthenticated}
                           onOpenLogin={() => setAuthMode('LOGIN')}
                         /> :
-                          <Home onSelectProduct={(id) => {
-                            setSelectedProductId(id);
-                          }} />}
+                          isProfileOpen ? <Profile /> :
+                            <BuyerHome onSelectProduct={(id) => {
+                              setSelectedProductId(id);
+                            }} />}
             </div>
             <Footer />
           </div>

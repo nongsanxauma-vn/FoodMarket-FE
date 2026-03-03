@@ -8,6 +8,10 @@ export interface ProductResponse {
     stockQuantity: number;
     description: string;
     imageUrl: string;
+    status?: string;
+    shopOwnerId?: number;
+    shopId?: number;
+    shopName?: string;
 }
 
 export interface ProductCreationRequest {
@@ -29,12 +33,26 @@ class ProductService {
         return httpClient.get<ProductResponse>(`/products/${id}`);
     }
 
-    async createProduct(data: ProductCreationRequest): Promise<ApiResponse<ProductResponse>> {
-        return httpClient.post<ProductResponse>('/products', data);
+    async getByShopId(shopId: number): Promise<ApiResponse<ProductResponse[]>> {
+        return httpClient.get<ProductResponse[]>(`/products/shop/${shopId}`);
     }
 
-    async updateProduct(id: number, data: Partial<ProductCreationRequest>): Promise<ApiResponse<ProductResponse>> {
-        return httpClient.put<ProductResponse>(`/products/${id}`, data);
+    async createProduct(data: ProductCreationRequest, image?: File): Promise<ApiResponse<ProductResponse>> {
+        const formData = new FormData();
+        formData.append('data', JSON.stringify(data));
+        if (image) {
+            formData.append('image', image);
+        }
+        return httpClient.post<ProductResponse>('/products', formData);
+    }
+
+    async updateProduct(id: number, data: Partial<ProductCreationRequest>, image?: File): Promise<ApiResponse<ProductResponse>> {
+        const formData = new FormData();
+        formData.append('data', JSON.stringify(data));
+        if (image) {
+            formData.append('image', image);
+        }
+        return httpClient.put<ProductResponse>(`/products/${id}`, formData);
     }
 
     async deleteProduct(id: number): Promise<ApiResponse<void>> {

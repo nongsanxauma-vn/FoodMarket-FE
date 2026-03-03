@@ -1,4 +1,5 @@
-import { productService, ProductResponse } from '../services';
+import React, { useState, useEffect } from 'react';
+import { productService, ProductResponse, mysteryBoxService, MysteryBox } from '../services';
 import {
   Star,
   MapPin,
@@ -11,7 +12,8 @@ import {
   Apple,
   LayoutGrid,
   Grape,
-  Loader2
+  Loader2,
+  Package
 } from 'lucide-react';
 // import { generateProduceStory } from '../services/geminiService';
 
@@ -22,7 +24,9 @@ interface BuyerHomeProps {
 const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct }) => {
   const [featuredStory, setFeaturedStory] = useState<string>('Đang tải câu chuyện nông sản...');
   const [products, setProducts] = useState<ProductResponse[]>([]);
+  const [mysteryBoxes, setMysteryBoxes] = useState<MysteryBox[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingBoxes, setIsLoadingBoxes] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const categories = [
@@ -42,7 +46,7 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct }) => {
         setIsLoading(true);
         const response = await productService.getAll();
         if (response.result) {
-          setProducts(response.result);
+          setProducts(response.result.filter(p => p.status === 'AVAILABLE' || !p.status));
         }
       } catch (err) {
         console.error('Failed to fetch products:', err);
@@ -52,7 +56,22 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct }) => {
       }
     };
 
+    const fetchBoxes = async () => {
+      try {
+        setIsLoadingBoxes(true);
+        const response = await mysteryBoxService.getAll();
+        if (response.result) {
+          setMysteryBoxes(response.result);
+        }
+      } catch (err) {
+        console.error('Failed to fetch boxes:', err);
+      } finally {
+        setIsLoadingBoxes(false);
+      }
+    };
+
     fetchProducts();
+    fetchBoxes();
   }, []);
 
   return (
@@ -101,35 +120,44 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct }) => {
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {[
-            { name: 'Gói Mù Đất Đỏ', price: '50.000đ', items: '1 Củ + 2 Rau + 1 Bí mật', farm: 'Vườn Chú Tư' },
-            { name: 'Gói Mù Giải Nhiệt', price: '50.000đ', items: '2 Củ + 1 Quả + 1 Bí mật', farm: 'Vườn Cô Bảy' },
-            { name: 'Gói Mù Bữa Cơm', price: '50.000đ', items: '3 Rau + Gia vị + 1 Bí mật', farm: 'Nông Trại Xanh' },
-          ].map((box, idx) => (
-            <div key={idx} className="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all border border-gray-100 flex flex-col group p-4">
-              <div className="h-48 rounded-xl bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center mb-6 relative">
-                <ShoppingCart className="size-20 text-green-200 group-hover:scale-110 transition-transform duration-500" />
-                <span className="absolute text-3xl font-black text-primary/40">?</span>
-                <div className="absolute top-3 right-3 bg-white/90 backdrop-blur px-2 py-1 rounded-full shadow-sm flex items-center gap-1">
-                  <Award className="size-3 text-green-600" />
-                  <span className="text-[10px] font-bold">CAM KẾT TƯƠI</span>
+          {isLoadingBoxes ? (
+            <div className="col-span-full py-10 text-center text-gray-400 font-bold uppercase tracking-widest text-[10px]">Đang tải túi mù...</div>
+          ) : mysteryBoxes.length > 0 ? (
+            mysteryBoxes.slice(0, 3).map((box) => (
+              <div key={box.id} className="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all border border-gray-100 flex flex-col group p-4">
+                <div className="h-48 rounded-xl bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center mb-6 relative overflow-hidden">
+                  {box.imageUrl ? (
+                    <img src={box.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                  ) : (
+                    <ShoppingCart className="size-20 text-green-200 group-hover:scale-110 transition-transform duration-500" />
+                  )}
+                  {!box.imageUrl && <span className="absolute text-3xl font-black text-primary/40">?</span>}
+                  <div className="absolute top-3 right-3 bg-white/90 backdrop-blur px-2 py-1 rounded-full shadow-sm flex items-center gap-1">
+                    <Award className="size-3 text-green-600" />
+                    <span className="text-[10px] font-bold uppercase">Cam kết sạch</span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <div className="flex justify-between items-start">
+                    <h4 className="font-extrabold text-lg text-gray-900 truncate pr-2 uppercase tracking-tight">{box.boxType}</h4>
+                    <span className="text-primary font-black text-xl whitespace-nowrap">{box.price.toLocaleString('vi-VN')}đ</span>
+                  </div>
+                  <p className="text-xs text-gray-500 font-medium line-clamp-2 min-h-[32px]">{box.description || 'Hộp quà nông sản bí ẩn từ farm'}</p>
+                  <div className="flex items-center gap-1.5 text-gray-400 text-xs font-bold">
+                    <MapPin className="size-3" /> Nông trại đối tác
+                  </div>
+                  <button className="w-full bg-primary hover:bg-primary-dark text-white font-black py-3 rounded-xl transition-all mt-2 active:scale-95">
+                    CHỌN TÚI NÀY
+                  </button>
                 </div>
               </div>
-              <div className="flex flex-col gap-3">
-                <div className="flex justify-between items-start">
-                  <h4 className="font-extrabold text-lg text-gray-900">{box.name}</h4>
-                  <span className="text-primary font-black text-xl">{box.price}</span>
-                </div>
-                <p className="text-xs text-gray-500 font-medium">{box.items}</p>
-                <div className="flex items-center gap-1.5 text-gray-400 text-xs font-bold">
-                  <MapPin className="size-3" /> {box.farm}
-                </div>
-                <button className="w-full bg-primary hover:bg-primary-dark text-white font-black py-3 rounded-xl transition-all mt-2">
-                  CHỌN TÚI NÀY
-                </button>
-              </div>
+            ))
+          ) : (
+            <div className="col-span-full py-10 bg-gray-50 rounded-3xl text-center border-2 border-dashed border-gray-200">
+              <Package className="size-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-400 font-black uppercase tracking-widest text-[10px]">Hiện chưa có túi mù nào khả dụng</p>
             </div>
-          ))}
+          )}
         </div>
       </div>
 
@@ -165,7 +193,7 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct }) => {
                   <div className="flex items-center justify-between">
                     <span className="text-primary text-[10px] font-bold uppercase">Nông sản</span>
                     <div className="flex items-center gap-1 text-gray-400 text-[10px] font-bold">
-                      <MapPin className="size-3" /> Vườn nhà
+                      <MapPin className="size-3" /> {product.shopName || (product.shopId ? `Farm #${product.shopId}` : 'Vườn nhà')}
                     </div>
                   </div>
                   <h3 className="text-gray-900 font-extrabold text-lg line-clamp-1">{product.productName}</h3>

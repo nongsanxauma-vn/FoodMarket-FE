@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import Stepper from '../../components/ui/Stepper';
-import { ShieldCheck, Send, FileText, Leaf, Hourglass, CheckCircle, ArrowLeft, Home } from 'lucide-react';
+import { ShieldCheck, Hourglass, CheckCircle, ArrowLeft, Home, Store, Mail, Phone, MapPin, CreditCard, FileText, User } from 'lucide-react';
 
 interface KYCProps {
   onComplete: () => void;
@@ -9,12 +8,19 @@ interface KYCProps {
 }
 
 const KYC: React.FC<KYCProps> = ({ onComplete, onBack, role }) => {
-  const [step, setStep] = useState(2);
-  const [isSubmitted, setIsSubmitted] = useState(role === 'FARMER'); // Nông dân đã upload ở bước đăng ký nên chuyển sang trạng thái chờ duyệt luôn
+  const [isSubmitted, setIsSubmitted] = useState(role === 'FARMER');
+  const [isReviewing, setIsReviewing] = useState(false);
 
-  const handleSubmit = () => {
-    // Ở đây bạn sẽ gọi API để gửi dữ liệu lên server
-    setIsSubmitted(true);
+  // Mock data — trong thực tế sẽ lấy từ API hoặc truyền qua props
+  const submittedData = {
+    fullName: 'Người dùng',
+    email: 'user@email.com',
+    phone: '0385xxxxxx',
+    shopName: 'Cửa hàng của tôi',
+    address: 'Địa chỉ đã đăng ký',
+    bankAccount: '********',
+    hasLogo: true,
+    hasAchievement: true,
   };
 
   // Giao diện hiển thị khi đang chờ Admin duyệt
@@ -41,7 +47,7 @@ const KYC: React.FC<KYCProps> = ({ onComplete, onBack, role }) => {
         <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 flex items-start gap-4 text-left">
           <Hourglass className="size-5 text-orange-500 shrink-0 mt-1" />
           <div>
-            <p className="text-sm font-bold text-gray-800">Xác thực chứng chỉ</p>
+            <p className="text-sm font-bold text-gray-800">Xác thực cửa hàng</p>
             <p className="text-[11px] text-gray-400">Đang kiểm tra</p>
           </div>
         </div>
@@ -49,13 +55,13 @@ const KYC: React.FC<KYCProps> = ({ onComplete, onBack, role }) => {
 
       <div className="mt-12 flex flex-col sm:flex-row items-center gap-4">
         <button
-          onClick={() => window.location.href = '/'} // Hoặc điều hướng về trang chủ
+          onClick={onBack}
           className="flex items-center gap-2 px-8 py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-black transition-all shadow-lg shadow-gray-200"
         >
           <Home className="size-4" /> Về trang chủ
         </button>
         <button
-          onClick={() => setIsSubmitted(false)}
+          onClick={() => setIsReviewing(true)}
           className="text-sm font-bold text-gray-400 hover:text-primary transition-colors"
         >
           Xem lại hồ sơ đã gửi
@@ -64,67 +70,82 @@ const KYC: React.FC<KYCProps> = ({ onComplete, onBack, role }) => {
     </div>
   );
 
-  const renderCertificatesStep = () => (
+  // Giao diện xem lại hồ sơ đã gửi (read-only)
+  const renderReviewProfile = () => (
     <div className="animate-in fade-in slide-in-from-right-4 duration-500">
       <div className="flex justify-between items-start mb-8">
         <div>
-          <h3 className="text-xl font-black text-gray-800 mb-2">Chứng Chỉ Canh Tác Nông Nghiệp</h3>
-          <p className="text-gray-500 text-sm font-medium">Bổ sung hồ sơ năng lực để Admin dễ dàng phê duyệt tài khoản.</p>
+          <h3 className="text-xl font-black text-gray-800 mb-2">Hồ Sơ Đã Gửi</h3>
+          <p className="text-gray-500 text-sm font-medium">Thông tin bạn đã đăng ký, đang chờ Admin xem xét.</p>
         </div>
-        <span className="bg-primary/10 text-primary text-[10px] font-black px-3 py-1 rounded-full uppercase">Bước 2: Hoàn tất</span>
+        <span className="bg-orange-100 text-orange-600 text-[10px] font-black px-3 py-1.5 rounded-full uppercase flex items-center gap-1">
+          <Hourglass className="size-3" /> Đang chờ duyệt
+        </span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="border-2 border-dashed border-gray-200 rounded-2xl p-6 flex flex-col items-center text-center gap-4 hover:border-primary/30 transition-colors group">
-              <div className="size-12 bg-green-50 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                <FileText className="size-5 text-primary" />
-              </div>
-              <p className="text-sm font-bold text-gray-800">VietGAP / GlobalGAP</p>
-              <button className="w-full py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50 flex items-center justify-center gap-2">
-                <Send className="size-3 -rotate-90" /> Tải lên
-              </button>
-            </div>
-            <div className="border-2 border-dashed border-gray-200 rounded-2xl p-6 flex flex-col items-center text-center gap-4 hover:border-primary/30 transition-colors group">
-              <div className="size-12 bg-green-50 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Leaf className="size-5 text-primary" />
-              </div>
-              <p className="text-sm font-bold text-gray-800">Chứng nhận Hữu cơ</p>
-              <button className="w-full py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50 flex items-center justify-center gap-2">
-                <Send className="size-3 -rotate-90" /> Tải lên
-              </button>
-            </div>
-          </div>
-
-          <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-4 flex items-start gap-3">
-            <div className="size-5 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">i</div>
-            <p className="text-[11px] text-gray-500 font-medium leading-relaxed">
-              Hồ sơ có chứng chỉ nông nghiệp sẽ được ưu tiên duyệt sớm và có nhãn "Người bán uy tín" sau khi hoạt động.
-            </p>
-          </div>
+      {/* Thông tin cá nhân */}
+      <div className="space-y-3 mb-6">
+        <p className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-3">
+          <User className="size-3.5" /> Thông tin cá nhân
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <InfoRow icon={<User className="size-4" />} label="Họ và tên" value={submittedData.fullName} />
+          <InfoRow icon={<Mail className="size-4" />} label="Email" value={submittedData.email} />
+          <InfoRow icon={<Phone className="size-4" />} label="Số điện thoại" value={submittedData.phone} />
+          <InfoRow icon={<CreditCard className="size-4" />} label="Tài khoản NH" value={submittedData.bankAccount} />
         </div>
+      </div>
 
-        <div className="bg-gray-50 rounded-3xl p-8 flex flex-col items-center text-center border border-gray-100">
-          <div className="size-14 bg-white shadow-sm rounded-2xl flex items-center justify-center mb-4">
-            <ShieldCheck className="size-7 text-primary" />
-          </div>
-          <h4 className="text-sm font-black text-gray-800 mb-2">Cam kết bảo mật</h4>
-          <p className="text-[10px] text-gray-400 font-medium leading-relaxed">
-            Thông tin của bạn chỉ dùng cho mục đích xác thực nội bộ.
+      {/* Thông tin cửa hàng */}
+      {role === 'FARMER' && (
+        <div className="space-y-3 mb-6">
+          <p className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-3">
+            <Store className="size-3.5" /> Thông tin cửa hàng
           </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <InfoRow icon={<Store className="size-4" />} label="Tên cửa hàng" value={submittedData.shopName} />
+            <InfoRow icon={<MapPin className="size-4" />} label="Địa chỉ" value={submittedData.address} />
+          </div>
+        </div>
+      )}
+
+      {/* Tài liệu đính kèm */}
+      <div className="space-y-3 mb-8">
+        <p className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-3">
+          <FileText className="size-3.5" /> Tài liệu đính kèm
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className={`p-4 rounded-2xl border flex items-center gap-3 ${submittedData.hasLogo ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+            <CheckCircle className={`size-5 shrink-0 ${submittedData.hasLogo ? 'text-green-500' : 'text-gray-300'}`} />
+            <div>
+              <p className="text-sm font-bold text-gray-800">Ảnh Logo</p>
+              <p className="text-[11px] text-gray-400">{submittedData.hasLogo ? 'Đã tải lên' : 'Chưa tải lên'}</p>
+            </div>
+          </div>
+          <div className={`p-4 rounded-2xl border flex items-center gap-3 ${submittedData.hasAchievement ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+            <CheckCircle className={`size-5 shrink-0 ${submittedData.hasAchievement ? 'text-green-500' : 'text-gray-300'}`} />
+            <div>
+              <p className="text-sm font-bold text-gray-800">Chứng chỉ</p>
+              <p className="text-[11px] text-gray-400">{submittedData.hasAchievement ? 'Đã tải lên' : 'Chưa tải lên'}</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between pt-8 border-t border-gray-100">
-        <button onClick={onBack} className="flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-gray-800">
-          <ArrowLeft className="size-4" /> Quay lại
-        </button>
+      {/* Cam kết bảo mật */}
+      <div className="bg-gray-50 rounded-2xl p-4 flex items-start gap-3 border border-gray-100 mb-8">
+        <ShieldCheck className="size-5 text-primary shrink-0 mt-0.5" />
+        <p className="text-[11px] text-gray-500 font-medium leading-relaxed">
+          Thông tin của bạn được bảo mật và chỉ sử dụng cho mục đích xác thực nội bộ bởi đội ngũ Xấu Mã.
+        </p>
+      </div>
+
+      <div className="flex items-center justify-between pt-6 border-t border-gray-100">
         <button
-          onClick={handleSubmit}
-          className="bg-primary text-white px-10 py-3 rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all flex items-center gap-2"
+          onClick={() => setIsReviewing(false)}
+          className="flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-gray-800 transition-colors"
         >
-          Hoàn thành & Gửi duyệt <Send className="size-4" />
+          <ArrowLeft className="size-4" /> Quay lại
         </button>
       </div>
     </div>
@@ -132,49 +153,43 @@ const KYC: React.FC<KYCProps> = ({ onComplete, onBack, role }) => {
 
   return (
     <div className="min-h-screen bg-[#F0F2F5] pb-20">
-      <div className="max-w-6xl mx-auto pt-12 px-4">
-        {/* Header - Ẩn khi đã gửi đơn */}
-        {!isSubmitted && (
+      <div className="max-w-3xl mx-auto pt-12 px-4">
+        {isReviewing && (
           <div className="flex items-center justify-between mb-10">
             <div>
               <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
                 <span>Đăng ký</span>
                 <span className="text-gray-300">/</span>
-                <span className="text-primary">Xác thực hồ sơ</span>
+                <span className="text-primary">Xem lại hồ sơ</span>
               </div>
-              <h1 className="text-4xl font-black font-display text-gray-900 tracking-tight">Xác Thực Nông Dân</h1>
+              <h1 className="text-4xl font-black font-display text-gray-900 tracking-tight">Hồ sơ của bạn</h1>
             </div>
-            <div className="bg-gray-100 text-gray-500 px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 border border-gray-200">
-              <span className="size-2 bg-gray-300 rounded-full"></span>
-              GIAI ĐOẠN CUỐI
+            <div className="bg-orange-100 text-orange-600 px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 border border-orange-200">
+              <Hourglass className="size-3" />
+              CHỜ DUYỆT
             </div>
           </div>
         )}
 
-        <div className="bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden">
-          {/* Chỉ hiển thị Stepper khi chưa gửi đơn */}
-          {!isSubmitted && (
-            <div className="px-10 border-b border-gray-50 bg-white">
-              <Stepper
-                currentStep={step}
-                steps={['Thông tin cá nhân', 'Chứng chỉ & Năng lực']}
-              />
-            </div>
-          )}
-
-          <div className="p-12">
-            {isSubmitted ? renderPendingStatus() : renderCertificatesStep()}
+        <div className="bg-white rounded-[32px] shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-10 md:p-12">
+            {isReviewing ? renderReviewProfile() : renderPendingStatus()}
           </div>
         </div>
-
-        {!isSubmitted && (
-          <div className="mt-12 text-center">
-            <p className="text-xs text-gray-400 font-medium">Bạn cần hỗ trợ? <a href="#" className="text-primary font-bold underline underline-offset-4">Liên hệ hỗ trợ 24/7</a></p>
-          </div>
-        )}
       </div>
     </div>
   );
 };
+
+// Component hiển thị một hàng thông tin read-only
+const InfoRow = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) => (
+  <div className="bg-gray-50 rounded-2xl px-4 py-3.5 border border-gray-100 flex items-center gap-3">
+    <div className="text-gray-400 shrink-0">{icon}</div>
+    <div className="min-w-0">
+      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
+      <p className="text-sm font-bold text-gray-800 truncate">{value}</p>
+    </div>
+  </div>
+);
 
 export default KYC;

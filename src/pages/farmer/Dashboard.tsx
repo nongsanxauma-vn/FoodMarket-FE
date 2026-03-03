@@ -1,34 +1,87 @@
 
-import React from 'react';
-import { ShoppingCart, TrendingUp, Star, Wallet, Package, Clock, MoreVertical, Plus, Sparkles, Landmark, History, ChefHat } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ShoppingCart, TrendingUp, Star, Wallet, Package, Clock, MoreVertical, Plus, Sparkles, Landmark, History, ChefHat, Loader2, AlertCircle } from 'lucide-react';
+import { productService, orderService, walletService, authService, ProductResponse, OrderResponse, WalletResponse } from '../../services';
 
 const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }) => {
+  const [products, setProducts] = useState<ProductResponse[]>([]);
+  const [orders, setOrders] = useState<OrderResponse[]>([]);
+  const [wallet, setWallet] = useState<WalletResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Get user info to get shopId
+        const userInfo = await authService.getMyInfo();
+        const shopId = userInfo.result?.id;
+
+        const [productsRes, ordersRes, walletRes] = await Promise.all([
+          shopId ? productService.getByShopId(shopId) : productService.getAll(),
+          orderService.getAllOrders(),
+          walletService.getMyWallet(),
+        ]);
+
+        if (productsRes.result) setProducts(Array.isArray(productsRes.result) ? productsRes.result : [productsRes.result]);
+        if (ordersRes.result) setOrders(Array.isArray(ordersRes.result) ? ordersRes.result : [ordersRes.result]);
+        if (walletRes.result) setWallet(walletRes.result as WalletResponse);
+      } catch (err) {
+        console.error('Failed to load dashboard data', err);
+        setError('Không thể tải dữ liệu. Vui lòng thử lại sau.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const totalOrders = orders.length;
+  const walletBalance = wallet?.totalBalance || 0;
+  const frozenBalance = wallet?.frozenBalance || 0;
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[600px] gap-4">
+        <Loader2 className="size-10 text-primary animate-spin" />
+        <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Đang tải bảng điều khiển...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-8 p-8 animate-in fade-in duration-500">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-black font-display text-gray-900">Bảng Điều Khiển Nông Dân</h2>
-          <p className="text-gray-400 font-medium text-sm mt-1">Chào buổi sáng, hôm nay bạn có 12 đơn hàng mới.</p>
+          <p className="text-gray-400 font-medium text-sm mt-1">Chào buổi sáng, hôm nay bạn có {orders.filter(o => o.status === 'PENDING' || o.status === 'NEW').length} đơn hàng mới.</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="relative">
             <input type="text" placeholder="Tìm kiếm nhanh..." className="pl-10 pr-4 py-2.5 bg-white border border-gray-100 rounded-full text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all w-64 shadow-sm" />
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xl">search</span>
           </div>
-          <button className="size-11 bg-white border border-gray-100 rounded-full flex items-center justify-center text-gray-400 relative shadow-sm">
+          <button onClick={() => onNavigate('notifications')} className="size-11 bg-white border border-gray-100 rounded-full flex items-center justify-center text-gray-400 relative shadow-sm">
             <span className="material-symbols-outlined fill-1">notifications</span>
             <span className="absolute top-2 right-2 size-2.5 bg-red-500 border-2 border-white rounded-full"></span>
           </button>
         </div>
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-center gap-3 text-red-600 font-bold text-sm">
+          <AlertCircle className="size-5" /> {error}
+        </div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {[
-          { label: 'Tổng đơn hàng', value: '1,250', trend: '+12%', icon: ShoppingCart },
-          { label: 'Doanh thu tháng', value: '45.8M', trend: '+8%', icon: TrendingUp },
+          { label: 'Tổng đơn hàng', value: totalOrders.toLocaleString('vi-VN'), trend: `${products.length} sản phẩm`, icon: ShoppingCart },
+          { label: 'Sản phẩm đang bán', value: products.length.toString(), trend: 'Đang hoạt động', icon: TrendingUp },
           { label: 'Chất lượng Shop', value: '98%', trend: 'Top 5%', icon: Star, bar: 98 },
-          { label: 'Số dư khả dụng', value: '12.450.000đ', icon: Wallet, isPrimary: true, frozen: '1.2M' },
+          { label: 'Số dư khả dụng', value: `${walletBalance.toLocaleString('vi-VN')}đ`, icon: Wallet, isPrimary: true, frozen: `${frozenBalance.toLocaleString('vi-VN')}đ` },
         ].map((stat, i) => (
           <div key={i} className={`p-6 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group ${stat.isPrimary ? 'bg-primary text-white' : 'bg-white'}`}>
             <p className={`text-[11px] font-black uppercase tracking-widest ${stat.isPrimary ? 'text-white/70' : 'text-gray-400'}`}>{stat.label}</p>
@@ -78,35 +131,32 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
                 <thead className="bg-gray-50/50">
                   <tr>
                     <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Sản phẩm</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Tồn kho</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Hạn sử dụng</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Giá</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Danh mục</th>
                     <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Trạng thái</th>
                     <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {[
-                    { name: 'Xà lách thủy canh', desc: 'Rau củ sạch', stock: '45kg', expiry: '2 ngày nữa', status: 'Đang bán', image: 'https://picsum.photos/seed/salad/40/40' },
-                    { name: 'Cà rốt hữu cơ', desc: 'Củ quả', stock: '120kg', expiry: '15 ngày nữa', status: 'Đang bán', image: 'https://picsum.photos/seed/carrot/40/40' },
-                  ].map((p, i) => (
-                    <tr key={i} className="hover:bg-gray-50/50 transition-colors">
+                  {products.slice(0, 5).map((p, i) => (
+                    <tr key={p.id || i} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <img src={p.image} className="size-10 rounded-xl object-cover" />
+                          <img src={p.imageUrl || `https://picsum.photos/seed/product${i}/40/40`} className="size-10 rounded-xl object-cover" />
                           <div>
-                            <p className="text-sm font-bold text-gray-900">{p.name}</p>
-                            <p className="text-[10px] text-gray-400 font-medium">{p.desc}</p>
+                            <p className="text-sm font-bold text-gray-900">{p.productName}</p>
+                            <p className="text-[10px] text-gray-400 font-medium">Nông sản</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-center text-sm font-bold text-gray-700">{p.stock}</td>
+                      <td className="px-6 py-4 text-center text-sm font-bold text-gray-700">{(p.sellingPrice || 0).toLocaleString('vi-VN')}đ</td>
                       <td className="px-6 py-4 text-center">
-                        <span className="px-3 py-1 bg-red-50 text-red-500 text-[10px] font-bold rounded-full">{p.expiry}</span>
+                        <span className="px-3 py-1 bg-green-50 text-green-600 text-[10px] font-bold rounded-full">Nông sản</span>
                       </td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-1.5">
                           <span className="size-1.5 bg-primary rounded-full"></span>
-                          <span className="text-[11px] font-bold text-gray-600">{p.status}</span>
+                          <span className="text-[11px] font-bold text-gray-600">{p.status || 'Đang bán'}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right">
@@ -116,9 +166,14 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
                       </td>
                     </tr>
                   ))}
+                  {products.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-8 text-center text-gray-400 font-bold text-sm">Chưa có sản phẩm nào. Hãy thêm sản phẩm mới!</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
-              <button onClick={() => onNavigate('products')} className="w-full py-4 text-primary text-xs font-bold hover:bg-primary/5 border-t border-gray-50 transition-all uppercase tracking-widest">Xem tất cả 24 sản phẩm</button>
+              <button onClick={() => onNavigate('products')} className="w-full py-4 text-primary text-xs font-bold hover:bg-primary/5 border-t border-gray-50 transition-all uppercase tracking-widest">Xem tất cả {products.length} sản phẩm</button>
             </div>
           </div>
 
@@ -132,11 +187,11 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
             <div className="grid grid-cols-2 gap-4">
               <div className="p-6 bg-gray-50/50 rounded-2xl border border-gray-100">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Số dư khả dụng</p>
-                <h3 className="text-2xl font-black text-gray-900 mt-1">12.450.000đ</h3>
+                <h3 className="text-2xl font-black text-gray-900 mt-1">{walletBalance.toLocaleString('vi-VN')}đ</h3>
               </div>
               <div className="p-6 bg-yellow-50/50 rounded-2xl border border-yellow-100">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-yellow-600">Số dư đóng băng</p>
-                <h3 className="text-2xl font-black text-yellow-700 mt-1">1.200.000đ</h3>
+                <h3 className="text-2xl font-black text-yellow-700 mt-1">{frozenBalance.toLocaleString('vi-VN')}đ</h3>
               </div>
             </div>
             <div className="flex gap-4 mt-6">
@@ -167,17 +222,18 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
               <div className="flex flex-col gap-3">
                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Chọn nông sản dư thừa</label>
                 <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { name: 'Bắp cải', image: 'https://picsum.photos/seed/cabbage/60/60' },
-                    { name: 'Cà chua', image: 'https://picsum.photos/seed/tomato/60/60' },
-                    { name: 'Khoai tây', image: 'https://picsum.photos/seed/potato/60/60' },
-                  ].map((item, idx) => (
+                  {products.slice(0, 3).map((item, idx) => (
                     <div key={idx} className="flex flex-col items-center gap-2 group cursor-pointer">
                       <div className="size-16 rounded-2xl overflow-hidden border-2 border-transparent group-hover:border-primary transition-all relative">
-                        <img src={item.image} className="w-full h-full object-cover" />
+                        <img src={item.imageUrl || `https://picsum.photos/seed/p${idx}/60/60`} className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-all" />
                       </div>
-                      <span className="text-[10px] font-bold text-gray-500">{item.name}</span>
+                      <span className="text-[10px] font-bold text-gray-500">{item.productName}</span>
+                    </div>
+                  ))}
+                  {products.length === 0 && [1, 2, 3].map(idx => (
+                    <div key={idx} className="size-16 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-300">
+                      <Package className="size-6" />
                     </div>
                   ))}
                 </div>
@@ -199,7 +255,7 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
                 </select>
               </div>
 
-              <button className="w-full py-4 bg-primary text-white font-black rounded-[20px] flex items-center justify-center gap-2 shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all transform active:scale-95">
+              <button onClick={() => onNavigate('blind-box')} className="w-full py-4 bg-primary text-white font-black rounded-[20px] flex items-center justify-center gap-2 shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all transform active:scale-95">
                 <Sparkles className="size-4" /> Tạo Combo Random
               </button>
             </div>
@@ -210,5 +266,4 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
   );
 };
 
-// Add fix: Export default
 export default FarmerDashboard;

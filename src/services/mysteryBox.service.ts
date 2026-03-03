@@ -1,4 +1,5 @@
 import { httpClient, ApiResponse } from './http.client';
+import { API_BASE_URL, TOKEN_KEY } from './api.config';
 
 export interface MysteryBox {
   id: number;
@@ -10,13 +11,53 @@ export interface MysteryBox {
   shopOwnerId: number;
 }
 
+export interface MysteryBoxCreationRequest {
+  boxType: string;
+  price: number;
+  description?: string;
+  note?: string;
+}
+
+export interface MysteryBoxUpdateRequest {
+  boxType?: string;
+  price?: number;
+  description?: string;
+  note?: string;
+}
+
 class MysteryBoxService {
   async getMyBoxes(): Promise<ApiResponse<MysteryBox[]>> {
     return httpClient.get<MysteryBox[]>('/mystery-boxes/me');
   }
 
+  async getAll(): Promise<ApiResponse<MysteryBox[]>> {
+    return httpClient.get<MysteryBox[]>('/mystery-boxes');
+  }
+
   async getById(id: number): Promise<ApiResponse<MysteryBox>> {
     return httpClient.get<MysteryBox>(`/mystery-boxes/${id}`);
+  }
+
+  async createMysteryBox(data: MysteryBoxCreationRequest, image?: File): Promise<ApiResponse<MysteryBox>> {
+    const formData = new FormData();
+    formData.append('data', JSON.stringify(data));
+    if (image) {
+      formData.append('image', image);
+    }
+    return httpClient.post<MysteryBox>('/mystery-boxes', formData);
+  }
+
+  async updateMysteryBox(id: number, data: MysteryBoxUpdateRequest, image?: File): Promise<ApiResponse<MysteryBox>> {
+    const formData = new FormData();
+    formData.append('data', JSON.stringify(data));
+    if (image) {
+      formData.append('image', image);
+    }
+    return httpClient.put<MysteryBox>(`/mystery-boxes/${id}`, formData);
+  }
+
+  async deleteMysteryBox(id: number): Promise<ApiResponse<void>> {
+    return httpClient.delete<void>(`/mystery-boxes/${id}`);
   }
 }
 

@@ -56,6 +56,10 @@ class WalletService {
         return httpClient.get<WithdrawRequestResponse[]>('/wallets/withdraw-requests/pending');
     }
 
+    async getAllWithdrawRequests(): Promise<ApiResponse<WithdrawRequestResponse[]>> {
+        return httpClient.get<WithdrawRequestResponse[]>('/wallets/withdraw-requests');
+    }
+
     async confirmWithdrawSuccess(id: number, note?: string): Promise<ApiResponse<WithdrawRequestResponse>> {
         const params = note ? { note } : {};
         return httpClient.put<WithdrawRequestResponse>(`/wallets/withdraw-requests/${id}/confirm-success`, null, { params });
@@ -64,6 +68,10 @@ class WalletService {
     async rejectWithdraw(id: number, note?: string): Promise<ApiResponse<WithdrawRequestResponse>> {
         const params = note ? { note } : {};
         return httpClient.put<WithdrawRequestResponse>(`/wallets/withdraw-requests/${id}/reject`, null, { params });
+    }
+
+    async createWithdrawQr(id: number): Promise<ApiResponse<WithdrawRequestResponse>> {
+        return httpClient.post<WithdrawRequestResponse>(`/wallets/withdraw-requests/${id}/create-qr`);
     }
 }
 

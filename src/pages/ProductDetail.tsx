@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { productService, ProductResponse } from '../services';
+import { productService, ProductResponse, userService, UserResponse } from '../services';
 import {
    Star,
    MapPin,
@@ -25,6 +25,7 @@ interface ProductDetailProps {
 const ProductDetail: React.FC<ProductDetailProps> = ({ productId, onBack }) => {
    const [quantity, setQuantity] = useState(1);
    const [product, setProduct] = useState<ProductResponse | null>(null);
+   const [shopOwner, setShopOwner] = useState<UserResponse | null>(null);
    const [isLoading, setIsLoading] = useState(true);
    const [error, setError] = useState<string | null>(null);
 
@@ -35,6 +36,14 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId, onBack }) => {
             const response = await productService.getById(Number(productId));
             if (response.result) {
                setProduct(response.result);
+               if (response.result.shopOwnerId) {
+                  try {
+                     const ownerRes = await userService.getUserById(response.result.shopOwnerId);
+                     if (ownerRes.result) setShopOwner(ownerRes.result);
+                  } catch (e) {
+                     console.error("Failed to load shop owner", e);
+                  }
+               }
             }
          } catch (err) {
             console.error('Failed to fetch product:', err);
@@ -158,8 +167,8 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId, onBack }) => {
                         <Store className="size-7" />
                      </div>
                      <div>
-                        <h4 className="font-black text-gray-900 text-lg uppercase tracking-tight">Nông Trại FoodMarket</h4>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Vùng canh tác hữu cơ</p>
+                        <h4 className="font-black text-gray-900 text-lg uppercase tracking-tight">{shopOwner?.shopName || shopOwner?.fullName || 'Nông Trại FoodMarket'}</h4>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{shopOwner?.address || 'Vùng canh tác hữu cơ'}</p>
                         <div className="flex items-center gap-4 mt-1">
                            <span className="text-[10px] font-black text-primary uppercase">98% Phản hồi</span>
                            <span className="text-[10px] font-bold text-gray-300">Uy tín cao</span>

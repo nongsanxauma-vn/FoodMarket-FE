@@ -8,6 +8,15 @@ const Wallet: React.FC = () => {
    const [isLoading, setIsLoading] = useState(true);
    const [error, setError] = useState<string | null>(null);
 
+   // Withdraw Modal State
+   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+   const [withdrawAmount, setWithdrawAmount] = useState('');
+   const [withdrawReason, setWithdrawReason] = useState('');
+   const [bankName, setBankName] = useState('MB Bank'); // Default for demo, can be empty
+   const [bankAccount, setBankAccount] = useState('');
+   const [bankHolder, setBankHolder] = useState('');
+   const [isSubmitting, setIsSubmitting] = useState(false);
+
    useEffect(() => {
       const fetchData = async () => {
          try {
@@ -29,6 +38,44 @@ const Wallet: React.FC = () => {
 
       fetchData();
    }, []);
+
+   const handleWithdrawSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      const amountNum = Number(withdrawAmount);
+      if (!amountNum || amountNum <= 0) {
+         alert('Vui lòng nhập số tiền hợp lệ');
+         return;
+      }
+      if (wallet && amountNum > wallet.totalBalance) {
+         alert('Số tiền rút vượt quá số dư khả dụng');
+         return;
+      }
+
+      setIsSubmitting(true);
+      try {
+         const res = await walletService.createWithdrawRequest({
+            amount: amountNum,
+            reason: withdrawReason,
+            bankName: bankName,
+            bankAccountNumber: bankAccount,
+            bankAccountHolder: bankHolder,
+         });
+
+         if (res.result) {
+            alert('Đã gửi yêu cầu rút tiền thành công!');
+            setIsWithdrawModalOpen(false);
+            setWithdrawAmount('');
+            setWithdrawReason('');
+            // Reload requests
+            const withdrawRes = await walletService.getMyWithdrawRequests();
+            if (withdrawRes.result) setWithdrawRequests(withdrawRes.result);
+         }
+      } catch (err: any) {
+         alert(err?.data?.message || 'Có lỗi xảy ra khi tạo yêu cầu rút tiền');
+      } finally {
+         setIsSubmitting(false);
+      }
+   };
 
    if (isLoading) {
       return (
@@ -189,12 +236,93 @@ const Wallet: React.FC = () => {
                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Hỗ trợ thanh toán nhanh</p>
                      </div>
                   </div>
-                  <button className="w-full py-4 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-dark transition-all">
+                  <button
+                     onClick={() => setIsWithdrawModalOpen(true)}
+                     className="w-full py-4 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-dark transition-all">
                      Rút tiền ngay
                   </button>
                </div>
             </div>
          </div>
+
+         {/* Withdraw Request Modal */}
+         {isWithdrawModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+               <div className="bg-white rounded-[32px] w-full max-w-lg p-8 shadow-2xl relative animate-in zoom-in-95 duration-200">
+                  <button
+                     onClick={() => setIsWithdrawModalOpen(false)}
+                     className="absolute top-6 right-6 text-gray-400 hover:text-gray-900"
+                  >
+                     <span className="material-symbols-outlined">close</span>
+                  </button>
+
+                  <div className="mb-6">
+                     <h3 className="text-2xl font-black font-display text-gray-900 mb-1">Tạo Yêu Cầu Rút Tiền</h3>
+                     <p className="text-sm text-gray-500">Số dư khả dụng: <span className="font-bold text-primary">{(wallet?.totalBalance || 0).toLocaleString('vi-VN')}đ</span></p>
+                  </div>
+
+                  <form onSubmit={handleWithdrawSubmit} className="space-y-4">
+                     <div>
+                        <label className="text-xs font-bold text-gray-700 block mb-2">Số tiền cần rút (VNĐ) *</label>
+                        <input
+                           type="number"
+                           value={withdrawAmount}
+                           onChange={(e) => setWithdrawAmount(e.target.value)}
+                           className="w-full px-4 py-3 bg-gray-50 border border-transparent rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold"
+                           placeholder="Nhập số tiền..."
+                           required
+                        />
+                     </div>
+                     <div>
+                        <label className="text-xs font-bold text-gray-700 block mb-2">Lý do rút tiền</label>
+                        <input
+                           type="text"
+                           value={withdrawReason}
+                           onChange={(e) => setWithdrawReason(e.target.value)}
+                           className="w-full px-4 py-3 bg-gray-50 border border-transparent rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                           placeholder="Ví dụ: Rút tiền thu nhập tháng 10"
+                        />
+                     </div>
+                     <div className="pt-4 border-t border-gray-100">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Thông tin nhận tiền (Tùy chọn)</p>
+                        <div className="space-y-3">
+                           <input
+                              type="text"
+                              value={bankName}
+                              onChange={(e) => setBankName(e.target.value)}
+                              className="w-full px-4 py-3 bg-gray-50 border border-transparent rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all text-sm"
+                              placeholder="Tên ngân hàng (VD: MB Bank, Vietcombank)"
+                           />
+                           <input
+                              type="text"
+                              value={bankAccount}
+                              onChange={(e) => setBankAccount(e.target.value)}
+                              className="w-full px-4 py-3 bg-gray-50 border border-transparent rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all text-sm"
+                              placeholder="Số tài khoản"
+                           />
+                           <input
+                              type="text"
+                              value={bankHolder}
+                              onChange={(e) => setBankHolder(e.target.value)}
+                              className="w-full px-4 py-3 bg-gray-50 border border-transparent rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all text-sm uppercase"
+                              placeholder="Tên chủ tài khoản"
+                           />
+                        </div>
+                     </div>
+
+                     <div className="pt-6">
+                        <button
+                           type="submit"
+                           disabled={isSubmitting}
+                           className="w-full py-4 bg-primary text-white rounded-2xl font-black shadow-lg hover:bg-primary-dark transition-all disabled:opacity-50"
+                        >
+                           {isSubmitting ? 'Đang xử lý...' : 'XÁC NHẬN RÚT TIỀN'}
+                        </button>
+                     </div>
+                  </form>
+               </div>
+            </div>
+         )}
       </div>
    );
 };

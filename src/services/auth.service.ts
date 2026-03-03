@@ -38,7 +38,7 @@ export interface UserResponse {
   fullName: string;
   phoneNumber: string;
   address?: string;
-  status: 'ACTIVE' | 'INACTIVE' | 'BANNED';
+  status: 'ACTIVE' | 'INACTIVE' | 'BANNED' | 'DEACTIVATED' | 'PENDING';
   role: {
     id: number;
     name: string;
@@ -56,6 +56,10 @@ export interface UserResponse {
   vehicleNumber?: string;
   // Computed field for frontend
   roleName?: string;
+  // Additional optional fields
+  username?: string;
+  profileImageUrl?: string;
+  kycStatus?: string;
 }
 
 export interface IntrospectRequest {

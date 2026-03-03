@@ -26,10 +26,8 @@ const OTPVerification: React.FC<OTPVerificationProps> = ({ email, onVerified, on
     }
   }, [countdown]);
 
-  // Auto-send OTP when component mounts
-  useEffect(() => {
-    handleSendOtp();
-  }, []);
+  // Auto-send OTP on mount removed to prevent double sending. The parent component should send the OTP before mounting this component.
+  // The 'Gửi lại mã OTP' button will still use handleSendOtp.
 
   const handleSendOtp = async () => {
     setIsLoading(true);
@@ -73,7 +71,7 @@ const OTPVerification: React.FC<OTPVerificationProps> = ({ email, onVerified, on
 
   const handleVerify = async () => {
     const otpCode = otp.join('');
-    
+
     if (otpCode.length !== 6) {
       setError('Vui lòng nhập đầy đủ 6 số');
       return;
@@ -84,7 +82,7 @@ const OTPVerification: React.FC<OTPVerificationProps> = ({ email, onVerified, on
 
     try {
       const response = await otpService.verifyOtp(email, otpCode);
-      
+
       if (response.result?.verified) {
         setSuccess('Xác thực thành công!');
         setTimeout(() => {

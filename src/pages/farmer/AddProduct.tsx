@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
-/* Fix: Import missing Plus icon from lucide-react */
 import { ArrowLeft, Save, Send, Camera, Info, Truck, HelpCircle, AlertTriangle, Plus } from 'lucide-react';
 import SubmissionSuccess from './SubmissionSuccessProps';
+import { productService } from '../../services';
 
 const AddProduct: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -11,6 +10,7 @@ const AddProduct: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [stock, setStock] = useState<number>(0);
   const [description, setDescription] = useState('');
   const [unit, setUnit] = useState('kg');
+  const [categoryId, setCategoryId] = useState<number>(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,6 +29,7 @@ const AddProduct: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         stockQuantity: stock,
         description,
         unit,
+        categoryId,
         // Tạm thời chưa xử lý upload ảnh riêng biệt ở đây
         imageUrl: 'https://picsum.photos/seed/newproduct/400/400'
       });
@@ -100,6 +101,22 @@ const AddProduct: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                   <input type="text" placeholder="SKU-AUTO-7231" disabled className="w-full px-6 py-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-medium text-gray-400 italic" />
                   <p className="text-[10px] text-gray-400 font-medium">Mã sản phẩm được tạo tự động.</p>
                 </div>
+                <div className="flex flex-col gap-3">
+                  <label className="text-sm font-bold text-gray-700">Danh mục</label>
+                  <select
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(Number(e.target.value))}
+                    className="w-full px-6 py-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-bold text-gray-600 outline-none appearance-none cursor-pointer"
+                  >
+                    <option value={1}>Rau củ</option>
+                    <option value={2}>Trái cây</option>
+                    <option value={3}>Thịt cá</option>
+                    <option value={4}>Khác</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-8">
                 <div className="flex flex-col gap-3">
                   <label className="text-sm font-bold text-gray-700">Đơn vị tính</label>
                   <select
@@ -203,7 +220,8 @@ const AddProduct: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             </div>
 
             <div className="space-y-6">
-              <div className="aspect-square w-full border-2 border-dashed border-gray-200 rounded-[32px] flex flex-col items-center justify-center text-center gap-4 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition-all group p-10">
+              <label className="aspect-square w-full border-2 border-dashed border-gray-200 rounded-[32px] flex flex-col items-center justify-center text-center gap-4 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition-all group p-10">
+                <input type="file" accept="image/*" className="hidden" />
                 <div className="size-16 bg-gray-50 rounded-2xl flex items-center justify-center group-hover:bg-primary/20 transition-all transform group-hover:-translate-y-1">
                   <span className="material-symbols-outlined text-gray-400 text-3xl group-hover:text-primary">upload</span>
                 </div>
@@ -211,7 +229,7 @@ const AddProduct: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                   <p className="text-sm font-black text-gray-800">Kéo thả hoặc Click để tải ảnh</p>
                   <p className="text-[10px] text-gray-400 font-medium mt-1 px-4 leading-relaxed">Khuyến khích ảnh thật, không qua chỉnh sửa để tăng độ tin cậy.</p>
                 </div>
-              </div>
+              </label>
 
               <div className="grid grid-cols-3 gap-3">
                 {[1, 2, 3].map(i => (

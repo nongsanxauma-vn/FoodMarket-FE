@@ -14,6 +14,7 @@ interface HeaderProps {
   onGoHome: () => void;
   onOpenLogin: () => void;
   onOpenRegister: () => void;
+  onOpenProfile?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -25,7 +26,8 @@ const Header: React.FC<HeaderProps> = ({
   onOpenNews,
   onGoHome,
   onOpenLogin,
-  onOpenRegister
+  onOpenRegister,
+  onOpenProfile
 }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -182,11 +184,8 @@ const Header: React.FC<HeaderProps> = ({
                         <p className="text-sm font-black truncate">{user?.name}</p>
                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">{user?.role}</p>
                       </div>
-                      <button onClick={() => { setShowProfileMenu(false); onRoleSwitch(AppRole.FARMER); }} className="w-full px-5 py-3 text-left text-xs font-bold hover:bg-gray-50 flex items-center gap-3 transition-colors">
-                        <UserIcon className="size-4 text-gray-400" /> Chuyển sang Nông dân
-                      </button>
-                      <button onClick={() => { setShowProfileMenu(false); onRoleSwitch(AppRole.SHIPPER); }} className="w-full px-5 py-3 text-left text-xs font-bold hover:bg-gray-50 flex items-center gap-3 transition-colors">
-                        <span className="material-symbols-outlined text-lg text-gray-400">local_shipping</span> Chuyển sang Shipper
+                      <button onClick={() => { setShowProfileMenu(false); onOpenProfile && onOpenProfile(); }} className="w-full px-5 py-3 text-left text-xs font-bold hover:bg-gray-50 flex items-center gap-3 transition-colors">
+                        <UserIcon className="size-4 text-gray-400" /> Hồ sơ của tôi
                       </button>
                       <div className="h-px bg-gray-50 mx-3 my-1" />
                       <button onClick={onLogout} className="w-full px-5 py-3 text-left text-xs font-black text-red-500 hover:bg-red-50 flex items-center gap-3 transition-colors">
