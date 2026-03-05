@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { AppRole, User } from '../../types/index';
-import { Search, ShoppingCart, Bell, Menu, Leaf, User as UserIcon, LogOut, Phone, X, CheckCircle2, Trash2, Store, Truck, LayoutDashboard } from 'lucide-react';
+import { Search, ShoppingCart, Bell, Menu, Leaf, User as UserIcon, LogOut, Phone, X } from 'lucide-react';
 import { notificationService, NotificationItem } from '../../services';
 
 interface HeaderProps {
@@ -111,10 +111,8 @@ const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center justify-between max-w-[1280px] mx-auto gap-10">
           {/* Logo Area */}
           <div className="flex items-center gap-3 shrink-0 cursor-pointer" onClick={onGoHome}>
-            <div className="size-10 bg-white rounded-full flex items-center justify-center text-[#38543a]">
-              <Leaf className="size-6 fill-current" />
-            </div>
-            <h2 className="text-white text-3xl font-black leading-tight tracking-tighter uppercase font-display italic">XẤU MÃ</h2>
+            <img src="/nong_san_xau_ma/logo.png" alt="Logo" className="size-10 object-contain rounded-full bg-white" />
+            <h2 className="text-white text-xl font-black leading-tight tracking-tighter uppercase font-display italic">NÔNG SẢN XẤU MÃ</h2>
           </div>
 
           {/* Search Bar */}
