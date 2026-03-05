@@ -52,6 +52,8 @@ const App: React.FC = () => {
   const [isTrackingOpen, setIsTrackingOpen] = useState(false);
   const [isNewsOpen, setIsNewsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [currentOrderId, setCurrentOrderId] = useState<number>(0);
+
 
   const currentUser: User | null = isAuthenticated ? {
     id: 'user-123',
@@ -172,6 +174,8 @@ const App: React.FC = () => {
 
   const handleOpenTracking = () => {
     setIsSuccessOpen(false);
+    // setCurrentOrderId(/* orderId từ checkout */);
+    setCurrentOrderId(6);
     setIsTrackingOpen(true);
   };
 
@@ -278,7 +282,7 @@ const App: React.FC = () => {
               onOpenProfile={() => setIsProfileOpen(true)}
             />
             <div className="flex-1">
-              {isTrackingOpen ? <Tracking onBack={handleCloseBuyerSpecialPages} /> :
+              {isTrackingOpen ? <Tracking onBack={handleCloseBuyerSpecialPages} orderId={6} /> :
                 isSuccessOpen ? <Success onTrackOrder={handleOpenTracking} onGoHome={handleCloseBuyerSpecialPages} /> :
                   isCheckoutOpen ? <Checkout onComplete={handlePaymentSuccess} onBack={handleOpenCart} /> :
                     isCartOpen ? <Cart onProceedToCheckout={handleProceedToCheckout} onBackToShopping={handleCloseBuyerSpecialPages} /> :

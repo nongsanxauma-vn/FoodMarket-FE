@@ -1,3 +1,559 @@
+// import React, { useState, useEffect, useCallback } from 'react';
+// import { notificationService, NotificationItem } from '../../services';
+// import {
+//   shipperService,
+//   AvailableOrderResponse,
+//   ShipperOrderResponse,
+// } from '../../services/shipper.service'; // ← điều chỉnh path nếu cần
+// import {
+//   Bell, MapPin, Wallet, Navigation, Zap, Clock, Bike, Package,
+//   Map as MapIcon, ArrowRight, User, LogOut, ShieldCheck, Star,
+//   Award, Truck, CreditCard, CheckCircle2, X, Info, AlertCircle,
+//   RefreshCw, Loader2
+// } from 'lucide-react';
+
+// interface ShipperDashboardProps {
+//   onLogout: () => void;
+// }
+
+// // ===================== TYPES =====================
+// type GpsStatus = 'idle' | 'loading' | 'granted' | 'denied' | 'error';
+
+// const ShipperDashboard: React.FC<ShipperDashboardProps> = ({ onLogout }) => {
+//   const [activeTab, setActiveTab] = useState('Đơn hàng mới');
+//   const [radius, setRadius] = useState('2km');
+
+//   // Notifications
+//   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+//   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+//   const [loadingNotifications, setLoadingNotifications] = useState(false);
+
+//   // GPS state
+//   const [gpsStatus, setGpsStatus] = useState<GpsStatus>('idle');
+//   const [shipperLat, setShipperLat] = useState<number | null>(null);
+//   const [shipperLng, setShipperLng] = useState<number | null>(null);
+
+//   // Orders state
+//   const [availableOrders, setAvailableOrders] = useState<AvailableOrderResponse[]>([]);
+//   const [loadingOrders, setLoadingOrders] = useState(false);
+//   const [ordersError, setOrdersError] = useState<string | null>(null);
+
+//   // Accept order state
+//   const [acceptingOrderId, setAcceptingOrderId] = useState<number | null>(null);
+//   const [acceptSuccess, setAcceptSuccess] = useState<number | null>(null); // orderId vừa nhận thành công
+
+//   const unreadCount = notifications.filter(n => !n.isRead).length;
+
+//   // ===================== NOTIFICATIONS =====================
+//   useEffect(() => {
+//     const fetchNotifications = async () => {
+//       setLoadingNotifications(true);
+//       try {
+//         const res = await notificationService.getMyNotifications();
+//         if (res.result) setNotifications(res.result);
+//       } catch (err) {
+//         console.error('Failed to fetch notifications', err);
+//       } finally {
+//         setLoadingNotifications(false);
+//       }
+//     };
+//     fetchNotifications();
+//     const interval = setInterval(fetchNotifications, 30000);
+//     return () => clearInterval(interval);
+//   }, []);
+
+//   // ===================== GPS =====================
+//   /**
+//    * Xin quyền GPS và lấy vị trí hiện tại
+//    * Sau khi có lat/lng → tự động fetch đơn gần nhất
+//    */
+//   const requestGpsAndFetchOrders = useCallback(() => {
+//     if (!navigator.geolocation) {
+//       setGpsStatus('error');
+//       setOrdersError('Trình duyệt không hỗ trợ GPS');
+//       return;
+//     }
+
+//     setGpsStatus('loading');
+//     setOrdersError(null);
+
+//     navigator.geolocation.getCurrentPosition(
+//       (position) => {
+//         const lat = position.coords.latitude;
+//         const lng = position.coords.longitude;
+//         setShipperLat(lat);
+//         setShipperLng(lng);
+//         setGpsStatus('granted');
+//         fetchNearbyOrders(lat, lng); // fetch ngay sau khi có GPS
+//       },
+//       (error) => {
+//         console.error('GPS error:', error);
+//         setGpsStatus('denied');
+//         setOrdersError('Không lấy được vị trí GPS. Vui lòng bật GPS và thử lại.');
+//       },
+//       {
+//         enableHighAccuracy: true,
+//         timeout: 10000,
+//         maximumAge: 60000, // cache GPS 1 phút
+//       }
+//     );
+//   }, []);
+
+//   // Auto-request GPS khi vào tab "Đơn hàng mới"
+//   useEffect(() => {
+//     if (activeTab === 'Đơn hàng mới' && gpsStatus === 'idle') {
+//       requestGpsAndFetchOrders();
+//     }
+//   }, [activeTab]);
+
+//   // ===================== FETCH ORDERS =====================
+//   const fetchNearbyOrders = async (lat: number, lng: number) => {
+//     setLoadingOrders(true);
+//     setOrdersError(null);
+//     try {
+//       const res = await shipperService.getNearbyOrders(lat, lng);
+//       if (res.result) {
+//         setAvailableOrders(res.result);
+//       }
+//     } catch (err: any) {
+//       console.error('Fetch nearby orders error:', err);
+//       setOrdersError('Không tải được danh sách đơn. Vui lòng thử lại.');
+//     } finally {
+//       setLoadingOrders(false);
+//     }
+//   };
+
+//   // Refresh thủ công
+//   const handleRefresh = () => {
+//     if (shipperLat && shipperLng) {
+//       fetchNearbyOrders(shipperLat, shipperLng);
+//     } else {
+//       requestGpsAndFetchOrders();
+//     }
+//   };
+
+//   // ===================== ACCEPT ORDER =====================
+//   const handleAcceptOrder = async (orderId: number) => {
+//     setAcceptingOrderId(orderId);
+//     try {
+//       await shipperService.acceptOrder(orderId);
+//       setAcceptSuccess(orderId);
+//       // Xoá đơn vừa nhận khỏi danh sách
+//       setAvailableOrders(prev => prev.filter(o => o.orderId !== orderId));
+//       // Tắt success badge sau 3 giây
+//       setTimeout(() => setAcceptSuccess(null), 3000);
+//     } catch (err: any) {
+//       console.error('Accept order error:', err);
+//       const msg = err?.data?.message;
+//       alert(msg === 'ORDER_ALREADY_TAKEN'
+//         ? 'Đơn này vừa được shipper khác nhận rồi!'
+//         : 'Không thể nhận đơn, vui lòng thử lại.');
+//       // Refresh để cập nhật danh sách
+//       if (shipperLat && shipperLng) fetchNearbyOrders(shipperLat, shipperLng);
+//     } finally {
+//       setAcceptingOrderId(null);
+//     }
+//   };
+
+//   // ===================== HELPERS =====================
+//   const formatDistance = (km: number | null) => {
+//     if (km === null) return 'Không xác định';
+//     if (km < 1) return `${Math.round(km * 1000)}m`;
+//     return `${km.toFixed(1)}km`;
+//   };
+
+//   const formatCurrency = (amount: number) =>
+//     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+
+//   const formatTime = (dateStr: string) => {
+//     const date = new Date(dateStr);
+//     const now = new Date();
+//     const diffMin = Math.floor((now.getTime() - date.getTime()) / 60000);
+//     if (diffMin < 1) return 'Vừa xong';
+//     if (diffMin < 60) return `${diffMin} phút trước`;
+//     return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+//   };
+
+//   // ===================== RENDER HELPERS =====================
+
+//   /** Banner GPS - hiện khi chưa có GPS */
+//   const renderGpsBanner = () => {
+//     if (gpsStatus === 'granted') return null;
+
+//     return (
+//       <div className={`mb-8 p-6 rounded-[28px] border flex items-center gap-5 ${
+//         gpsStatus === 'denied' || gpsStatus === 'error'
+//           ? 'bg-red-50 border-red-100 text-red-700'
+//           : 'bg-blue-50 border-blue-100 text-blue-700'
+//       }`}>
+//         <div className="size-12 rounded-2xl bg-white/60 flex items-center justify-center shrink-0">
+//           {gpsStatus === 'loading'
+//             ? <Loader2 className="size-6 animate-spin" />
+//             : <Navigation className="size-6" />
+//           }
+//         </div>
+//         <div className="flex-1">
+//           <p className="font-black text-sm uppercase tracking-tight">
+//             {gpsStatus === 'loading' && 'Đang lấy vị trí GPS...'}
+//             {gpsStatus === 'idle' && 'Cần bật GPS để xem đơn gần bạn'}
+//             {gpsStatus === 'denied' && 'Không thể lấy GPS — Vui lòng bật quyền vị trí'}
+//             {gpsStatus === 'error' && ordersError}
+//           </p>
+//           {gpsStatus !== 'loading' && (
+//             <p className="text-xs opacity-70 font-medium mt-1">
+//               GPS giúp tìm đơn hàng gần nhất và tính khoảng cách chính xác
+//             </p>
+//           )}
+//         </div>
+//         {(gpsStatus === 'denied' || gpsStatus === 'error' || gpsStatus === 'idle') && (
+//           <button
+//             onClick={requestGpsAndFetchOrders}
+//             className="px-5 py-2.5 bg-white rounded-xl text-xs font-black shadow-sm border border-current/10 hover:scale-105 transition-transform whitespace-nowrap"
+//           >
+//             Bật GPS
+//           </button>
+//         )}
+//       </div>
+//     );
+//   };
+
+//   /** Loading skeleton cho order cards */
+//   const renderLoadingSkeleton = () => (
+//     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+//       {[1, 2, 3].map(i => (
+//         <div key={i} className="bg-white rounded-[40px] border border-gray-100 p-8 animate-pulse">
+//           <div className="h-4 bg-gray-100 rounded-full w-1/3 mb-8" />
+//           <div className="space-y-4">
+//             <div className="h-3 bg-gray-100 rounded-full w-full" />
+//             <div className="h-3 bg-gray-100 rounded-full w-4/5" />
+//             <div className="h-3 bg-gray-100 rounded-full w-2/3" />
+//           </div>
+//           <div className="h-12 bg-gray-100 rounded-2xl w-full mt-10" />
+//         </div>
+//       ))}
+//     </div>
+//   );
+
+//   /** Empty state */
+//   const renderEmptyOrders = () => (
+//     <div className="col-span-3 flex flex-col items-center justify-center py-24 gap-6 text-center">
+//       <div className="size-24 bg-gray-50 rounded-[40px] flex items-center justify-center text-gray-200 border border-gray-100">
+//         <Package className="size-12" />
+//       </div>
+//       <div>
+//         <p className="text-lg font-black text-gray-400 uppercase tracking-tight">Không có đơn nào trong khu vực</p>
+//         <p className="text-xs text-gray-300 font-bold uppercase tracking-widest mt-2">Thử mở rộng bán kính tìm kiếm</p>
+//       </div>
+//       <button
+//         onClick={handleRefresh}
+//         className="px-8 py-3 bg-primary/10 text-primary rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-primary/20 transition-all flex items-center gap-2"
+//       >
+//         <RefreshCw className="size-4" /> Tải lại
+//       </button>
+//     </div>
+//   );
+
+//   /** Order cards từ API thật */
+//   const renderOrderCards = () => (
+//     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+//       {availableOrders.length === 0
+//         ? renderEmptyOrders()
+//         : availableOrders.map((order) => (
+//           <div
+//             key={order.orderId}
+//             className="bg-white rounded-[40px] border border-gray-100 shadow-sm hover:shadow-xl transition-all p-8 flex flex-col group relative overflow-hidden"
+//           >
+//             {/* Header: thời gian + phí */}
+//             <div className="flex justify-between items-start mb-8">
+//               <div className="px-3 py-1 rounded-lg flex items-center gap-1.5 bg-gray-50 text-gray-400">
+//                 <Clock className="size-3" />
+//                 <span className="text-[10px] font-black uppercase tracking-tight">
+//                   {formatTime(order.createdAt)}
+//                 </span>
+//               </div>
+//               <span className="text-2xl font-black text-primary">
+//                 {formatCurrency(order.shippingFee)}
+//               </span>
+//             </div>
+
+//             {/* Route: lấy hàng → giao hàng */}
+//             <div className="space-y-8 relative">
+//               <div className="absolute left-2.5 top-2 bottom-2 w-0.5 border-l border-dashed border-gray-200" />
+
+//               {/* Điểm lấy hàng (shop) */}
+//               <div className="relative flex items-start gap-5">
+//                 <div className="size-5 bg-orange-100 border-2 border-white rounded-full flex items-center justify-center shrink-0 mt-1 shadow-sm">
+//                   <div className="size-1.5 bg-orange-500 rounded-full" />
+//                 </div>
+//                 <div>
+//                   <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">LẤY HÀNG</p>
+//                   <h4 className="text-sm font-black text-gray-900">{order.shopName}</h4>
+//                   <p className="text-[11px] text-gray-500 font-medium leading-tight mt-1">{order.shopAddress}</p>
+//                 </div>
+//               </div>
+
+//               {/* Điểm giao hàng (buyer) */}
+//               <div className="relative flex items-start gap-5">
+//                 <div className="size-5 bg-blue-100 border-2 border-white rounded-full flex items-center justify-center shrink-0 mt-1 shadow-sm">
+//                   <div className="size-1.5 bg-blue-500 rounded-full" />
+//                 </div>
+//                 <div>
+//                   <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">GIAO HÀNG</p>
+//                   <h4 className="text-sm font-black text-gray-900">{order.recipientName}</h4>
+//                   <p className="text-[11px] text-gray-500 font-medium leading-tight mt-1">{order.shippingAddress}</p>
+//                   {/* Khoảng cách từ Goong */}
+//                   <p className="text-[10px] text-primary font-bold italic mt-1 flex items-center gap-1">
+//                     <Navigation className="size-3" />
+//                     {formatDistance(order.distanceKm)} từ vị trí của bạn
+//                   </p>
+//                 </div>
+//               </div>
+//             </div>
+
+//             {/* Nút nhận đơn */}
+//             <button
+//               onClick={() => handleAcceptOrder(order.orderId)}
+//               disabled={acceptingOrderId === order.orderId}
+//               className={`mt-10 w-full py-4 font-black rounded-2xl flex items-center justify-center gap-2 shadow-xl transition-all transform active:scale-95 group
+//                 ${acceptSuccess === order.orderId
+//                   ? 'bg-green-500 text-white shadow-green-500/20'
+//                   : 'bg-primary text-white shadow-primary/20 hover:bg-primary-dark'
+//                 }
+//                 ${acceptingOrderId === order.orderId ? 'opacity-70 cursor-not-allowed' : ''}
+//               `}
+//             >
+//               {acceptingOrderId === order.orderId ? (
+//                 <><Loader2 className="size-4 animate-spin" /> Đang xử lý...</>
+//               ) : acceptSuccess === order.orderId ? (
+//                 <><CheckCircle2 className="size-4" /> Đã nhận đơn!</>
+//               ) : (
+//                 <>Nhận đơn này <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" /></>
+//               )}
+//             </button>
+
+//             <div className="absolute top-0 right-0 size-32 bg-primary/5 rounded-full translate-x-1/2 -translate-y-1/2 blur-2xl group-hover:bg-primary/10 transition-colors" />
+//           </div>
+//         ))
+//       }
+//     </div>
+//   );
+
+//   // ===================== PROFILE (giữ nguyên) =====================
+//   const renderProfile = () => (
+//     <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+//       {/* ... giữ nguyên code profile cũ ... */}
+//       <div className="bg-white rounded-[48px] border border-gray-100 shadow-sm p-10 flex items-center gap-10">
+//         <div className="size-32 rounded-[40px] overflow-hidden border-4 border-white shadow-xl bg-blue-100">
+//           <img src="https://picsum.photos/seed/shipper_avatar/200/200" className="w-full h-full object-cover" />
+//         </div>
+//         <div className="flex-1">
+//           <h2 className="text-3xl font-black text-gray-900">Shipper</h2>
+//           <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-2">Đang hoạt động</p>
+//         </div>
+//       </div>
+//     </div>
+//   );
+
+//   // ===================== MAIN RENDER =====================
+//   return (
+//     <div className="flex-1 bg-background animate-in fade-in duration-500 min-h-screen">
+
+//       {/* Header */}
+//       <div className="bg-[#1a4d2e] text-white px-4 md:px-10 lg:px-40 py-4 flex items-center justify-between sticky top-0 z-[50] shadow-xl">
+//         <div className="flex items-center gap-3">
+//           <div className="size-10 bg-white rounded-xl flex items-center justify-center text-[#1a4d2e]">
+//             <Bike className="size-6 fill-current" />
+//           </div>
+//           <div>
+//             <h2 className="text-xl font-black tracking-tighter uppercase leading-none">XẤU MÃ SHIPPER</h2>
+//             <p className="text-[9px] font-black text-green-400 uppercase tracking-widest mt-1">Hệ thống vận chuyển thông minh</p>
+//           </div>
+//         </div>
+
+//         <div className="flex items-center gap-6">
+//           <button
+//             onClick={() => setIsNotificationsOpen(true)}
+//             className="size-10 bg-white/10 rounded-xl flex items-center justify-center text-white hover:bg-white/20 transition-all relative"
+//           >
+//             <Bell className="size-5" />
+//             {unreadCount > 0 && (
+//               <span className="absolute -top-1 -right-1 size-5 bg-red-500 rounded-full border-2 border-[#1a4d2e] text-[10px] font-bold flex items-center justify-center animate-bounce">
+//                 {unreadCount}
+//               </span>
+//             )}
+//           </button>
+//           <div className="h-8 w-px bg-white/10" />
+//           <div className="flex items-center gap-4 group cursor-pointer" onClick={() => setActiveTab('Hồ sơ cá nhân')}>
+//             <div className="text-right hidden sm:block">
+//               <p className="text-xs font-black">Shipper</p>
+//               <p className="text-[9px] font-bold text-green-400 uppercase tracking-widest">
+//                 {gpsStatus === 'granted' ? '📍 GPS đang bật' : 'Đang trực tuyến'}
+//               </p>
+//             </div>
+//             <img src="https://picsum.photos/seed/shipper_avatar/80/80" className="size-10 rounded-xl object-cover border-2 border-white/20 group-hover:border-white transition-all shadow-md" />
+//           </div>
+//           <button
+//             onClick={onLogout}
+//             className="size-10 bg-red-500/20 text-red-200 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
+//             title="Đăng xuất"
+//           >
+//             <LogOut className="size-5" />
+//           </button>
+//         </div>
+//       </div>
+
+//       {/* Sub Nav */}
+//       <div className="bg-white border-b border-gray-100 shadow-sm sticky top-[72px] z-40 px-4 md:px-10 lg:px-40">
+//         <div className="max-w-[1280px] mx-auto flex items-center justify-between">
+//           <div className="flex items-center gap-10">
+//             {['Đơn hàng mới', 'Đơn đang giao', 'Lịch sử thu nhập', 'Hồ sơ cá nhân'].map((tab) => (
+//               <button
+//                 key={tab}
+//                 onClick={() => setActiveTab(tab)}
+//                 className={`py-5 text-sm font-black uppercase tracking-tight transition-all border-b-4 flex items-center gap-2 ${activeTab === tab ? 'text-primary border-primary' : 'text-gray-400 border-transparent hover:text-gray-600'}`}
+//               >
+//                 {tab === 'Đơn hàng mới' && <Zap className={`size-4 ${activeTab === tab ? 'fill-primary' : ''}`} />}
+//                 {tab === 'Hồ sơ cá nhân' && <User className="size-4" />}
+//                 {tab}
+//               </button>
+//             ))}
+//           </div>
+//           <div className="flex items-center gap-4 py-4 border-l border-gray-50 pl-10 hidden md:flex">
+//             <div className="flex items-center gap-3 bg-gray-50 px-4 py-2 rounded-2xl border border-gray-100">
+//               <Wallet className="size-4 text-primary" />
+//               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">VÍ SHIPPER:</span>
+//               <span className="text-sm font-black text-gray-900">1.250.000đ</span>
+//             </div>
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* Content */}
+//       <div className="max-w-[1280px] mx-auto px-4 md:px-10 lg:px-40 py-12 pb-24">
+//         {activeTab === 'Hồ sơ cá nhân' ? renderProfile() : (
+//           <>
+//             {/* Page header */}
+//             <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6">
+//               <div>
+//                 <h1 className="text-4xl font-black text-gray-900 font-display uppercase tracking-tighter">{activeTab}</h1>
+//                 <p className="text-gray-400 font-bold mt-1 uppercase text-xs tracking-widest">
+//                   {gpsStatus === 'granted' && shipperLat
+//                     ? `📍 Đang tìm đơn gần vị trí của bạn`
+//                     : 'Bật GPS để xem đơn hàng gần nhất'
+//                   }
+//                 </p>
+//               </div>
+
+//               {activeTab === 'Đơn hàng mới' && (
+//                 <div className="flex items-center gap-3">
+//                   {/* Refresh button */}
+//                   <button
+//                     onClick={handleRefresh}
+//                     disabled={loadingOrders || gpsStatus === 'loading'}
+//                     className="size-10 bg-white border border-gray-100 rounded-2xl flex items-center justify-center text-gray-400 hover:text-primary hover:border-primary/20 transition-all disabled:opacity-40"
+//                     title="Tải lại đơn hàng"
+//                   >
+//                     <RefreshCw className={`size-4 ${loadingOrders ? 'animate-spin' : ''}`} />
+//                   </button>
+
+//                   {/* Radius selector */}
+//                   <div className="flex items-center gap-4 bg-white p-2 rounded-[28px] border border-gray-100 shadow-sm">
+//                     <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">BÁN KÍNH:</span>
+//                     <div className="flex gap-1">
+//                       {['2km', '5km', '10km'].map((r) => (
+//                         <button
+//                           key={r}
+//                           onClick={() => setRadius(r)}
+//                           className={`px-5 py-2 rounded-2xl text-xs font-black transition-all ${radius === r ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-gray-400 hover:bg-gray-50'}`}
+//                         >
+//                           {r}
+//                         </button>
+//                       ))}
+//                     </div>
+//                   </div>
+//                 </div>
+//               )}
+//             </div>
+
+//             {/* GPS Banner */}
+//             {activeTab === 'Đơn hàng mới' && renderGpsBanner()}
+
+//             {/* Order Cards hoặc Loading */}
+//             {activeTab === 'Đơn hàng mới' && (
+//               loadingOrders
+//                 ? renderLoadingSkeleton()
+//                 : renderOrderCards()
+//             )}
+//           </>
+//         )}
+//       </div>
+
+//       {/* Footer */}
+//       <footer className="bg-[#1a4d2e] text-white py-12 px-4 md:px-10 lg:px-40 mt-12">
+//         <div className="max-w-[1280px] mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
+//           <div className="flex items-center gap-3">
+//             <div className="size-8 bg-white rounded-xl flex items-center justify-center text-[#1a4d2e]">
+//               <Bike className="size-5 fill-current" />
+//             </div>
+//             <h2 className="text-xl font-black tracking-tighter uppercase">XẤU MÃ SHIPPER</h2>
+//           </div>
+//           <nav className="flex flex-wrap justify-center gap-10">
+//             <a href="#" className="text-xs font-bold text-green-100/60 hover:text-white transition-colors uppercase tracking-widest">Trung tâm hỗ trợ</a>
+//             <a href="#" className="text-xs font-bold text-green-100/60 hover:text-white transition-colors uppercase tracking-widest">Quy tắc ứng xử</a>
+//             <a href="#" className="text-xs font-bold text-green-100/60 hover:text-white transition-colors uppercase tracking-widest">Biểu phí thu nhập</a>
+//           </nav>
+//           <p className="text-[10px] text-green-100/40 font-medium italic">© 2024 XẤU MÃ. Hệ thống vận chuyển thông minh.</p>
+//         </div>
+//       </footer>
+
+//       {/* Notification Modal */}
+//       {isNotificationsOpen && (
+//         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+//           <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={() => setIsNotificationsOpen(false)} />
+//           <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl relative z-10 flex flex-col max-h-[80vh] overflow-hidden animate-in zoom-in-95 duration-300">
+//             <div className="p-8 border-b border-gray-100 flex items-center justify-between">
+//               <div>
+//                 <h3 className="text-2xl font-black text-gray-900 uppercase">Thông báo hệ thống</h3>
+//                 <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Gửi từ ban quản trị</p>
+//               </div>
+//               <button onClick={() => setIsNotificationsOpen(false)} className="size-12 bg-gray-50 text-gray-400 rounded-2xl flex items-center justify-center hover:bg-gray-100 transition-all">
+//                 <X className="size-6" />
+//               </button>
+//             </div>
+//             <div className="flex-1 overflow-y-auto p-8 space-y-4">
+//               {loadingNotifications && notifications.length === 0 ? (
+//                 <div className="flex flex-col items-center justify-center py-20 gap-4">
+//                   <Loader2 className="size-12 text-primary animate-spin" />
+//                   <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Đang cập nhật...</p>
+//                 </div>
+//               ) : notifications.length === 0 ? (
+//                 <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+//                   <Bell className="size-10 text-gray-200" />
+//                   <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Không có thông báo nào</p>
+//                 </div>
+//               ) : notifications.map((n) => (
+//                 <div key={n.id} className={`p-6 rounded-[32px] border flex gap-5 ${!n.isRead ? 'bg-primary/5 border-primary/10' : 'bg-white border-gray-100 shadow-sm'}`}>
+//                   <div className={`size-12 rounded-2xl flex items-center justify-center shrink-0 ${!n.isRead ? 'bg-primary text-white' : 'bg-gray-100 text-gray-400'}`}>
+//                     {n.title.toLowerCase().includes('đơn') ? <Package className="size-6" /> : <Info className="size-6" />}
+//                   </div>
+//                   <div className="flex-1">
+//                     <div className="flex items-center justify-between mb-1">
+//                       <h4 className="font-black text-gray-900">{n.title}</h4>
+//                       <span className="text-[10px] font-bold text-gray-300 uppercase">{new Date(n.createAt).toLocaleDateString()}</span>
+//                     </div>
+//                     <p className="text-sm text-gray-500 font-medium leading-relaxed">{n.message}</p>
+//                   </div>
+//                 </div>
+//               ))}
+//             </div>
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   );
+// };
+
+// export default ShipperDashboard;
 
 import React, { useState, useEffect } from 'react';
 import { notificationService, NotificationItem } from '../../services';
@@ -202,7 +758,7 @@ const ShipperDashboard: React.FC<ShipperDashboardProps> = ({ onLogout }) => {
                </div>
                <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                     <span className="text-xs font-bold text-gray-400">Liên kết ngân hàng:</span>
+                  <span className="text-xs font-bold text-gray-400">Liên kết ngân hàng:</span>
                      <span className="text-sm font-black text-gray-900">MB BANK</span>
                   </div>
                   <div className="flex justify-between items-center">
@@ -251,50 +807,50 @@ const ShipperDashboard: React.FC<ShipperDashboardProps> = ({ onLogout }) => {
                   <Bell className="size-5" />
                   {unreadCount > 0 && (
                      <span className="absolute -top-1 -right-1 size-5 bg-red-500 rounded-full border-2 border-[#1a4d2e] text-[10px] font-bold flex items-center justify-center animate-bounce">
-                        {unreadCount}
-                     </span>
-                  )}
-               </button>
-               <div className="h-8 w-px bg-white/10" />
-               <div className="flex items-center gap-4 group cursor-pointer" onClick={() => setActiveTab('Hồ sơ cá nhân')}>
-                  <div className="text-right hidden sm:block">
-                     <p className="text-xs font-black">Anh Hùng</p>
-                     <p className="text-[9px] font-bold text-green-400 uppercase tracking-widest">Đang trực tuyến</p>
-                  </div>
-                  <img src="https://picsum.photos/seed/shipper_avatar/80/80" className="size-10 rounded-xl object-cover border-2 border-white/20 group-hover:border-white transition-all shadow-md" />
+                     {unreadCount}
+                  </span>
+               )}
+            </button>
+            <div className="h-8 w-px bg-white/10" />
+            <div className="flex items-center gap-4 group cursor-pointer" onClick={() => setActiveTab('Hồ sơ cá nhân')}>
+               <div className="text-right hidden sm:block">
+                  <p className="text-xs font-black">Anh Hùng</p>
+                  <p className="text-[9px] font-bold text-green-400 uppercase tracking-widest">Đang trực tuyến</p>
                </div>
-               <button
-                  onClick={onLogout}
-                  className="size-10 bg-red-500/20 text-red-200 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-inner"
-                  title="Đăng xuất"
-               >
-                  <LogOut className="size-5" />
-               </button>
+               <img src="https://picsum.photos/seed/shipper_avatar/80/80" className="size-10 rounded-xl object-cover border-2 border-white/20 group-hover:border-white transition-all shadow-md" />
             </div>
+            <button
+               onClick={onLogout}
+               className="size-10 bg-red-500/20 text-red-200 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-inner"
+               title="Đăng xuất"
+            >
+               <LogOut className="size-5" />
+            </button>
          </div>
+      </div>
 
-         {/* Shipper Sub Header / Navigation */}
-         <div className="bg-white border-b border-gray-100 shadow-sm sticky top-[72px] z-40 px-4 md:px-10 lg:px-40">
-            <div className="max-w-[1280px] mx-auto flex items-center justify-between">
-               <div className="flex items-center gap-10">
-                  {['Đơn hàng mới', 'Đơn đang giao', 'Lịch sử thu nhập', 'Hồ sơ cá nhân'].map((tab) => (
-                     <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        className={`py-5 text-sm font-black uppercase tracking-tight transition-all border-b-4 relative flex items-center gap-2 ${activeTab === tab ? 'text-primary border-primary' : 'text-gray-400 border-transparent hover:text-gray-600'
-                           }`}
-                     >
-                        {tab === 'Đơn hàng mới' && <Zap className={`size-4 ${activeTab === tab ? 'fill-primary' : ''}`} />}
-                        {tab === 'Hồ sơ cá nhân' && <User className="size-4" />}
-                        {tab}
-                     </button>
-                  ))}
-               </div>
-               <div className="flex items-center gap-4 py-4 border-l border-gray-50 pl-10 hidden md:flex">
-                  <div className="flex items-center gap-3 bg-gray-50 px-4 py-2 rounded-2xl border border-gray-100">
-                     <Wallet className="size-4 text-primary" />
-                     <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">VÍ SHIPPER:</span>
-                     <span className="text-sm font-black text-gray-900">1.250.000đ</span>
+      {/* Shipper Sub Header / Navigation */}
+      <div className="bg-white border-b border-gray-100 shadow-sm sticky top-[72px] z-40 px-4 md:px-10 lg:px-40">
+         <div className="max-w-[1280px] mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-10">
+               {['Đơn hàng mới', 'Đơn đang giao', 'Lịch sử thu nhập', 'Hồ sơ cá nhân'].map((tab) => (
+                  <button
+                     key={tab}
+                     onClick={() => setActiveTab(tab)}
+                     className={`py-5 text-sm font-black uppercase tracking-tight transition-all border-b-4 relative flex items-center gap-2 ${activeTab === tab ? 'text-primary border-primary' : 'text-gray-400 border-transparent hover:text-gray-600'
+                        }`}
+                  >
+                     {tab === 'Đơn hàng mới' && <Zap className={`size-4 ${activeTab === tab ? 'fill-primary' : ''}`} />}
+                     {tab === 'Hồ sơ cá nhân' && <User className="size-4" />}
+                     {tab}
+                  </button>
+               ))}
+            </div>
+            <div className="flex items-center gap-4 py-4 border-l border-gray-50 pl-10 hidden md:flex">
+               <div className="flex items-center gap-3 bg-gray-50 px-4 py-2 rounded-2xl border border-gray-100">
+                  <Wallet className="size-4 text-primary" />
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">VÍ SHIPPER:</span>
+                  <span className="text-sm font-black text-gray-900">1.250.000đ</span>
                   </div>
                </div>
             </div>
@@ -343,45 +899,45 @@ const ShipperDashboard: React.FC<ShipperDashboardProps> = ({ onLogout }) => {
                            </div>
 
                            <div className="space-y-8 relative">
-                              <div className="absolute left-2.5 top-2 bottom-2 w-0.5 bg-gray-50 border-l border-dashed border-gray-200" />
+                           <div className="absolute left-2.5 top-2 bottom-2 w-0.5 bg-gray-50 border-l border-dashed border-gray-200" />
 
-                              <div className="relative flex items-start gap-5">
-                                 <div className="size-5 bg-orange-100 border-2 border-white rounded-full flex items-center justify-center shrink-0 mt-1 shadow-sm">
-                                    <div className="size-1.5 bg-orange-500 rounded-full" />
-                                 </div>
-                                 <div>
-                                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">LẤY HÀNG</p>
-                                    <h4 className="text-sm font-black text-gray-900">{order.pickup.name}</h4>
-                                    <p className="text-[11px] text-gray-500 font-medium leading-tight mt-1">{order.pickup.address} ({order.pickup.distance})</p>
-                                 </div>
-                              </div>
+<div className="relative flex items-start gap-5">
+   <div className="size-5 bg-orange-100 border-2 border-white rounded-full flex items-center justify-center shrink-0 mt-1 shadow-sm">
+      <div className="size-1.5 bg-orange-500 rounded-full" />
+   </div>
+   <div>
+      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">LẤY HÀNG</p>
+      <h4 className="text-sm font-black text-gray-900">{order.pickup.name}</h4>
+      <p className="text-[11px] text-gray-500 font-medium leading-tight mt-1">{order.pickup.address} ({order.pickup.distance})</p>
+   </div>
+</div>
 
-                              <div className="relative flex items-start gap-5">
-                                 <div className="size-5 bg-blue-100 border-2 border-white rounded-full flex items-center justify-center shrink-0 mt-1 shadow-sm">
-                                    <div className="size-1.5 bg-blue-500 rounded-full" />
-                                 </div>
-                                 <div>
-                                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">GIAO HÀNG</p>
-                                    <h4 className="text-sm font-black text-gray-900">{order.delivery.name}</h4>
-                                    <p className="text-[11px] text-gray-500 font-medium leading-tight mt-1">{order.delivery.address}</p>
-                                    <p className="text-[10px] text-primary font-bold italic mt-1">{order.delivery.distance}</p>
-                                 </div>
-                              </div>
-                           </div>
+<div className="relative flex items-start gap-5">
+   <div className="size-5 bg-blue-100 border-2 border-white rounded-full flex items-center justify-center shrink-0 mt-1 shadow-sm">
+      <div className="size-1.5 bg-blue-500 rounded-full" />
+   </div>
+   <div>
+      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">GIAO HÀNG</p>
+      <h4 className="text-sm font-black text-gray-900">{order.delivery.name}</h4>
+      <p className="text-[11px] text-gray-500 font-medium leading-tight mt-1">{order.delivery.address}</p>
+      <p className="text-[10px] text-primary font-bold italic mt-1">{order.delivery.distance}</p>
+   </div>
+</div>
+</div>
 
-                           <button className="mt-10 w-full py-4 bg-primary text-white font-black rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all transform active:scale-95 group">
-                              Nhận đơn này <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
-                           </button>
+<button className="mt-10 w-full py-4 bg-primary text-white font-black rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all transform active:scale-95 group">
+Nhận đơn này <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
+</button>
 
-                           <div className="absolute top-0 right-0 size-32 bg-primary/5 rounded-full translate-x-1/2 -translate-y-1/2 blur-2xl group-hover:bg-primary/10 transition-colors" />
-                        </div>
-                     ))}
-                  </div>
+<div className="absolute top-0 right-0 size-32 bg-primary/5 rounded-full translate-x-1/2 -translate-y-1/2 blur-2xl group-hover:bg-primary/10 transition-colors" />
+</div>
+))}
+</div>
 
-                  {/* Heatmap Section */}
-                  <div className="bg-white rounded-[48px] border border-gray-100 shadow-sm p-12">
-                     <div className="flex items-center justify-between mb-8">
-                        <div className="flex items-center gap-4">
+{/* Heatmap Section */}
+<div className="bg-white rounded-[48px] border border-gray-100 shadow-sm p-12">
+<div className="flex items-center justify-between mb-8">
+<div className="flex items-center gap-4">
                            <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Khu vực đang nóng</h2>
                            <div className="size-3 bg-red-500 rounded-full animate-ping" />
                         </div>
