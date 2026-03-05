@@ -9,6 +9,7 @@ import Cart from './pages/auth/Cart';
 import Checkout from './pages/auth/Checkout';
 import Success from './pages/auth/Success';
 import Tracking from './pages/auth/Tracking';
+import MyOrders from './pages/auth/MyOrders';
 import News from './pages/News/News';
 import FarmerDashboard from './pages/farmer/Dashboard';
 import Products from './pages/farmer/Products';
@@ -54,6 +55,7 @@ const App: React.FC = () => {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [isTrackingOpen, setIsTrackingOpen] = useState(false);
+  const [isMyOrdersOpen, setIsMyOrdersOpen] = useState(false);
   const [isNewsOpen, setIsNewsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [currentOrderId, setCurrentOrderId] = useState<number>(0);
@@ -106,7 +108,7 @@ const App: React.FC = () => {
 
   // Prevent body scroll when modal is open (but NOT for full page views like ProductDetail or News)
   useEffect(() => {
-    const isModalOpen = isCartOpen || isCheckoutOpen || isSuccessOpen || isTrackingOpen;
+    const isModalOpen = isCartOpen || isCheckoutOpen || isSuccessOpen || isTrackingOpen || isMyOrdersOpen;
     if (isModalOpen) {
       document.documentElement.style.overflow = 'hidden';
       document.body.style.overflow = 'hidden';
@@ -118,7 +120,7 @@ const App: React.FC = () => {
       document.documentElement.style.overflow = 'unset';
       document.body.style.overflow = 'unset';
     };
-  }, [isCartOpen, isCheckoutOpen, isSuccessOpen, isTrackingOpen, isProfileOpen]);
+  }, [isCartOpen, isCheckoutOpen, isSuccessOpen, isTrackingOpen, isMyOrdersOpen, isProfileOpen]);
 
   // Reset order prep when navigating away from Orders
   useEffect(() => {
@@ -216,15 +218,20 @@ const App: React.FC = () => {
     setIsCheckoutOpen(true);
   };
 
-  const handlePaymentSuccess = () => {
+  const handlePaymentSuccess = (orderId: number) => {
     setIsCheckoutOpen(false);
+    setCurrentOrderId(orderId);
     setIsSuccessOpen(true);
   };
 
-  const handleOpenTracking = () => {
+  const handleOpenMyOrders = () => {
     setIsSuccessOpen(false);
-    // setCurrentOrderId(/* orderId từ checkout */);
-    setCurrentOrderId(6);
+    setIsMyOrdersOpen(true);
+  };
+
+  const handleOpenTracking = (orderId: number) => {
+    setIsMyOrdersOpen(false);
+    setCurrentOrderId(orderId);
     setIsTrackingOpen(true);
   };
   const handleCloseBuyerSpecialPages = () => {
@@ -232,6 +239,7 @@ const App: React.FC = () => {
     setIsCheckoutOpen(false);
     setIsSuccessOpen(false);
     setIsTrackingOpen(false);
+    setIsMyOrdersOpen(false);
     setIsNewsOpen(false);
     setIsProfileOpen(false);
     setSelectedProductId(null);
@@ -357,24 +365,26 @@ const App: React.FC = () => {
               onOpenLogin={() => setAuthMode('LOGIN')}
               onOpenRegister={() => setAuthMode('REGISTER')}
               onOpenProfile={() => setIsProfileOpen(true)}
+              onOpenMyOrders={handleOpenMyOrders}
               activeTab={activeTab}
             />
             <div className="flex-1">
-              {isTrackingOpen ? <Tracking onBack={handleCloseBuyerSpecialPages} orderId={6} /> :
-                isSuccessOpen ? <Success onTrackOrder={handleOpenTracking} onGoHome={handleCloseBuyerSpecialPages} /> :
-                  isCheckoutOpen ? <Checkout onComplete={handlePaymentSuccess} onBack={handleOpenCart} /> :
-                    isCartOpen ? <Cart onProceedToCheckout={handleProceedToCheckout} onBackToShopping={handleCloseBuyerSpecialPages} /> :
-                      isNewsOpen ? <News /> :
-                        selectedProductId ? <ProductDetail
-                          productId={selectedProductId}
-                          onBack={() => setSelectedProductId(null)}
-                          isAuthenticated={isAuthenticated}
-                          onOpenLogin={() => setAuthMode('LOGIN')}
-                        /> :
-                          isProfileOpen ? <Profile /> :
-                            <BuyerHome onSelectProduct={(id) => {
-                              setSelectedProductId(id);
-                            }} />}
+              {isTrackingOpen ? <Tracking onBack={handleCloseBuyerSpecialPages} orderId={currentOrderId} /> :
+                isMyOrdersOpen ? <MyOrders onBack={handleCloseBuyerSpecialPages} onViewTracking={handleOpenTracking} /> :
+                  isSuccessOpen ? <Success onViewMyOrders={handleOpenMyOrders} onGoHome={handleCloseBuyerSpecialPages} orderId={currentOrderId} /> :
+                    isCheckoutOpen ? <Checkout onComplete={handlePaymentSuccess} onBack={handleOpenCart} /> :
+                      isCartOpen ? <Cart onProceedToCheckout={handleProceedToCheckout} onBackToShopping={handleCloseBuyerSpecialPages} /> :
+                        isNewsOpen ? <News /> :
+                          selectedProductId ? <ProductDetail
+                            productId={selectedProductId}
+                            onBack={() => setSelectedProductId(null)}
+                            isAuthenticated={isAuthenticated}
+                            onOpenLogin={() => setAuthMode('LOGIN')}
+                          /> :
+                            isProfileOpen ? <Profile /> :
+                              <BuyerHome onSelectProduct={(id) => {
+                                setSelectedProductId(id);
+                              }} />}
             </div>
             <Footer />
           </div>

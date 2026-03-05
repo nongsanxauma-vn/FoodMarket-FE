@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { AppRole, User } from '../../types/index';
-import { Search, ShoppingCart, Bell, Menu, Leaf, User as UserIcon, LogOut, Phone, X, CheckCircle2, Trash2, Store, Truck, LayoutDashboard } from 'lucide-react';
+import { Search, ShoppingCart, Bell, Menu, Leaf, User as UserIcon, LogOut, Phone, X, CheckCircle2, Trash2, Store, Truck, LayoutDashboard, Package } from 'lucide-react';
 import { notificationService, NotificationItem, cartService } from '../../services';
 
 interface HeaderProps {
@@ -15,6 +15,7 @@ interface HeaderProps {
   onOpenLogin: () => void;
   onOpenRegister: () => void;
   onOpenProfile?: () => void;
+  onOpenMyOrders?: () => void;
   activeTab?: 'home' | 'blindbox' | 'news';
 }
 
@@ -29,6 +30,7 @@ const Header: React.FC<HeaderProps> = ({
   onOpenLogin,
   onOpenRegister,
   onOpenProfile,
+  onOpenMyOrders,
   activeTab
 }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -278,6 +280,9 @@ const Header: React.FC<HeaderProps> = ({
 
                       <button onClick={() => { setShowProfileMenu(false); onOpenProfile && onOpenProfile(); }} className="w-full px-5 py-3 text-left text-xs font-bold hover:bg-gray-50 flex items-center gap-3 transition-colors">
                         <UserIcon className="size-4 text-gray-400" /> Hồ sơ của tôi
+                      </button>
+                      <button onClick={() => { setShowProfileMenu(false); onOpenMyOrders && onOpenMyOrders(); }} className="w-full px-5 py-3 text-left text-xs font-bold hover:bg-gray-50 flex items-center gap-3 transition-colors">
+                        <Package className="size-4 text-gray-400" /> Đơn hàng của tôi
                       </button>
                       <div className="h-px bg-gray-50 mx-3 my-1" />
                       <button onClick={onLogout} className="w-full px-5 py-3 text-left text-xs font-black text-red-500 hover:bg-red-50 flex items-center gap-3 transition-colors">

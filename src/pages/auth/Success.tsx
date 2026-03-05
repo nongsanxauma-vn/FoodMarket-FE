@@ -1,53 +1,62 @@
 
 import React from 'react';
-import { CheckCircle2, Package, ArrowRight, Home, ShoppingBag } from 'lucide-react';
+import { CheckCircle2, Clock, Home, ShoppingBag, Eye } from 'lucide-react';
 
 interface SuccessProps {
-  onTrackOrder: () => void;
+  onViewMyOrders: () => void;
   onGoHome: () => void;
+  orderId?: number;
 }
 
-const Success: React.FC<SuccessProps> = ({ onTrackOrder, onGoHome }) => {
+const Success: React.FC<SuccessProps> = ({ onViewMyOrders, onGoHome, orderId }) => {
   return (
-    <div className="flex-1 bg-white flex items-center justify-center py-20 px-4 animate-in fade-in zoom-in-95 duration-500">
+    <div className="fixed inset-0 z-50 bg-white overflow-y-auto flex items-center justify-center py-20 px-4 animate-in fade-in zoom-in-95 duration-500">
       <div className="max-w-md w-full text-center flex flex-col items-center">
         <div className="size-24 bg-green-50 rounded-full flex items-center justify-center text-primary mb-8 relative">
            <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping opacity-20" />
            <CheckCircle2 className="size-14 relative z-10" />
         </div>
         
-        <h2 className="text-3xl font-black text-gray-900 font-display uppercase tracking-tight mb-4">Thanh toán thành công!</h2>
+        <h2 className="text-3xl font-black text-gray-900 font-display uppercase tracking-tight mb-4">Đặt hàng thành công!</h2>
         <p className="text-gray-500 font-medium leading-relaxed mb-10">
-          Cảm ơn bạn đã đồng hành cùng <span className="text-primary font-black">XẤU MÃ</span> để cứu nông sản. Đơn hàng <span className="font-bold text-gray-900">#XM-99218</span> đã được gửi đến nhà vườn.
+          Cảm ơn bạn đã đồng hành cùng <span className="text-primary font-black">XẤU MÃ</span> để cứu nông sản. Đơn hàng <span className="font-bold text-gray-900">#{orderId || 'XM-XXXX'}</span> đã được gửi đến nhà vườn để duyệt.
         </p>
 
-        <div className="w-full p-8 bg-gray-50 rounded-[40px] border border-gray-100 mb-10 flex flex-col gap-4">
-           <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Mã đơn hàng:</span>
-              <span className="text-gray-900 font-black">#XM-99218</span>
+        <div className="w-full p-8 bg-yellow-50 rounded-[40px] border border-yellow-100 mb-10 flex flex-col gap-6">
+           <div className="flex items-center gap-3 pb-4 border-b border-yellow-100">
+              <div className="size-10 bg-yellow-100 rounded-2xl flex items-center justify-center text-yellow-600">
+                <Clock className="size-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-black text-yellow-900 uppercase">Đang chờ duyệt</h4>
+                <p className="text-xs text-yellow-600 font-medium mt-0.5">Nhà vườn sẽ xác nhận đơn hàng trong vòng 1-2 giờ</p>
+              </div>
            </div>
-           <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Tổng thanh toán:</span>
-              <span className="text-primary font-black">169.100đ</span>
-           </div>
-           <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Phương thức:</span>
-              <span className="text-gray-900 font-black uppercase">Ví Xấu Mã</span>
+           
+           <div className="space-y-3">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Mã đơn hàng:</span>
+                <span className="text-gray-900 font-black">#{orderId || 'XM-XXXX'}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Trạng thái:</span>
+                <span className="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-black rounded-full uppercase">Chờ duyệt</span>
+              </div>
            </div>
         </div>
 
         <div className="flex flex-col w-full gap-4">
            <button 
-             onClick={onTrackOrder}
+             onClick={onViewMyOrders}
              className="w-full py-5 bg-primary text-white font-black rounded-2xl flex items-center justify-center gap-3 shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all transform active:scale-95"
            >
-              <Package className="size-5" /> THEO DÕI ĐƠN HÀNG
+              <Eye className="size-5" /> XEM ĐƠN HÀNG CỦA TÔI
            </button>
            <button 
              onClick={onGoHome}
              className="w-full py-5 bg-white border-2 border-gray-100 text-gray-400 font-black rounded-2xl flex items-center justify-center gap-3 hover:bg-gray-50 hover:text-gray-900 transition-all"
            >
-              <Home className="size-5" /> QUAY LẠI TRANG CHỦ
+              <Home className="size-5" /> TIẾP TỤC MUA SẮM
            </button>
         </div>
 
@@ -55,8 +64,8 @@ const Success: React.FC<SuccessProps> = ({ onTrackOrder, onGoHome }) => {
            <div className="size-10 bg-white rounded-xl flex items-center justify-center text-blue-500 shadow-sm shrink-0">
               <ShoppingBag className="size-5" />
            </div>
-           <p className="text-[11px] text-blue-900 font-bold leading-relaxed italic">
-              Bạn nhận được <span className="text-blue-600">50 Điểm Xanh</span> từ đơn hàng này. Dùng điểm để đổi voucher cho lần mua tới nhé!
+           <p className="text-[11px] text-blue-900 font-bold leading-relaxed">
+              💡 <span className="font-black">Mẹo:</span> Bạn có thể xem trạng thái đơn hàng bất cứ lúc nào trong mục "Đơn hàng của tôi". Chúng tôi sẽ thông báo khi nhà vườn duyệt đơn!
            </p>
         </div>
       </div>

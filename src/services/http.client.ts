@@ -105,11 +105,18 @@ class HttpClient {
       delete headers['Content-Type'];
     }
 
+    // Debug logging
+    console.log(`[HTTP] ${method} ${fullUrl}`);
+    console.log('[HTTP] Headers:', headers);
+    console.log('[HTTP] Token:', this.getToken() ? 'Present' : 'Missing');
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), config?.timeout || this.timeout);
 
     try {
       const body = isFormData ? data : (data ? JSON.stringify(data) : undefined);
+
+      console.log(`[HTTP] Request body:`, body);
 
       const response = await fetch(fullUrl, {
         method,
@@ -123,6 +130,16 @@ class HttpClient {
       const responseData = await response.json();
 
       if (!response.ok) {
+        console.error(`[HTTP] Error ${response.status}:`, responseData);
+        
+        // Nếu 401, có thể token hết hạn
+        if (response.status === 401) {
+          console.error('[HTTP] Unauthorized - Token may be expired');
+          // Clear token và redirect to login
+          localStorage.removeItem(TOKEN_KEY);
+          window.location.href = '/';
+        }
+        
         throw {
           status: response.status,
           data: responseData,

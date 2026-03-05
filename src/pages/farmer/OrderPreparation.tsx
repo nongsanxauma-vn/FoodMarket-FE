@@ -64,11 +64,15 @@ const OrderPreparation: React.FC<OrderPreparationProps> = ({ orderId, onBack, on
     if (!order) return;
     setUpdating(true);
     try {
-      await orderService.updateOrder(order.id, { status: 'PREPARING' });
+      // Order is already in SHIPPING status from Orders.tsx
+      // Here we just mark it as ready for delivery or keep it in SHIPPING
+      // The buyer will mark it as DELIVERED when they receive it
+      console.log('[OrderPreparation] Order is ready for shipment:', order.id);
+      // No status update needed - just close the preparation screen
       onComplete();
-    } catch (err) {
-      console.error('Failed to update order', err);
-      setError('Không thể cập nhật trạng thái đơn hàng.');
+    } catch (err: any) {
+      console.error('[OrderPreparation] Error:', err);
+      setError(err?.data?.message || 'Có lỗi xảy ra.');
     } finally {
       setUpdating(false);
     }

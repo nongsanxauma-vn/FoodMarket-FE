@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ShoppingCart, MapPin, Trash2, Plus, Minus, AlertTriangle, ArrowRight, Info, Loader2 } from 'lucide-react';
+import { ShoppingCart, MapPin, Trash2, Plus, Minus, AlertTriangle, ArrowRight, ArrowLeft, Info, Loader2 } from 'lucide-react';
 import { cartService, CartResponse, CartItemResponse } from '../../services/cart.service';
 import { productService, ProductResponse } from '../../services/product.service';
 
@@ -126,8 +126,19 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
   const shopsCount = Object.keys(groupedItems).length;
 
   return (
-    <div className="flex-1 bg-background animate-in fade-in duration-500 pb-20">
+    <div className="fixed inset-0 z-50 bg-background overflow-y-auto animate-in fade-in duration-500">
+      <div className="min-h-screen pb-20">
       <div className="max-w-[1280px] mx-auto px-4 md:px-10 lg:px-40 py-12">
+        
+        {/* Back Button */}
+        <button
+          onClick={onBackToShopping}
+          className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+        >
+          <ArrowLeft className="size-5" />
+          <span className="font-bold text-sm">Quay lại mua sắm</span>
+        </button>
+
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
           <div className="flex flex-col gap-2">
             <h1 className="text-4xl font-black text-gray-900 font-display">Giỏ Hàng Của Bạn</h1>
@@ -268,6 +279,7 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );
