@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { AppRole, User } from '../../types/index';
-import { Search, ShoppingCart, Bell, Menu, Leaf, User as UserIcon, LogOut, Phone, X } from 'lucide-react';
+import { Search, ShoppingCart, Bell, Menu, Leaf, User as UserIcon, LogOut, Phone, X, CheckCircle2, Trash2, Store, Truck, LayoutDashboard } from 'lucide-react';
 import { notificationService, NotificationItem } from '../../services';
 
 interface HeaderProps {
