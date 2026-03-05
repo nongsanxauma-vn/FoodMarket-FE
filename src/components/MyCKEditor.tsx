@@ -37,7 +37,7 @@ const MyCKEditor: React.FC<MyCKEditorProps> = ({ value, onChange, placeholder = 
       // backend returns plain map { "url": "..." }
       const imageUrl = response.result?.url || (response as any).url;
       console.log('Extracted image URL:', imageUrl);
-      
+      h
       if (!imageUrl) {
         console.error('Response structure:', JSON.stringify(response));
         throw new Error('Server did not return image URL');

@@ -1,4 +1,5 @@
 import { httpClient, ApiResponse } from './http.client';
+import { BlogCategory } from '../types';
 
 export interface BlogResponse {
     id: number;
@@ -6,6 +7,7 @@ export interface BlogResponse {
     content: string;
     pictureUrl: string;
     status: string;
+    category: string;
     createAt: string;
     adminId: number;
     adminName: string;
@@ -15,6 +17,7 @@ export interface BlogCreationRequest {
     title: string;
     content: string;
     status: string;
+    category: string;
 }
 
 class BlogService {

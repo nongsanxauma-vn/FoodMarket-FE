@@ -13,6 +13,13 @@ export enum KYCStatus {
   REJECTED = 'REJECTED'
 }
 
+export enum BlogCategory {
+  SUC_KHOE = 'Sức khỏe',
+  CAM_NANG = 'Cẩm nang',
+  NHA_NONG = 'Nhà nông',
+  XU_HUONG = 'Xu hướng'
+}
+
 export interface User {
   id: string;
   name: string;

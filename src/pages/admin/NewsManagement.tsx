@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Newspaper, Plus, Search, Filter, Edit3, Trash2, Eye, Calendar, User, Clock, CheckCircle2, ChevronLeft, ChevronRight, RefreshCcw } from 'lucide-react';
 import { blogService, BlogResponse, BlogCreationRequest } from '../../services';
+import { BlogCategory } from '../../types';
 import MyCKEditor from '../../components/MyCKEditor';
 
 const NewsManagement: React.FC = () => {
@@ -9,10 +10,15 @@ const NewsManagement: React.FC = () => {
    const [isAddingNew, setIsAddingNew] = useState(false);
    const [error, setError] = useState<string | null>(null);
 
+   // Filter state
+   const [searchQuery, setSearchQuery] = useState('');
+   const [selectedFilterCategory, setSelectedFilterCategory] = useState('Tất cả danh mục');
+
    // Form state
    const [title, setTitle] = useState('');
    const [content, setContent] = useState('');
    const [status, setStatus] = useState('DRAFT');
+   const [category, setCategory] = useState(BlogCategory.SUC_KHOE);
    const [selectedImage, setSelectedImage] = useState<File | null>(null);
    const [imagePreview, setImagePreview] = useState<string | null>(null);
    const [submitting, setSubmitting] = useState(false);
@@ -21,9 +27,26 @@ const NewsManagement: React.FC = () => {
    const [isViewing, setIsViewing] = useState(false);
    const [selectedBlog, setSelectedBlog] = useState<BlogResponse | null>(null);
 
+   const clearFilters = () => {
+      setSearchQuery('');
+      setSelectedFilterCategory('Tất cả danh mục');
+   };
+
    useEffect(() => {
       fetchBlogs();
    }, []);
+
+   // Filter blogs based on search and category
+   const filteredBlogs = blogs.filter(blog => {
+      const matchesSearch = searchQuery === '' || 
+         blog.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+         blog.content.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesCategory = selectedFilterCategory === 'Tất cả danh mục' || 
+         blog.category === selectedFilterCategory;
+      
+      return matchesSearch && matchesCategory;
+   });
 
    const fetchBlogs = async () => {
       try {
@@ -60,6 +83,7 @@ const NewsManagement: React.FC = () => {
             title,
             content,
             status,
+            category,
          };
          const response = await blogService.createBlog(request, selectedImage || undefined);
          if (response.result) {
@@ -68,6 +92,7 @@ const NewsManagement: React.FC = () => {
             // Reset form
             setTitle('');
             setContent('');
+            setCategory(BlogCategory.SUC_KHOE);
             setSelectedImage(null);
             setImagePreview(null);
          }
@@ -100,7 +125,8 @@ const NewsManagement: React.FC = () => {
          await blogService.updateBlog(blog.id, {
             title: blog.title,
             content: blog.content,
-            status: newStatus
+            status: newStatus,
+            category: blog.category
          });
          setBlogs(blogs.map(b => b.id === blog.id ? { ...b, status: newStatus } : b));
       } catch (err) {
@@ -163,6 +189,19 @@ const NewsManagement: React.FC = () => {
                <div className="flex flex-col gap-8">
                   <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-10 space-y-8">
                      <h4 className="font-black text-gray-800 uppercase tracking-tight">Thiết lập xuất bản</h4>
+                     <div className="flex flex-col gap-3">
+                        <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Danh mục</label>
+                        <select
+                           value={category}
+                           onChange={(e) => setCategory(e.target.value)}
+                           className="w-full px-6 py-4 bg-gray-50 border border-transparent rounded-2xl text-[10px] font-black text-gray-600 outline-none uppercase tracking-widest"
+                        >
+                           <option value={BlogCategory.SUC_KHOE}>{BlogCategory.SUC_KHOE}</option>
+                           <option value={BlogCategory.CAM_NANG}>{BlogCategory.CAM_NANG}</option>
+                           <option value={BlogCategory.NHA_NONG}>{BlogCategory.NHA_NONG}</option>
+                           <option value={BlogCategory.XU_HUONG}>{BlogCategory.XU_HUONG}</option>
+                        </select>
+                     </div>
                      <div className="flex flex-col gap-3">
                         <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Trạng thái</label>
                         <select
@@ -227,7 +266,7 @@ const NewsManagement: React.FC = () => {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-12">
                      <div className="max-w-4xl">
                         <div className="flex items-center gap-4 text-[10px] font-black text-white/80 uppercase tracking-widest mb-4">
-                           <span className="px-3 py-1 bg-primary text-white rounded-lg">Nhà nông</span>
+                           <span className="px-3 py-1 bg-primary text-white rounded-lg">{selectedBlog.category}</span>
                            <span>{new Date(selectedBlog.createAt).toLocaleDateString('vi-VN')}</span>
                            <span>Bởi: {selectedBlog.adminName}</span>
                         </div>
@@ -259,17 +298,35 @@ const NewsManagement: React.FC = () => {
             <div className="px-10 py-8 border-b border-gray-50 flex flex-wrap items-center justify-between gap-6">
                <div className="flex items-center gap-6 flex-1 max-w-2xl">
                   <div className="relative flex-1">
-                     <input type="text" placeholder="Tìm kiếm bài viết..." className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-transparent rounded-2xl text-sm font-medium outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all" />
+                     <input 
+                        type="text" 
+                        placeholder="Tìm kiếm bài viết..." 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-transparent rounded-2xl text-sm font-medium outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all" 
+                     />
                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
                   </div>
-                  <select className="px-6 py-3 bg-gray-50 border border-transparent rounded-2xl text-[10px] font-black text-gray-600 outline-none uppercase tracking-widest cursor-pointer">
+                  <select 
+                     value={selectedFilterCategory}
+                     onChange={(e) => setSelectedFilterCategory(e.target.value)}
+                     className="px-6 py-3 bg-gray-50 border border-transparent rounded-2xl text-[10px] font-black text-gray-600 outline-none uppercase tracking-widest cursor-pointer"
+                  >
                      <option>Tất cả danh mục</option>
-                     <option>Nhà nông</option>
-                     <option>Sức khỏe</option>
-                     <option>Cẩm nang</option>
+                     <option>{BlogCategory.SUC_KHOE}</option>
+                     <option>{BlogCategory.CAM_NANG}</option>
+                     <option>{BlogCategory.NHA_NONG}</option>
+                     <option>{BlogCategory.XU_HUONG}</option>
                   </select>
                </div>
                <div className="flex gap-4">
+                  <button 
+                     onClick={clearFilters}
+                     className="size-11 flex items-center justify-center bg-gray-50 rounded-2xl text-gray-400 hover:text-red-500 transition-colors"
+                     title="Xóa bộ lọc"
+                  >
+                     <RefreshCcw className="size-5" />
+                  </button>
                   <button className="size-11 flex items-center justify-center bg-gray-50 rounded-2xl text-gray-400 hover:text-primary transition-colors">
                      <Filter className="size-5" />
                   </button>
@@ -293,12 +350,14 @@ const NewsManagement: React.FC = () => {
                         <tr>
                            <td colSpan={6} className="px-10 py-20 text-center text-xs font-black text-gray-400 uppercase tracking-widest">Đang tải bài viết...</td>
                         </tr>
-                     ) : blogs.length === 0 ? (
+                     ) : filteredBlogs.length === 0 ? (
                         <tr>
-                           <td colSpan={6} className="px-10 py-20 text-center text-xs font-black text-gray-400 uppercase tracking-widest">Chưa có bài viết nào</td>
+                           <td colSpan={6} className="px-10 py-20 text-center text-xs font-black text-gray-400 uppercase tracking-widest">
+                              {blogs.length === 0 ? 'Chưa có bài viết nào' : 'Không tìm thấy bài viết phù hợp'}
+                           </td>
                         </tr>
                      ) : (
-                        blogs.map((art) => (
+                        filteredBlogs.map((art) => (
                            <tr key={art.id} className="hover:bg-gray-50/30 transition-colors group">
                               <td className="px-10 py-6">
                                  <div className="flex items-center gap-4">
@@ -313,7 +372,7 @@ const NewsManagement: React.FC = () => {
                               </td>
                               <td className="px-6 py-6">
                                  <span className="px-3 py-1 bg-green-50 text-primary text-[10px] font-black rounded-lg uppercase tracking-tight">
-                                    Nhà nông
+                                    {art.category}
                                  </span>
                               </td>
                               <td className="px-6 py-6 text-center">
