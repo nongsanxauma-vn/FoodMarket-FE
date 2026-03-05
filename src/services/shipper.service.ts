@@ -1,27 +1,16 @@
-/**
- * Shipper Service
- * Xử lý các chức năng liên quan đến shipper
- */
-
 import { httpClient, ApiResponse } from './http.client';
 import { API_BASE_URL, TOKEN_KEY } from './api.config';
 
-/**
- * Request/Response Types
- */
+// ===================== TYPES =====================
+
 export interface ShipperRegisterRequest {
-  // Thông tin cá nhân
   fullName: string;
   phoneNumber: string;
   email: string;
   password: string;
   address: string;
-
-  // Thông tin phương tiện (shipper specific)
-  license: string; // Số bằng lái xe
-  vehicleNumber: string; // Biển số xe
-
-  // Thông tin bổ sung (không bắt buộc)
+  license: string;
+  vehicleNumber: string;
   bankAccount?: string;
   description?: string;
 }
@@ -34,68 +23,130 @@ export interface ShipperRegisterResponse {
   status: string;
 }
 
-/**
- * Shipper Service Class
- */
+/** Response từ GET /shipper/orders/nearby */
+export interface AvailableOrderResponse {
+  orderId: number;
+  shopName: string;
+  shopAddress: string;
+  shippingAddress: string;
+  recipientName: string;
+  recipientPhone: string;
+  shippingFee: number;
+  totalAmount: number;
+  status: string;
+  createdAt: string;
+  estimatedDeliveryDate: string | null;
+  distanceKm: number | null; // khoảng cách thực tế từ Goong (null nếu không geocode được)
+}
+
+/** Response từ POST /shipper/orders/{id}/accept và /status */
+export interface ShipperOrderResponse {
+  orderId: number;
+  buyerName: string;
+  buyerPhone: string;
+  shippingAddress: string;
+  recipientName: string;
+  recipientPhone: string;
+  shippingFee: number;
+  status: string;
+  createdAt: string;
+  estimatedDeliveryDate: string | null;
+  note: string | null;
+}
+
+export type UpdateOrderStatus = 'DELIVERED' | 'FAILED';
+
+export interface UpdateOrderStatusRequest {
+  status: UpdateOrderStatus;
+  note?: string;
+}
+
+/** Response từ GET /shipper/location/order/{orderId} */
+export interface ShipperLocationResponse {
+  shipperId: number;
+  shipperName: string;
+  orderId: number;
+  latitude: number;
+  longitude: number;
+  updatedAt: string;
+}
+
+// ===================== SERVICE =====================
+
 class ShipperService {
+
   /**
-   * Đăng ký tài khoản shipper mới
-   * Backend sử dụng multipart/form-data format
+   * Đăng ký tài khoản shipper
    */
-  async register(shipperData: ShipperRegisterRequest, documents?: {
-    driverLicense?: File;
-    vehicleRegistration?: File;
-    portrait?: File;
-  }): Promise<ApiResponse<ShipperRegisterResponse>> {
-    try {
-      const formData = new FormData();
+  async register(
+    shipperData: ShipperRegisterRequest,
+    documents?: { driverLicense?: File; portrait?: File }
+  ): Promise<ApiResponse<ShipperRegisterResponse>> {
+    const formData = new FormData();
+    formData.append('data', JSON.stringify({
+      ...shipperData,
+      roleName: 'SHIPPER',
+    }));
+    if (documents?.portrait) formData.append('logoUrl', documents.portrait);
+    if (documents?.driverLicense) formData.append('achievement', documents.driverLicense);
 
-      // Tạo data object với roleName là SHIPPER
-      const data = {
-        email: shipperData.email,
-        password: shipperData.password,
-        roleName: 'SHIPPER',
-        fullName: shipperData.fullName,
-        phoneNumber: shipperData.phoneNumber,
-        address: shipperData.address,
-        license: shipperData.license,
-        vehicleNumber: shipperData.vehicleNumber,
-        bankAccount: shipperData.bankAccount,
-        description: shipperData.description,
-      };
+    const response = await fetch(`${API_BASE_URL}/users/register`, {
+      method: 'POST',
+      body: formData,
+    });
+    const data = await response.json();
+    if (!response.ok) throw { status: response.status, data };
+    return data;
+  }
 
-      // Thêm data dưới dạng JSON string
-      formData.append('data', JSON.stringify(data));
+  /**
+   * Lấy top 6 đơn gần nhất dựa vào GPS hiện tại của shipper
+   * FE cần gọi navigator.geolocation trước, rồi truyền lat/lng vào đây
+   */
+  async getNearbyOrders(lat: number, lng: number): Promise<ApiResponse<AvailableOrderResponse[]>> {
+    return httpClient.get<AvailableOrderResponse[]>(
+      `/shipper/orders/nearby?lat=${lat}&lng=${lng}`
+    );
+  }
 
-      // Thêm các file documents nếu có
-      // BE expects: logoUrl (chân dung) and achievement (bằng lái xe)
-      if (documents?.portrait) formData.append('logoUrl', documents.portrait);
-      if (documents?.driverLicense) formData.append('achievement', documents.driverLicense);
-      // Note: vehicleRegistration chưa có field tương ứng ở BE
+  /**
+   * Shipper nhận đơn hàng
+   */
+  async acceptOrder(orderId: number): Promise<ApiResponse<ShipperOrderResponse>> {
+    return httpClient.post<ShipperOrderResponse>(
+      `/shipper/orders/${orderId}/accept`,
+      {}
+    );
+  }
 
-      // Gọi API với fetch trực tiếp vì cần multipart/form-data
-      const response = await fetch(`${API_BASE_URL}/users/register`, {
-        method: 'POST',
-        body: formData,
-        // Không set Content-Type header, để browser tự động set với boundary
-      });
+  /**
+   * Cập nhật trạng thái đơn hàng (DELIVERED / FAILED)
+   */
+  async updateOrderStatus(
+    orderId: number,
+    request: UpdateOrderStatusRequest
+  ): Promise<ApiResponse<ShipperOrderResponse>> {
+    return httpClient.post<ShipperOrderResponse>(
+      `/shipper/orders/${orderId}/status`,
+      request
+    );
+  }
 
-      const responseData = await response.json();
+  /**
+   * Xem tất cả đơn của shipper hiện tại
+   */
+  async getMyOrders(): Promise<ApiResponse<ShipperOrderResponse[]>> {
+    return httpClient.get<ShipperOrderResponse[]>('/shipper/orders/my');
+  }
 
-      if (!response.ok) {
-        throw {
-          status: response.status,
-          data: responseData,
-        };
-      }
-
-      return responseData;
-    } catch (error) {
-      console.error('Shipper register error:', error);
-      throw error;
-    }
+  /**
+   * Lấy vị trí shipper đang giao đơn (REST fallback, dùng khi mới mở trang)
+   */
+  async getShipperLocation(orderId: number): Promise<ApiResponse<ShipperLocationResponse>> {
+    return httpClient.get<ShipperLocationResponse>(
+      `/shipper/location/order/${orderId}`
+    );
   }
 }
 
-// Export singleton instance
 export const shipperService = new ShipperService();
