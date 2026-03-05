@@ -3,7 +3,7 @@ import { MapPin, Truck, Wallet, ShieldCheck, CreditCard, ChevronRight, Lock, Map
 import { orderService, paymentService, authService, cartService, productService, UserResponse, CartResponse } from '../../services';
 
 interface CheckoutProps {
-   onComplete: () => void;
+   onComplete: (orderId: number) => void;
    onBack: () => void;
 }
 
@@ -111,8 +111,8 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
                });
             }
 
-            // Success
-            onComplete();
+            // Success - pass orderId to parent
+            onComplete(orderId);
          }
 
       } catch (error) {
@@ -124,7 +124,8 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
    };
 
    return (
-      <div className="flex-1 bg-background animate-in fade-in duration-500 pb-20">
+      <div className="fixed inset-0 z-50 bg-background overflow-y-auto animate-in fade-in duration-500">
+         <div className="min-h-screen pb-20">
          {/* Mini Nav Header */}
          <div className="bg-white border-b border-gray-100 py-4 px-4 md:px-10 lg:px-40 flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -379,6 +380,7 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
                   </div>
                </div>
             </div>
+         </div>
          </div>
       </div>
    );

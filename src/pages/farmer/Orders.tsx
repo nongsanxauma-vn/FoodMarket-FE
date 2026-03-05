@@ -46,13 +46,15 @@ const Orders: React.FC<OrdersProps> = ({ onPrepareOrder }) => {
     if (!cancellingOrderId) return;
     try {
       setIsProcessing(true);
-      // API currently uses PATCH to update status, assume we pass { status: 'CANCELLED' } 
-      await orderService.updateOrder(cancellingOrderId, { status: 'CANCELLED' });
+      const updateData = { status: 'CANCELLED' };
+      console.log('[Orders] Sending cancel request:', updateData);
+      await orderService.updateOrder(cancellingOrderId, updateData);
       alert(`Đã hủy đơn hàng #${cancellingOrderId}`);
       setShowCancelModal(false);
       setCancellingOrderId(null);
       fetchOrders();
     } catch (err: any) {
+      console.error('[Orders] Cancel error:', err);
       alert(err?.data?.message || 'Có lỗi khi hủy đơn hàng');
     } finally {
       setIsProcessing(false);
@@ -63,11 +65,17 @@ const Orders: React.FC<OrdersProps> = ({ onPrepareOrder }) => {
     if (!window.confirm(`Xác nhận chuẩn bị đơn hàng #${orderId}?`)) return;
     try {
       setIsProcessing(true);
-      await orderService.updateOrder(orderId, { status: 'CONFIRMED' });
+      // WORKAROUND: Backend blocks updates to CONFIRMED orders
+      // So we skip CONFIRMED and go directly to SHIPPING
+      // TODO: Backend should fix validation to allow CONFIRMED → SHIPPING
+      const updateData = { status: 'SHIPPING' };
+      console.log('[Orders] Sending update request:', updateData);
+      await orderService.updateOrder(orderId, updateData);
       alert(`Đã xác nhận đơn hàng #${orderId}`);
       if (onPrepareOrder) onPrepareOrder(orderId.toString());
       fetchOrders();
     } catch (err: any) {
+      console.error('[Orders] Update error:', err);
       alert(err?.data?.message || 'Có lỗi khi xác nhận đơn hàng');
     } finally {
       setIsProcessing(false);

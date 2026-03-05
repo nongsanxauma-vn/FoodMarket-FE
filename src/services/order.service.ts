@@ -40,11 +40,20 @@ class OrderService {
         return httpClient.get<OrderResponse[]>('/orders');
     }
 
+    async getOrdersByUserId(userId: number): Promise<ApiResponse<OrderResponse[]>> {
+        return httpClient.get<OrderResponse[]>(`/orders/user/${userId}`);
+    }
+
+    async getOrderById(id: number): Promise<ApiResponse<OrderResponse>> {
+        return httpClient.get<OrderResponse>(`/orders/${id}`);
+    }
+
     async createOrder(data: OrderCreationRequest): Promise<ApiResponse<OrderResponse>> {
         return httpClient.post<OrderResponse>('/orders', data);
     }
 
-    async updateOrder(id: number, data: any): Promise<ApiResponse<OrderResponse>> {
+    async updateOrder(id: number, data: { status: string }): Promise<ApiResponse<OrderResponse>> {
+        console.log('[OrderService] Updating order:', id, 'with data:', data);
         return httpClient.patch<OrderResponse>(`/orders/${id}`, data);
     }
 
