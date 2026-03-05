@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Edit3, EyeOff, Trash2, CheckCircle, Clock, AlertCircle, Loader2, X } from 'lucide-react';
-import { productService, ProductResponse, ProductCreationRequest, authService } from '../../services';
+import { Plus, Search, Filter, Edit3, EyeOff, Trash2, CheckCircle, Clock, AlertCircle, Loader2, X, Sparkles, ChefHat } from 'lucide-react';
+import { productService, comboService, authService, ProductResponse, ProductCreationRequest, BuildComboResponse } from '../../services';
 
 interface EditModalProps {
   product: ProductResponse;
@@ -146,23 +146,28 @@ const EditModal: React.FC<EditModalProps> = ({ product, onClose, onSuccess }) =>
 
 const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }) => {
   const [products, setProducts] = useState<ProductResponse[]>([]);
+  const [combos, setCombos] = useState<BuildComboResponse[]>([]);
+  const [activeTab, setActiveTab] = useState<'NONG_SAN' | 'COMBO' | 'BLIND_BOX'>('NONG_SAN');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductResponse | null>(null);
 
-  const fetchProducts = async () => {
+  const fetchData = async () => {
     try {
       setIsLoading(true);
       const userRes = await authService.getMyInfo();
-      if (userRes.result && userRes.result.id) {
-        const productsRes = await productService.getByShopId(Number(userRes.result.id));
-        if (productsRes.result) {
-          setProducts(productsRes.result);
-        }
+      const shopId = userRes.result?.id;
+      if (shopId) {
+        const [productsRes, combosRes] = await Promise.all([
+          productService.getByShopId(Number(shopId)).catch(() => ({ result: [] })),
+          comboService.getByShop(Number(shopId)).catch(() => ({ result: [] }))
+        ]);
+        if (productsRes.result) setProducts(productsRes.result);
+        if (combosRes.result) setCombos(combosRes.result);
       }
     } catch (err) {
-      console.error('Failed to fetch products:', err);
+      console.error('Failed to fetch data:', err);
       setError('Mất kết nối tải dữ liệu. Vui lòng thử lại sau.');
     } finally {
       setIsLoading(false);
@@ -170,7 +175,7 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
   };
 
   useEffect(() => {
-    fetchProducts();
+    fetchData();
   }, []);
 
   const handleDelete = async (id: number) => {
@@ -179,8 +184,8 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
     try {
       setIsDeleting(true);
       await productService.deleteProduct(id);
-      alert('Đã xóa sản phẩm thành công!');
-      fetchProducts();
+      alert('Đã xóa thành công!');
+      fetchData();
     } catch (err: any) {
       alert(err?.data?.message || 'Có lỗi khi xóa sản phẩm');
     } finally {
@@ -204,17 +209,39 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
         <EditModal
           product={editingProduct}
           onClose={() => setEditingProduct(null)}
-          onSuccess={fetchProducts}
+          onSuccess={fetchData}
         />
       )}
 
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-black font-display text-gray-900">Quản Lý Sản Phẩm</h2>
-          <p className="text-gray-400 font-medium text-sm mt-1">Bạn đang quản lý {products.length} sản phẩm nông sản.</p>
+          <p className="text-gray-400 font-medium text-sm mt-1">Cửa hàng của bạn đang có {products.length} sản phẩm và {combos.length} combo.</p>
         </div>
         <button onClick={() => onNavigate('add-product')} className="px-6 py-3 bg-primary text-white rounded-2xl font-bold flex items-center gap-2 shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all">
           <Plus className="size-5" /> Thêm sản phẩm mới
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex bg-white rounded-2xl p-1 border border-gray-100 shadow-sm w-fit">
+        <button
+          onClick={() => setActiveTab('NONG_SAN')}
+          className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all ${activeTab === 'NONG_SAN' ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
+        >
+          NÔNG SẢN ({products.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('COMBO')}
+          className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all ${activeTab === 'COMBO' ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
+        >
+          TÚI COMBO ({combos.filter(c => c.type === 'CUSTOM').length})
+        </button>
+        <button
+          onClick={() => setActiveTab('BLIND_BOX')}
+          className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all ${activeTab === 'BLIND_BOX' ? 'bg-purple-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
+        >
+          HỘP MÙ ({combos.filter(c => c.type !== 'CUSTOM').length})
         </button>
       </div>
 
@@ -246,20 +273,21 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
           <table className="w-full text-left">
             <thead className="bg-gray-50/50">
               <tr>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Sản phẩm</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Unit / DVT</th>
+                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">{activeTab === 'NONG_SAN' ? 'Sản phẩm' : 'Tên Combo / Hộp mù'}</th>
+                {activeTab === 'NONG_SAN' && <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Unit / DVT</th>}
                 <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Giá bán</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Tồn kho</th>
+                {activeTab === 'NONG_SAN' && <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Tồn kho</th>}
                 <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Trạng thái</th>
                 <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {products.length === 0 ? (
+              {activeTab === 'NONG_SAN' && products.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-10 py-10 text-center text-gray-400 font-bold">Bạn chưa có sản phẩm nào. Hãy thêm sản phẩm mới!</td>
                 </tr>
-              ) : products.map((p) => {
+              )}
+              {activeTab === 'NONG_SAN' && products.map((p) => {
                 const isOut = p.stockQuantity <= 0;
                 return (
                   <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
@@ -290,19 +318,59 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
                       </span>
                     </td>
                     <td className="px-6 py-5">
+                      <div className="flex flex-col items-end gap-2">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => setEditingProduct(p)}
+                            disabled={isDeleting}
+                            title="Chỉnh sửa sản phẩm"
+                            className="size-9 bg-gray-50 text-primary rounded-xl flex items-center justify-center hover:bg-primary/10 transition-colors disabled:opacity-50 cursor-pointer"
+                          >
+                            <Edit3 className="size-4" />
+                          </button>
+                          <button disabled={isDeleting} className="size-9 bg-gray-50 text-gray-400 rounded-xl flex items-center justify-center hover:bg-gray-100 transition-colors disabled:opacity-50">
+                            <EyeOff className="size-4" />
+                          </button>
+                          <button onClick={() => handleDelete(p.id)} disabled={isDeleting} className="size-9 bg-gray-50 text-red-400 rounded-xl flex items-center justify-center hover:bg-red-50 transition-colors disabled:opacity-50">
+                            <Trash2 className="size-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {/* Combo Rows */}
+              {activeTab !== 'NONG_SAN' && combos.filter(c => activeTab === 'COMBO' ? c.type === 'CUSTOM' : c.type !== 'CUSTOM').map((c) => {
+                const isBlindBox = c.type !== 'CUSTOM';
+                return (
+                  <tr key={c.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-4">
+                        <div className={`size-12 rounded-2xl flex items-center justify-center shadow-sm text-white ${isBlindBox ? 'bg-purple-500' : 'bg-orange-500'}`}>
+                          {isBlindBox ? <Sparkles className="size-6" /> : <ChefHat className="size-6" />}
+                        </div>
+                        <div>
+                          <p className={`text-sm font-black line-clamp-1 max-w-[200px] ${isBlindBox ? 'text-purple-700' : 'text-orange-600'}`}>
+                            {c.comboName}
+                          </p>
+                          <p className="text-[10px] text-gray-400 font-bold tracking-wider">{c.items.length} thành phần phụ</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-5 text-center text-sm font-black text-gray-800">{(c.discountPrice || 0).toLocaleString('vi-VN')}đ</td>
+                    <td className="px-6 py-5 text-center">
+                      <span className="px-2 py-1 rounded-lg text-[10px] font-black uppercase bg-green-50 text-green-600">
+                        Đang Mở
+                      </span>
+                    </td>
+                    <td className="px-6 py-5">
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => setEditingProduct(p)}
-                          disabled={isDeleting}
-                          title="Chỉnh sửa sản phẩm"
-                          className="size-9 bg-gray-50 text-primary rounded-xl flex items-center justify-center hover:bg-primary/10 transition-colors disabled:opacity-50 cursor-pointer"
-                        >
-                          <Edit3 className="size-4" />
-                        </button>
-                        <button disabled={isDeleting} className="size-9 bg-gray-50 text-gray-400 rounded-xl flex items-center justify-center hover:bg-gray-100 transition-colors disabled:opacity-50">
+                        <button disabled={isDeleting} className="size-9 bg-gray-50 text-gray-400 rounded-xl flex items-center justify-center hover:bg-gray-100 transition-colors disabled:opacity-50 cursor-not-allowed">
                           <EyeOff className="size-4" />
                         </button>
-                        <button onClick={() => handleDelete(p.id)} disabled={isDeleting} className="size-9 bg-gray-50 text-red-400 rounded-xl flex items-center justify-center hover:bg-red-50 transition-colors disabled:opacity-50">
+                        <button disabled={isDeleting} className="size-9 bg-gray-50 text-red-400 rounded-xl flex items-center justify-center hover:bg-red-50 transition-colors disabled:opacity-50 cursor-not-allowed">
                           <Trash2 className="size-4" />
                         </button>
                       </div>
@@ -310,12 +378,21 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
                   </tr>
                 );
               })}
+              {activeTab !== 'NONG_SAN' && combos.filter(c => activeTab === 'COMBO' ? c.type === 'CUSTOM' : c.type !== 'CUSTOM').length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-10 py-10 text-center text-gray-400 font-bold">
+                    Không có dữ liệu cho loại {activeTab === 'COMBO' ? 'Combo' : 'Hộp mù'} này.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
 
         <div className="p-6 bg-white border-t border-gray-50 flex items-center justify-between">
-          <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Hiển thị {products.length} sản phẩm</p>
+          <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">
+            Hiển thị {activeTab === 'NONG_SAN' ? products.length : combos.filter(c => activeTab === 'COMBO' ? c.type === 'CUSTOM' : c.type !== 'CUSTOM').length} mục
+          </p>
         </div>
       </div>
 

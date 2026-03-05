@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   ArrowLeft,
   Save,
@@ -10,28 +10,51 @@ import {
   Clock,
   ChefHat,
   Sparkles,
-  X
+  RefreshCw
 } from 'lucide-react';
-import { MOCK_PRODUCTS, DISH_SUGGESTIONS } from '../../constants/index';
+import { DISH_SUGGESTIONS } from '../../constants/index';
+import { productService, comboService, authService, ProductResponse } from '../../services/index';
 
 interface SelectedIngredient {
-  productId: string;
+  productId: number;
   productName: string;
   quantity: number;
 }
 
 const ComboBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+  const [availableProducts, setAvailableProducts] = useState<ProductResponse[]>([]);
   const [selectedIngredients, setSelectedIngredients] = useState<SelectedIngredient[]>([]);
   const [comboName, setComboName] = useState('');
   const [comboDescription, setComboDescription] = useState('');
   const [comboPrice, setComboPrice] = useState('');
   const [isSaved, setIsSaved] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Get suggested dishes based on selected ingredients
+  // Load farmer's actual products
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const userRes = await authService.getMyInfo();
+        if (userRes.result && userRes.result.id) {
+          const res = await productService.getByShopId(Number(userRes.result.id));
+          if (res.result) {
+            setAvailableProducts(res.result);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load products', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadProducts();
+  }, []);
+
+  // Get suggested dishes based on selected ingredients (will be empty for real DB IDs unless updated in constants)
   const suggestedDishes = useMemo(() => {
     const dishes: { [key: string]: any } = {};
     selectedIngredients.forEach(ing => {
-      const suggestions = DISH_SUGGESTIONS[ing.productId] || [];
+      const suggestions = DISH_SUGGESTIONS[ing.productId.toString()] || [];
       suggestions.forEach(dish => {
         if (!dishes[dish.id]) {
           dishes[dish.id] = dish;
@@ -41,15 +64,15 @@ const ComboBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     return Object.values(dishes);
   }, [selectedIngredients]);
 
-  // Calculate total combo price
+  // Calculate total combo price based on original product prices
   const totalIngredientsPrice = useMemo(() => {
     return selectedIngredients.reduce((total, ing) => {
-      const product = MOCK_PRODUCTS.find(p => p.id === ing.productId);
-      return total + (product?.price ?? 0) * ing.quantity;
+      const product = availableProducts.find(p => p.id === ing.productId);
+      return total + (product?.sellingPrice ?? 0) * ing.quantity;
     }, 0);
-  }, [selectedIngredients]);
+  }, [selectedIngredients, availableProducts]);
 
-  const handleAddIngredient = (productId: string) => {
+  const handleAddIngredient = (productId: number) => {
     const existing = selectedIngredients.find(ing => ing.productId === productId);
     if (existing) {
       setSelectedIngredients(
@@ -58,21 +81,21 @@ const ComboBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         )
       );
     } else {
-      const product = MOCK_PRODUCTS.find(p => p.id === productId);
+      const product = availableProducts.find(p => p.id === productId);
       if (product) {
         setSelectedIngredients([
           ...selectedIngredients,
-          { productId, productName: product.name, quantity: 1 }
+          { productId, productName: product.productName, quantity: 1 }
         ]);
       }
     }
   };
 
-  const handleRemoveIngredient = (productId: string) => {
+  const handleRemoveIngredient = (productId: number) => {
     setSelectedIngredients(selectedIngredients.filter(ing => ing.productId !== productId));
   };
 
-  const handleUpdateQuantity = (productId: string, quantity: number) => {
+  const handleUpdateQuantity = (productId: number, quantity: number) => {
     if (quantity <= 0) {
       handleRemoveIngredient(productId);
     } else {
@@ -84,19 +107,44 @@ const ComboBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }
   };
 
-  const handleSaveCombo = () => {
+  const handleSaveCombo = async () => {
     if (!comboName || selectedIngredients.length === 0) {
       alert('Vui lòng nhập tên combo và chọn ít nhất một nguyên liệu');
       return;
     }
-    setIsSaved(true);
-    setTimeout(() => {
-      setIsSaved(false);
-      setComboName('');
-      setComboDescription('');
-      setComboPrice('');
-      setSelectedIngredients([]);
-    }, 2000);
+
+    const priceNum = Number(comboPrice) || 0;
+    if (priceNum > totalIngredientsPrice) {
+      alert(`Giá bán combo (${priceNum.toLocaleString('vi-VN')}đ) không được lớn hơn tổng giá trị nguyên liệu rời (${totalIngredientsPrice.toLocaleString('vi-VN')}đ). Mức giá này không ráp với quy luật vì combo nên rẻ hơn hoặc bằng giá lẻ.`);
+      return;
+    }
+
+    try {
+      await comboService.create({
+        comboName,
+        description: comboDescription,
+        discountPrice: Number(comboPrice) || 0,
+        type: 'CUSTOM',
+        items: selectedIngredients.map(ing => ({
+          productId: ing.productId,
+          quantity: ing.quantity
+        }))
+      });
+
+      setIsSaved(true);
+      setTimeout(() => {
+        setIsSaved(false);
+        setComboName('');
+        setComboDescription('');
+        setComboPrice('');
+        setSelectedIngredients([]);
+        onBack();
+      }, 2000);
+    } catch (err: any) {
+      const errorMsg = err?.data?.message || err?.message || 'Có lỗi xảy ra khi lưu combo! Vui lòng thử lại.';
+      alert(`Lỗi: ${errorMsg}`);
+      console.error(err);
+    }
   };
 
   return (
@@ -183,14 +231,14 @@ const ComboBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             ) : (
               <div className="space-y-3">
                 {selectedIngredients.map((ing) => {
-                  const product = MOCK_PRODUCTS.find(p => p.id === ing.productId);
+                  const product = availableProducts.find(p => p.id === ing.productId);
                   return (
                     <div key={ing.productId} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-primary/20 transition-colors">
                       <div className="flex items-center gap-3 flex-1">
                         <img
-                          src={product?.image}
+                          src={product?.imageUrl}
                           alt={ing.productName}
-                          className="size-12 rounded-lg object-cover"
+                          className="size-12 rounded-lg object-cover bg-white"
                         />
                         <div className="flex-1">
                           <p className="text-sm font-bold text-gray-800">{ing.productName}</p>
@@ -199,14 +247,14 @@ const ComboBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                       </div>
 
                       <div className="flex items-center gap-4">
-                        <div className="flex items-center border border-gray-200 rounded-lg">
+                        <div className="flex items-center border border-gray-200 rounded-lg bg-white">
                           <button
                             onClick={() => handleUpdateQuantity(ing.productId, ing.quantity - 1)}
                             className="p-2 hover:text-primary"
                           >
                             <Minus className="size-4" />
                           </button>
-                          <span className="px-3 font-bold text-sm">{ing.quantity}</span>
+                          <span className="px-3 font-bold text-sm w-8 text-center">{ing.quantity}</span>
                           <button
                             onClick={() => handleUpdateQuantity(ing.productId, ing.quantity + 1)}
                             className="p-2 hover:text-primary"
@@ -215,7 +263,7 @@ const ComboBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                           </button>
                         </div>
                         <p className="font-bold text-primary min-w-[80px] text-right text-sm">
-                          {((product?.price ?? 0) * ing.quantity).toLocaleString('vi-VN')}đ
+                          {((product?.sellingPrice ?? 0) * ing.quantity).toLocaleString('vi-VN')}đ
                         </p>
                         <button
                           onClick={() => handleRemoveIngredient(ing.productId)}
@@ -231,7 +279,7 @@ const ComboBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             )}
           </div>
 
-          {/* Suggested Dishes */}
+          {/* Suggested Dishes (remains for UI intactness, will map actual data if IDs match later) */}
           {suggestedDishes.length > 0 && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
               <div className="flex items-center gap-3 mb-6">
@@ -287,52 +335,62 @@ const ComboBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               Sản Phẩm Của Bạn
             </h3>
 
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {MOCK_PRODUCTS.map((product) => {
-                const isSelected = selectedIngredients.some(ing => ing.productId === product.id);
-                return (
-                  <button
-                    key={product.id}
-                    onClick={() => handleAddIngredient(product.id)}
-                    className={`w-full text-left p-3 rounded-xl border-2 transition-all group ${
-                      isSelected
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-10 gap-3 text-gray-400">
+                <RefreshCw className="size-6 animate-spin" />
+                <span className="text-sm font-bold">Đang tải sản phẩm...</span>
+              </div>
+            ) : availableProducts.length === 0 ? (
+              <div className="text-center py-8 text-sm text-gray-500 italic">
+                Bạn chưa có sản phẩm nào. Hãy thêm sản phẩm trước khi tạo combo.
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                {availableProducts.map((product) => {
+                  const isSelected = selectedIngredients.some(ing => ing.productId === product.id);
+                  return (
+                    <button
+                      key={product.id}
+                      onClick={() => handleAddIngredient(product.id)}
+                      className={`w-full text-left p-3 rounded-xl border-2 transition-all group ${isSelected
                         ? 'border-primary bg-primary/5'
                         : 'border-gray-100 bg-white hover:border-primary/30'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="size-12 rounded-lg object-cover flex-shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-gray-800 mb-1 truncate">{product.name}</p>
-                        <p className="text-xs text-gray-500 mb-2">{product.category}</p>
-                        <p className="text-xs font-bold text-primary">
-                          {product.price.toLocaleString('vi-VN')}đ/{product.unit}
-                        </p>
-                      </div>
-                      {isSelected && (
-                        <div className="size-5 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
-                          <Check className="size-3 text-white" />
+                        }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <img
+                          src={product.imageUrl}
+                          alt={product.productName}
+                          className="size-12 rounded-lg object-cover flex-shrink-0 bg-gray-50"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-gray-800 mb-1 truncate">{product.productName}</p>
+                          <p className="text-xs text-gray-500 mb-2 truncate">{product.description}</p>
+                          <p className="text-xs font-bold text-primary">
+                            {(product.sellingPrice || 0).toLocaleString('vi-VN')}đ/{product.unit}
+                          </p>
                         </div>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                        {isSelected && (
+                          <div className="size-5 bg-primary rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                            <Check className="size-3 text-white" />
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Save Button */}
           <button
             onClick={handleSaveCombo}
-            className={`w-full py-4 rounded-2xl font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 text-white ${
-              isSaved
-                ? 'bg-green-500 shadow-lg shadow-green-500/30'
-                : 'bg-primary shadow-lg shadow-primary/30 hover:bg-primary-dark'
-            }`}
+            disabled={isSaved || isLoading}
+            className={`w-full py-4 rounded-2xl font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 text-white ${isSaved
+              ? 'bg-green-500 shadow-lg shadow-green-500/30'
+              : 'bg-primary shadow-lg shadow-primary/30 hover:bg-primary-dark disabled:opacity-70 disabled:cursor-not-allowed'
+              }`}
           >
             {isSaved ? (
               <>
@@ -353,18 +411,23 @@ const ComboBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               <p className="text-[10px] font-bold uppercase text-primary/70 mb-3">Tóm Tắt</p>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Số nguyên liệu:</span>
-                  <span className="font-bold text-gray-800">{selectedIngredients.length}</span>
+                  <span className="text-gray-600">Số lượng món:</span>
+                  <span className="font-bold text-gray-800">{selectedIngredients.reduce((a, b) => a + b.quantity, 0)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Tổng giá nguyên liệu:</span>
+                  <span className="text-gray-600">Tổng giá trị đơn lẻ:</span>
                   <span className="font-bold text-primary">{totalIngredientsPrice.toLocaleString('vi-VN')}đ</span>
                 </div>
                 <div className="h-px bg-primary/20 my-2" />
-                <div className="flex justify-between">
-                  <span className="font-bold text-gray-700 text-sm">Giá Combo:</span>
-                  <span className="font-black text-primary text-lg">{(comboPrice || 0).toLocaleString('vi-VN')}đ</span>
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-gray-700 text-sm">Giá Bán Combo:</span>
+                  <span className="font-black text-primary text-xl">{(Number(comboPrice) || 0).toLocaleString('vi-VN')}đ</span>
                 </div>
+                {Number(comboPrice) < totalIngredientsPrice && Number(comboPrice) > 0 && (
+                  <p className="text-xs text-green-600 font-bold text-right pt-1">
+                    Tiết kiệm: {(totalIngredientsPrice - Number(comboPrice)).toLocaleString('vi-VN')}đ
+                  </p>
+                )}
               </div>
             </div>
           )}

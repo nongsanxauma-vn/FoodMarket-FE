@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapPin, Truck, Wallet, ShieldCheck, CreditCard, ChevronRight, Lock, Map, Zap, Info, Loader2 } from 'lucide-react';
-import { orderService, paymentService } from '../../services';
+import { orderService, paymentService, authService, cartService, productService, UserResponse, CartResponse } from '../../services';
 
 interface CheckoutProps {
    onComplete: () => void;
@@ -10,35 +10,90 @@ interface CheckoutProps {
 const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
    const [isProcessing, setIsProcessing] = useState(false);
    const [paymentMethod, setPaymentMethod] = useState<'WALLET' | 'PAYOS'>('WALLET');
+   const [userInfo, setUserInfo] = useState<UserResponse | null>(null);
+   const [cartData, setCartData] = useState<CartResponse | null>(null);
+   const [shopsCount, setShopsCount] = useState(1);
+   const [recipientName, setRecipientName] = useState('');
+   const [recipientPhone, setRecipientPhone] = useState('');
+   const [recipientAddress, setRecipientAddress] = useState('');
+   const [note, setNote] = useState('Giao giờ hành chính');
+
+   useEffect(() => {
+      const fetchData = async () => {
+         try {
+            const [userRes, cartRes] = await Promise.all([
+               authService.getMyInfo(),
+               cartService.getCart()
+            ]);
+
+            if (userRes.result) {
+               setUserInfo(userRes.result);
+               setRecipientName(userRes.result.fullName || '');
+               setRecipientPhone(userRes.result.phoneNumber || '');
+               setRecipientAddress(userRes.result.address || '');
+            }
+
+            if (cartRes.result) {
+               setCartData(cartRes.result);
+
+               // Calculate shop count
+               const items = cartRes.result.items || [];
+               const shopIds = new Set();
+               await Promise.all(items.map(async (item) => {
+                  try {
+                     const pRes = await productService.getById(item.productId);
+                     if (pRes.result?.shopId) {
+                        shopIds.add(pRes.result.shopId);
+                     }
+                  } catch (e) {
+                     console.error(e);
+                  }
+               }));
+               setShopsCount(shopIds.size || 1);
+            }
+         } catch (error) {
+            console.error('Failed to fetch checkout data', error);
+         }
+      };
+
+      fetchData();
+   }, []);
 
    const handleConfirmPayment = async () => {
+      if (!cartData || !cartData.items || cartData.items.length === 0) {
+         alert('Giỏ hàng trống!');
+         return;
+      }
+
       try {
          setIsProcessing(true);
 
          // 1. Create Order
          const orderData = {
-            recipientName: 'Nguyễn Văn A',
-            recipientPhone: '0901234567',
-            shippingAddress: '285 Cách Mạng Tháng Tám, Phường 12, Quận 10, TP.HCM',
-            note: 'Giao giờ hành chính',
+            recipientName,
+            recipientPhone,
+            shippingAddress: recipientAddress,
+            note,
             paymentMethod: paymentMethod,
-            items: [
-               { productId: 1, quantity: 1 } // Mock item since we don't have real cart state yet
-            ]
+            items: cartData.items.map(item => ({
+               productId: item.productId,
+               quantity: item.quantity
+            }))
          };
 
          const orderRes = await orderService.createOrder(orderData);
 
          if (orderRes.result) {
             const orderId = orderRes.result.id;
-            const amount = orderRes.result.totalAmount || 169100; // Fallback to mock total
+            const amount = orderRes.result.totalAmount;
 
             // 2. Create Payment
             if (paymentMethod === 'PAYOS') {
                const paymentRes = await paymentService.createPaymentPayOS({
                   orderId: orderId,
                   amount: amount,
-                  method: 'PAYOS'
+                  method: 'PAYOS',
+                  paymentGateway: 'PAYOS'
                });
 
                if (paymentRes.result && paymentRes.result.payOsCheckoutUrl) {
@@ -47,11 +102,12 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
                   return;
                }
             } else {
-               // Wallet Payment - assume backend handles or we create normal payment
+               // Wallet Payment
                await paymentService.createPayment({
                   orderId: orderId,
                   amount: amount,
-                  method: 'WALLET'
+                  method: 'WALLET',
+                  paymentGateway: 'WALLET'
                });
             }
 
@@ -89,7 +145,7 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
                   </div>
                   <div>
                      <p className="text-[10px] font-black text-gray-400 uppercase leading-none">NGƯỜI MUA</p>
-                     <p className="text-xs font-bold text-gray-900">Nguyễn Văn A</p>
+                     <p className="text-xs font-bold text-gray-900">{userInfo?.fullName || 'Khách'}</p>
                   </div>
                </div>
             </div>
@@ -116,16 +172,30 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
                      <div className="flex flex-col gap-6">
                         <div className="p-6 bg-green-50/30 rounded-[32px] border-2 border-dashed border-primary/20 flex flex-col gap-4">
                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-black text-primary uppercase tracking-widest">VỊ TRÍ HIỆN TẠI CỦA BẠN</span>
+                              <span className="text-[10px] font-black text-primary uppercase tracking-widest">ĐỊA CHỈ NHẬN HÀNG</span>
                            </div>
-                           <p className="text-sm font-black text-gray-900 leading-relaxed">
-                              285 Cách Mạng Tháng Tám, Phường 12, Quận 10, TP. Hồ Chí Minh
-                           </p>
-                           <p className="text-[11px] text-gray-400 font-bold italic">Ghi chú: Nhà riêng (Giao giờ hành chính)</p>
+                           <textarea
+                              value={recipientAddress}
+                              onChange={(e) => setRecipientAddress(e.target.value)}
+                              className="text-sm font-black text-gray-900 leading-relaxed bg-transparent border-none focus:ring-0 w-full resize-none p-0"
+                              rows={2}
+                           />
+                           <input
+                              type="text"
+                              value={note}
+                              onChange={(e) => setNote(e.target.value)}
+                              placeholder="Ghi chú thêm..."
+                              className="text-[11px] text-gray-400 font-bold italic bg-transparent border-none focus:ring-0 w-full p-0"
+                           />
                         </div>
                         <div className="flex flex-col gap-3">
                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Số điện thoại người nhận</label>
-                           <input type="text" defaultValue="0901234567" className="w-full px-6 py-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-black outline-none" />
+                           <input
+                              type="text"
+                              value={recipientPhone}
+                              onChange={(e) => setRecipientPhone(e.target.value)}
+                              className="w-full px-6 py-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-black outline-none"
+                           />
                         </div>
                      </div>
                      <div className="relative aspect-video rounded-[32px] overflow-hidden group shadow-lg border border-gray-100">
@@ -255,33 +325,31 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
                   <h4 className="text-xl font-black text-gray-900 uppercase tracking-tight">Xác nhận đơn hàng</h4>
 
                   <div className="space-y-4">
-                     {[
-                        { name: 'Sản phẩm mẫu nông sản (1kg)', price: '131.600đ' },
-                     ].map((item, idx) => (
+                     {cartData?.items?.map((item, idx) => (
                         <div key={idx} className="flex justify-between items-center text-sm font-bold text-gray-500">
-                           <span>{item.name}</span>
-                           <span className="text-gray-900 font-black">{item.price}</span>
+                           <span className="flex-1 mr-4">{item.productName} (x{item.quantity})</span>
+                           <span className="text-gray-900 font-black">{(item.price * item.quantity).toLocaleString('vi-VN')}đ</span>
                         </div>
                      ))}
                   </div>
 
                   <div className="space-y-4 pt-6 border-t border-gray-50">
                      <div className="flex justify-between items-center text-sm font-bold text-gray-500">
-                        <span>Tiền hàng (1 món)</span>
-                        <span className="text-gray-900 font-black">131.600đ</span>
+                        <span>Tiền hàng ({cartData?.items?.length || 0} món)</span>
+                        <span className="text-gray-900 font-black">{(cartData?.totalAmount || 0).toLocaleString('vi-VN')}đ</span>
                      </div>
                      <div className="flex justify-between items-center text-sm font-bold text-gray-500">
                         <div className="flex items-center gap-1">
                            Phí vận chuyển <Info className="size-3 text-gray-300" />
                         </div>
-                        <span className="text-gray-900 font-black">37.500đ</span>
+                        <span className="text-gray-900 font-black">{(15000 * shopsCount).toLocaleString('vi-VN')}đ</span>
                      </div>
                   </div>
 
                   <div className="pt-8 border-t border-gray-50 flex justify-between items-end">
                      <div>
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">TỔNG CỘNG</p>
-                        <h3 className="text-4xl font-black text-primary tracking-tight">169.100đ</h3>
+                        <h3 className="text-4xl font-black text-primary tracking-tight">{((cartData?.totalAmount || 0) + (15000 * shopsCount)).toLocaleString('vi-VN')}đ</h3>
                         <p className="text-[9px] text-gray-400 font-bold italic mt-1">(Đã bao gồm VAT)</p>
                      </div>
                   </div>

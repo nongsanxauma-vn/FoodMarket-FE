@@ -17,6 +17,8 @@ export { orderService } from './order.service';
 export { walletService } from './wallet.service';
 export { blogService } from './blog.service';
 export { paymentService } from './payment.service';
+export { comboService } from './combo.service';
+export { cartService } from './cart.service';
 export { httpClient } from './http.client';
 
 // Export types
@@ -31,6 +33,14 @@ export type { OrderResponse, OrderCreationRequest } from './order.service';
 export type { WalletResponse, WithdrawRequestResponse } from './wallet.service';
 export type { BlogResponse, BlogCreationRequest } from './blog.service';
 export type { PaymentResponse, CreatePaymentRequest } from './payment.service';
+export type {
+    BuildComboResponse,
+    BuildComboCreationRequest,
+    BuildComboUpdateRequest,
+    ProductComboResponse,
+    ProductComboRequest
+} from './combo.service';
+export type { AddCartItemRequest, CartItemResponse, CartResponse } from './cart.service';
 export type { ApiResponse, RequestConfig } from './http.client';
 export type { UserUpdateRequest } from './user.service';
 

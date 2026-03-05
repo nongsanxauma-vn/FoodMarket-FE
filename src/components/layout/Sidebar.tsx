@@ -19,7 +19,8 @@ import {
   Bell,
   Newspaper,
   Send,
-  ChevronRight
+  ChevronRight,
+  ChefHat
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -34,6 +35,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role, user, currentPath, onNavigate, 
   const farmerMenu = [
     { name: 'Tổng quan', icon: LayoutDashboard, id: 'overview' },
     { name: 'Sản phẩm', icon: Package, id: 'products' },
+    { name: 'Tạo Combo', icon: ChefHat, id: 'combo-builder' },
     { name: 'Đơn hàng', icon: ShoppingCart, id: 'orders' },
     { name: 'Thông báo', icon: Bell, id: 'notifications' },
     { name: 'Blind Box Tool', icon: Gift, id: 'blind-box' },

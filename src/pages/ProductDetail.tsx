@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { productService, ProductResponse, userService, UserResponse } from '../services';
+import { productService, ProductResponse, userService, UserResponse, cartService } from '../services';
 import {
    Star,
    MapPin,
@@ -28,6 +28,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId, onBack }) => {
    const [shopOwner, setShopOwner] = useState<UserResponse | null>(null);
    const [isLoading, setIsLoading] = useState(true);
    const [error, setError] = useState<string | null>(null);
+   const [isAdding, setIsAdding] = useState(false);
 
    useEffect(() => {
       const fetchProduct = async () => {
@@ -214,8 +215,24 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId, onBack }) => {
                   </div>
                </div>
                <div className="flex gap-4 flex-1 max-w-md">
-                  <button className="flex-1 py-4 px-8 border-2 border-primary text-primary font-black rounded-2xl uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-primary/5 transition-all">
-                     <ShoppingCart className="size-5" /> Thêm vào giỏ
+                  <button
+                     disabled={isAdding}
+                     onClick={async () => {
+                        try {
+                           setIsAdding(true);
+                           await cartService.addToCart({ productId: Number(productId), quantity });
+                           window.dispatchEvent(new Event('cart-updated'));
+                           alert('Đã thêm sản phẩm vào giỏ hàng!');
+                        } catch (e) {
+                           alert('Không thể thêm vào giỏ hàng. Vui lòng thử lại.');
+                        } finally {
+                           setIsAdding(false);
+                        }
+                     }}
+                     className="flex-1 py-4 px-8 border-2 border-primary text-primary font-black rounded-2xl uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-primary/5 transition-all disabled:opacity-50"
+                  >
+                     {isAdding ? <Loader2 className="size-5 animate-spin" /> : <ShoppingCart className="size-5" />}
+                     {isAdding ? 'Đang thêm...' : 'Thêm vào giỏ'}
                   </button>
                   <button className="flex-1 py-4 px-8 bg-primary text-white font-black rounded-2xl uppercase tracking-widest shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all transform active:scale-95">
                      Mua ngay

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AppRole, User } from '../../types/index';
 import { Search, ShoppingCart, Bell, Menu, Leaf, User as UserIcon, LogOut, Phone, X, CheckCircle2, Trash2, Store, Truck, LayoutDashboard } from 'lucide-react';
-import { notificationService, NotificationItem } from '../../services';
+import { notificationService, NotificationItem, cartService } from '../../services';
 
 interface HeaderProps {
   user: User | null;
@@ -34,6 +34,7 @@ const Header: React.FC<HeaderProps> = ({
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loadingNotifs, setLoadingNotifs] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
+  const [cartCount, setCartCount] = useState(0);
   const notifRef = useRef<HTMLDivElement>(null);
 
   // Close notification dropdown when clicking outside
@@ -58,6 +59,34 @@ const Header: React.FC<HeaderProps> = ({
       setLoadingNotifs(false);
     }
   };
+
+  const fetchCartCount = async () => {
+    if (!isAuthenticated) return;
+    try {
+      const res = await cartService.getCart();
+      if (res.result) {
+        setCartCount(res.result.items?.length || 0);
+      }
+    } catch (err) {
+      console.error('Failed to fetch cart count', err);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchNotifications();
+      fetchCartCount();
+    } else {
+      setNotifications([]);
+      setCartCount(0);
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    const handleCartUpdate = () => fetchCartCount();
+    window.addEventListener('cart-updated', handleCartUpdate);
+    return () => window.removeEventListener('cart-updated', handleCartUpdate);
+  }, [isAuthenticated]);
 
   const handleMarkAsRead = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -207,7 +236,11 @@ const Header: React.FC<HeaderProps> = ({
 
                 <button onClick={onOpenCart} className="relative text-white hover:opacity-80 transition-opacity">
                   <ShoppingCart className="size-6" />
-                  <span className="absolute -top-1.5 -right-1.5 bg-[#FAD973] text-[#38543a] text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-[#38543a]">3</span>
+                  {cartCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-[#FAD973] text-[#38543a] text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-[#38543a]">
+                      {cartCount}
+                    </span>
+                  )}
                 </button>
 
                 <div className="relative">

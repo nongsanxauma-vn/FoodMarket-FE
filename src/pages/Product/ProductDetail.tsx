@@ -18,7 +18,7 @@ import {
   Loader2,
   AlertCircle
 } from 'lucide-react';
-import { productService, ProductResponse } from '../../services';
+import { productService, ProductResponse, cartService } from '../../services';
 import ShopProducts from './ShopProducts';
 
 interface ProductDetailProps {
@@ -38,6 +38,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId, onBack, isAuth
   const [activeTab, setActiveTab] = useState('mota');
   const [viewShopMode, setViewShopMode] = useState(false);
   const [selectedFarm, setSelectedFarm] = useState<string | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
     setTimeout(() => {
@@ -183,18 +184,28 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId, onBack, isAuth
               <button disabled={isOutOfStock || quantity >= product.stockQuantity} onClick={() => setQuantity(quantity + 1)} className="w-12 h-full flex items-center justify-center hover:bg-gray-200 transition-colors text-gray-600 disabled:opacity-50"><Plus className="size-4" /></button>
             </div>
             <button
-              disabled={isOutOfStock}
-              onClick={() => {
+              disabled={isOutOfStock || isAdding}
+              onClick={async () => {
                 if (!isAuthenticated) {
                   onOpenLogin();
                 } else {
-                  alert(`Đã thêm ${quantity} ${product.unit} ${product.productName} vào giỏ hàng`);
+                  try {
+                    setIsAdding(true);
+                    await cartService.addToCart({ productId: Number(productId), quantity });
+                    window.dispatchEvent(new Event('cart-updated'));
+                    alert(`Đã thêm ${quantity} ${product.unit} ${product.productName} vào giỏ hàng`);
+                  } catch (e) {
+                    console.error('Failed to add to cart', e);
+                    alert('Không thể thêm vào giỏ hàng. Vui lòng thử lại.');
+                  } finally {
+                    setIsAdding(false);
+                  }
                 }
               }}
               className="flex-1 bg-primary text-white h-14 rounded-xl font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all flex items-center justify-center gap-3 disabled:bg-gray-300 disabled:text-gray-500 disabled:shadow-none hover:-translate-y-1 transform disabled:transform-none"
             >
-              <ShoppingCart className="size-5" />
-              {isOutOfStock ? 'Hết hàng' : 'Thêm vào giỏ'}
+              {isAdding ? <Loader2 className="size-5 animate-spin" /> : <ShoppingCart className="size-5" />}
+              {isAdding ? 'Đang thêm...' : (isOutOfStock ? 'Hết hàng' : 'Thêm vào giỏ')}
             </button>
           </div>
         </div>

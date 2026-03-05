@@ -1,35 +1,44 @@
 
 import React, { useEffect, useState } from 'react';
 import { ShoppingCart, TrendingUp, Star, Wallet, Package, Clock, MoreVertical, Plus, Sparkles, Landmark, History, ChefHat, Loader2, AlertCircle } from 'lucide-react';
-import { productService, orderService, walletService, authService, ProductResponse, OrderResponse, WalletResponse } from '../../services';
+import { productService, orderService, walletService, authService, comboService, ProductResponse, OrderResponse, WalletResponse, BuildComboResponse } from '../../services';
 
 const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }) => {
   const [products, setProducts] = useState<ProductResponse[]>([]);
   const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [wallet, setWallet] = useState<WalletResponse | null>(null);
+  const [combos, setCombos] = useState<BuildComboResponse[]>([]);
+  const [activeTab, setActiveTab] = useState<'NONG_SAN' | 'COMBO' | 'BLIND_BOX'>('NONG_SAN');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+      setError(null);
       try {
         // Get user info to get shopId
         const userInfo = await authService.getMyInfo();
         const shopId = userInfo.result?.id;
 
-        const [productsRes, ordersRes, walletRes] = await Promise.all([
-          shopId ? productService.getByShopId(shopId) : productService.getAll(),
-          orderService.getAllOrders(),
-          walletService.getMyWallet(),
+        const [productsRes, ordersRes, walletRes, combosRes] = await Promise.all([
+          (shopId ? productService.getByShopId(shopId) : productService.getAll())
+            .catch(e => { console.error('Products fetch error', e); return { result: [] }; }),
+          orderService.getAllOrders()
+            .catch(e => { console.error('Orders fetch error', e); return { result: [] }; }),
+          walletService.getMyWallet()
+            .catch(e => { console.error('Wallet fetch error', e); return { result: null }; }),
+          (shopId ? comboService.getByShop(shopId) : Promise.resolve({ result: [] }))
+            .catch(e => { console.error('Combos fetch error', e); return { result: [] }; }),
         ]);
 
         if (productsRes.result) setProducts(Array.isArray(productsRes.result) ? productsRes.result : [productsRes.result]);
         if (ordersRes.result) setOrders(Array.isArray(ordersRes.result) ? ordersRes.result : [ordersRes.result]);
         if (walletRes.result) setWallet(walletRes.result as WalletResponse);
+        if (combosRes.result) setCombos(Array.isArray(combosRes.result) ? combosRes.result : [combosRes.result]);
       } catch (err) {
         console.error('Failed to load dashboard data', err);
-        setError('Không thể tải dữ liệu. Vui lòng thử lại sau.');
+        setError('Không thể tải một số dữ liệu. Vui lòng làm mới trang.');
       } finally {
         setLoading(false);
       }
@@ -40,6 +49,8 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
   const totalOrders = orders.length;
   const walletBalance = wallet?.totalBalance || 0;
   const frozenBalance = wallet?.frozenBalance || 0;
+  const totalCombos = combos.filter(c => c.type === 'CUSTOM').length;
+  const totalBlindBoxes = combos.filter(c => c.type !== 'CUSTOM').length;
 
   if (loading) {
     return (
@@ -76,18 +87,20 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
         {[
           { label: 'Tổng đơn hàng', value: totalOrders.toLocaleString('vi-VN'), trend: `${products.length} sản phẩm`, icon: ShoppingCart },
           { label: 'Sản phẩm đang bán', value: products.length.toString(), trend: 'Đang hoạt động', icon: TrendingUp },
+          { label: 'Combo Đã Tạo', value: totalCombos.toString(), trend: 'Tự chọn', icon: ChefHat },
+          { label: 'Hộp mù (Blind Box)', value: totalBlindBoxes.toString(), trend: 'Giải cứu nông sản', icon: Sparkles },
           { label: 'Chất lượng Shop', value: '98%', trend: 'Top 5%', icon: Star, bar: 98 },
           { label: 'Số dư khả dụng', value: `${walletBalance.toLocaleString('vi-VN')}đ`, icon: Wallet, isPrimary: true, frozen: `${frozenBalance.toLocaleString('vi-VN')}đ` },
         ].map((stat, i) => (
-          <div key={i} className={`p-6 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group ${stat.isPrimary ? 'bg-primary text-white' : 'bg-white'}`}>
+          <div key={i} className={`p-6 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group ${stat.isPrimary ? 'bg-primary text-white md:col-span-3 lg:col-span-1' : 'bg-white'}`}>
             <p className={`text-[11px] font-black uppercase tracking-widest ${stat.isPrimary ? 'text-white/70' : 'text-gray-400'}`}>{stat.label}</p>
             <div className="flex items-baseline gap-2 mt-2">
-              <h3 className="text-2xl font-black font-display">{stat.value}</h3>
-              {stat.trend && <span className={`text-[10px] font-bold ${stat.isPrimary ? 'text-white' : 'text-primary'}`}>{stat.trend}</span>}
+              <h3 className="text-2xl font-black font-display truncate">{stat.value}</h3>
+              {stat.trend && <span className={`text-[10px] whitespace-nowrap font-bold ${stat.isPrimary ? 'text-white' : 'text-primary'}`}>{stat.trend}</span>}
             </div>
             {stat.bar && (
               <div className="w-full h-1.5 bg-gray-100 rounded-full mt-3 overflow-hidden">
@@ -120,31 +133,54 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
                 <button onClick={() => onNavigate('combo-builder')} className="px-4 py-2 bg-orange-50 text-orange-600 rounded-xl text-xs font-bold border border-orange-200 hover:bg-orange-100 transition-colors flex items-center gap-2">
                   <ChefHat className="size-4" /> Tạo Combo
                 </button>
-                <button className="px-4 py-2 bg-gray-50 text-gray-600 rounded-xl text-xs font-bold border border-gray-100">Quản lý hạn dùng</button>
+                <button onClick={() => onNavigate('blind-box')} className="px-4 py-2 bg-gray-50 text-gray-600 rounded-xl text-xs font-bold border border-gray-100">Blindbox</button>
                 <button onClick={() => onNavigate('add-product')} className="px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-primary/20 hover:bg-primary-dark">
                   <Plus className="size-4" /> Thêm sản phẩm
                 </button>
               </div>
             </div>
             <div className="p-0 overflow-x-auto">
+              {/* Inline Tabs for Table */}
+              <div className="flex border-b border-gray-100 w-full bg-gray-50/30">
+                <button
+                  onClick={() => setActiveTab('NONG_SAN')}
+                  className={`flex-1 py-3 text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'NONG_SAN' ? 'bg-primary/5 text-primary border-b-2 border-primary' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'}`}
+                >
+                  Nông Sản ({products.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab('COMBO')}
+                  className={`flex-1 py-3 text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'COMBO' ? 'bg-orange-50 text-orange-600 border-b-2 border-orange-500' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'}`}
+                >
+                  Túi Combo ({totalCombos})
+                </button>
+                <button
+                  onClick={() => setActiveTab('BLIND_BOX')}
+                  className={`flex-1 py-3 text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'BLIND_BOX' ? 'bg-purple-50 text-purple-600 border-b-2 border-purple-500' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'}`}
+                >
+                  Hộp Mù ({totalBlindBoxes})
+                </button>
+              </div>
+
               <table className="w-full text-left">
                 <thead className="bg-gray-50/50">
                   <tr>
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Sản phẩm</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">{activeTab === 'NONG_SAN' ? 'Sản phẩm' : 'Tên Combo / Hộp mù'}</th>
                     <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Giá</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Danh mục</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">{activeTab === 'NONG_SAN' ? 'Danh mục' : 'Thành phần phụ'}</th>
                     <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Trạng thái</th>
                     <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {products.slice(0, 5).map((p, i) => (
+                  {/* Rendering Products */}
+                  {activeTab === 'NONG_SAN' && products.slice(0, 5).map((p, i) => (
                     <tr key={p.id || i} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <img src={p.imageUrl || `https://picsum.photos/seed/product${i}/40/40`} className="size-10 rounded-xl object-cover" />
                           <div>
-                            <p className="text-sm font-bold text-gray-900">{p.productName}</p>
+                            <p className="text-sm font-bold text-gray-900 line-clamp-1">{p.productName}</p>
                             <p className="text-[10px] text-gray-400 font-medium">Nông sản</p>
                           </div>
                         </div>
@@ -166,14 +202,57 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
                       </td>
                     </tr>
                   ))}
-                  {products.length === 0 && (
+
+                  {/* Rendering Combos/Blind Boxes */}
+                  {activeTab !== 'NONG_SAN' && combos.filter(c => activeTab === 'COMBO' ? c.type === 'CUSTOM' : c.type !== 'CUSTOM').slice(0, 5).map((c, i) => {
+                    const isBlindBox = c.type !== 'CUSTOM';
+                    return (
+                      <tr key={c.id || i} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`size-10 rounded-xl flex items-center justify-center text-white shadow-sm ${isBlindBox ? 'bg-purple-500' : 'bg-orange-500'}`}>
+                              {isBlindBox ? <Sparkles className="size-5" /> : <ChefHat className="size-5" />}
+                            </div>
+                            <div>
+                              <p className={`text-sm font-bold line-clamp-1 ${isBlindBox ? 'text-purple-700' : 'text-orange-600'}`}>{c.comboName}</p>
+                              <p className="text-[10px] text-gray-400 font-medium">{isBlindBox ? 'Hộp mù' : 'Combo Tự Chọn'}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center text-sm font-bold text-gray-700">{(c.discountPrice || 0).toLocaleString('vi-VN')}đ</td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="px-3 py-1 bg-gray-100 text-gray-600 text-[10px] font-bold rounded-full">{c.items.length} món</span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <span className="size-1.5 bg-green-500 rounded-full"></span>
+                            <span className="text-[11px] font-bold text-gray-600">Đang Mở</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button className="size-8 rounded-lg hover:bg-gray-100 flex items-center justify-center ml-auto">
+                            <MoreVertical className="size-4 text-gray-400" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {activeTab === 'NONG_SAN' && products.length === 0 && (
                     <tr>
                       <td colSpan={5} className="px-6 py-8 text-center text-gray-400 font-bold text-sm">Chưa có sản phẩm nào. Hãy thêm sản phẩm mới!</td>
                     </tr>
                   )}
+                  {activeTab !== 'NONG_SAN' && combos.filter(c => activeTab === 'COMBO' ? c.type === 'CUSTOM' : c.type !== 'CUSTOM').length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-8 text-center text-gray-400 font-bold text-sm">Chưa có {activeTab === 'COMBO' ? 'combo' : 'hộp mù'} nào được tạo.</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
-              <button onClick={() => onNavigate('products')} className="w-full py-4 text-primary text-xs font-bold hover:bg-primary/5 border-t border-gray-50 transition-all uppercase tracking-widest">Xem tất cả {products.length} sản phẩm</button>
+              <button onClick={() => onNavigate('products')} className="w-full py-4 text-primary text-xs font-bold hover:bg-primary/5 border-t border-gray-50 transition-all uppercase tracking-widest">
+                Xem chi tiết tất cả {activeTab === 'NONG_SAN' ? products.length : combos.filter(c => activeTab === 'COMBO' ? c.type === 'CUSTOM' : c.type !== 'CUSTOM').length} đối tượng
+              </button>
             </div>
           </div>
 
@@ -205,58 +284,53 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
           </div>
         </div>
 
-        {/* Sidebar Tool */}
+        {/* Sidebar Tool: Recent Orders */}
         <div className="flex flex-col gap-6">
           <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm p-8 overflow-hidden relative">
             <div className="flex items-center gap-3 mb-6">
               <div className="size-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
-                <Sparkles className="size-5" />
+                <ShoppingCart className="size-5" />
               </div>
               <div>
-                <h4 className="font-black text-gray-800 uppercase tracking-tight">Blind Box Surplus</h4>
-                <p className="text-[10px] text-gray-400 font-medium">Giải cứu nông sản dư thừa qua các hộp quà bí ẩn.</p>
+                <h4 className="font-black text-gray-800 uppercase tracking-tight">Quản lý Đơn hàng</h4>
+                <p className="text-[10px] text-gray-400 font-medium">Danh sách các đơn hàng mới nhất.</p>
               </div>
             </div>
 
-            <div className="space-y-6">
-              <div className="flex flex-col gap-3">
-                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Chọn nông sản dư thừa</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {products.slice(0, 3).map((item, idx) => (
-                    <div key={idx} className="flex flex-col items-center gap-2 group cursor-pointer">
-                      <div className="size-16 rounded-2xl overflow-hidden border-2 border-transparent group-hover:border-primary transition-all relative">
-                        <img src={item.imageUrl || `https://picsum.photos/seed/p${idx}/60/60`} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-all" />
-                      </div>
-                      <span className="text-[10px] font-bold text-gray-500">{item.productName}</span>
+            <div className="space-y-4">
+              {orders.slice(0, 5).map((order, i) => (
+                <div key={order.id || i} className="flex items-center justify-between p-3 rounded-2xl hover:bg-gray-50 transition-colors cursor-pointer border border-transparent hover:border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="size-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400">
+                      <Package className="size-5" />
                     </div>
-                  ))}
-                  {products.length === 0 && [1, 2, 3].map(idx => (
-                    <div key={idx} className="size-16 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-300">
-                      <Package className="size-6" />
+                    <div className="max-w-[120px]">
+                      <p className="text-xs font-bold text-gray-800 truncate">Đơn #{order.id}</p>
+                      <p className="text-[10px] text-gray-400 font-medium truncate">{order.shippingAddress || 'Khách hàng'}</p>
                     </div>
-                  ))}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[13px] font-black text-primary">{(order.totalAmount || 0).toLocaleString('vi-VN')}đ</p>
+                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md ${order.status === 'PENDING' ? 'bg-orange-50 text-orange-600' :
+                        order.status === 'SHIPPING' ? 'bg-blue-50 text-blue-600' :
+                          order.status === 'DELIVERED' ? 'bg-green-50 text-green-600' :
+                            'bg-gray-50 text-gray-600'
+                      }`}>
+                      {order.status || 'NEW'}
+                    </span>
+                  </div>
                 </div>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <div className="flex justify-between items-center">
-                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Mức giá combo</label>
-                  <span className="text-primary font-black">59.000đ</span>
+              ))}
+              {orders.length === 0 && (
+                <div className="p-8 text-center bg-gray-50 rounded-2xl">
+                  <p className="text-xs font-bold text-gray-400">Chưa có đơn hàng nào.</p>
                 </div>
-                <input type="range" className="w-full accent-primary h-1.5 bg-gray-100 rounded-full" />
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Số lượng vật phẩm</label>
-                <select className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-primary/10 appearance-none bg-no-repeat bg-[right_12px_center]">
-                  <option>3 - 5 loại nông sản</option>
-                  <option>5 - 7 loại nông sản</option>
-                </select>
-              </div>
-
-              <button onClick={() => onNavigate('blind-box')} className="w-full py-4 bg-primary text-white font-black rounded-[20px] flex items-center justify-center gap-2 shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all transform active:scale-95">
-                <Sparkles className="size-4" /> Tạo Combo Random
+              )}
+              <button
+                onClick={() => onNavigate('orders')}
+                className="w-full mt-2 py-4 bg-primary text-white font-black rounded-[20px] flex items-center justify-center gap-2 shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all transform active:scale-95"
+              >
+                <ShoppingCart className="size-4" /> Xem Tất Cả Đơn Hàng
               </button>
             </div>
           </div>

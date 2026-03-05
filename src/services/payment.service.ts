@@ -3,7 +3,8 @@ import { httpClient, ApiResponse } from './http.client';
 export interface CreatePaymentRequest {
     orderId: number;
     amount: number;
-    method: string;
+    method?: string;
+    paymentGateway?: string;
 }
 
 export interface PaymentResponse {
