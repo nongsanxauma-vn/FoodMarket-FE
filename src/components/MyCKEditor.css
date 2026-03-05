@@ -1,0 +1,250 @@
+.tiptap-editor-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #f9fafb;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.tiptap-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 12px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  align-items: center;
+}
+
+.toolbar-group {
+  display: flex;
+  gap: 4px;
+  border-right: 1px solid #e5e7eb;
+  padding-right: 8px;
+}
+
+.toolbar-group:last-child {
+  border-right: none;
+  padding-right: 0;
+}
+
+.tiptap-toolbar button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tiptap-toolbar button:hover:not(:disabled) {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+  color: #1f2937;
+}
+
+.tiptap-toolbar button.active {
+  background: #10b981;
+  border-color: #059669;
+  color: #ffffff;
+}
+
+.tiptap-toolbar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.image-upload-btn {
+  font-size: 14px !important;
+}
+
+.tiptap-editor {
+  padding: 16px;
+  min-height: 400px;
+  max-height: 600px;
+  overflow-y: auto;
+  background: #f9fafb;
+  color: #1f2937;
+  font-size: 14px;
+  line-height: 1.6;
+  transition: background-color 0.2s;
+}
+
+.tiptap-editor:focus {
+  outline: none;
+  background: #ffffff;
+}
+
+.tiptap-editor.drag-over {
+  background: #f0fdf4;
+  border: 2px dashed #10b981;
+}
+
+/* Tiptap editor content styling */
+.tiptap-editor.ProseMirror {
+  outline: none;
+}
+
+.tiptap-editor .is-editor-empty:first-child::before {
+  color: #9ca3af;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Headings */
+.tiptap-editor h1,
+.tiptap-editor h2,
+.tiptap-editor h3,
+.tiptap-editor h4,
+.tiptap-editor h5,
+.tiptap-editor h6 {
+  line-height: 1.1;
+  font-weight: 700;
+  margin: 16px 0 8px 0;
+}
+
+.tiptap-editor h1 {
+  font-size: 28px;
+}
+
+.tiptap-editor h2 {
+  font-size: 24px;
+}
+
+.tiptap-editor h3 {
+  font-size: 20px;
+}
+
+.tiptap-editor h4 {
+  font-size: 16px;
+}
+
+.tiptap-editor h5 {
+  font-size: 14px;
+}
+
+.tiptap-editor h6 {
+  font-size: 12px;
+}
+
+/* Paragraph */
+.tiptap-editor p {
+  margin: 8px 0;
+}
+
+/* Lists */
+.tiptap-editor ul,
+.tiptap-editor ol {
+  margin: 12px 0;
+  padding-left: 24px;
+}
+
+.tiptap-editor li {
+  margin: 4px 0;
+}
+
+/* Blockquote */
+.tiptap-editor blockquote {
+  border-left: 4px solid #10b981;
+  margin: 12px 0;
+  padding: 12px 16px;
+  background: #f0fdf4;
+  color: #166534;
+  font-style: italic;
+}
+
+/* Code */
+.tiptap-editor code {
+  background: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+  color: #dc2626;
+}
+
+.tiptap-editor pre {
+  background: #1f2937;
+  color: #f3f4f6;
+  padding: 16px;
+  border-radius: 8px;
+  margin: 12px 0;
+  overflow-x: auto;
+}
+
+.tiptap-editor pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* Images */
+.tiptap-editor img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 12px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Links */
+.tiptap-editor a {
+  color: #0284c7;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.tiptap-editor a:hover {
+  color: #0369a1;
+}
+
+/* Text alignment */
+.tiptap-editor .text-left {
+  text-align: left;
+}
+
+.tiptap-editor .text-center {
+  text-align: center;
+}
+
+.tiptap-editor .text-right {
+  text-align: right;
+}
+
+/* Bold, italic, underline */
+.tiptap-editor strong {
+  font-weight: 700;
+}
+
+.tiptap-editor em {
+  font-style: italic;
+}
+
+.tiptap-editor u {
+  text-decoration: underline;
+}
+
+.tiptap-editor s {
+  text-decoration: line-through;
+}
+
+/* HR */
+.tiptap-editor hr {
+  border: none;
+  border-top: 2px solid #e5e7eb;
+  margin: 16px 0;
+}
+

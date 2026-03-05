@@ -52,6 +52,7 @@ const App: React.FC = () => {
   const [isTrackingOpen, setIsTrackingOpen] = useState(false);
   const [isNewsOpen, setIsNewsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'home' | 'blindbox' | 'news'>('home');
 
   const currentUser: User | null = isAuthenticated ? {
     id: 'user-123',
@@ -158,6 +159,7 @@ const App: React.FC = () => {
     setIsSuccessOpen(false);
     setIsTrackingOpen(false);
     setSelectedProductId(null);
+    setActiveTab('news');
   };
 
   const handleProceedToCheckout = () => {
@@ -183,6 +185,7 @@ const App: React.FC = () => {
     setIsNewsOpen(false);
     setIsProfileOpen(false);
     setSelectedProductId(null);
+    setActiveTab('home');
   };
 
   // Rendering logic for Auth Screens
@@ -276,6 +279,7 @@ const App: React.FC = () => {
               onOpenLogin={() => setAuthMode('LOGIN')}
               onOpenRegister={() => setAuthMode('REGISTER')}
               onOpenProfile={() => setIsProfileOpen(true)}
+              activeTab={activeTab}
             />
             <div className="flex-1">
               {isTrackingOpen ? <Tracking onBack={handleCloseBuyerSpecialPages} /> :
