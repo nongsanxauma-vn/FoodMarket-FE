@@ -51,6 +51,16 @@ class BlogService {
     async deleteBlog(id: number): Promise<ApiResponse<void>> {
         return httpClient.delete<void>(`/blogs/${id}`);
     }
+
+    /**
+     * Upload rich‑text editor images. Backend returns an object containing `url`.
+     */
+    async uploadImage(file: File): Promise<ApiResponse<{ url: string }>> {
+        // backend expects field name "file" and returns a simple { url: ... } map
+        const formData = new FormData();
+        formData.append('file', file);
+        return httpClient.post<{ url: string }>('/blogs/upload-image', formData);
+    }
 }
 
 export const blogService = new BlogService();

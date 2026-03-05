@@ -236,11 +236,7 @@ const NewsManagement: React.FC = () => {
                   </div>
                </div>
                <div className="p-12 md:p-20">
-                  <div className="prose prose-lg max-w-none">
-                     <p className="text-gray-600 font-medium leading-relaxed whitespace-pre-wrap">
-                        {selectedBlog.content}
-                     </p>
-                  </div>
+                  <div className="prose prose-lg max-w-none text-gray-600 font-medium leading-relaxed" dangerouslySetInnerHTML={{ __html: selectedBlog.content }} />
                </div>
             </div>
          </div>
