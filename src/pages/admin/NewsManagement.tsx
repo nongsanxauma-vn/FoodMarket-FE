@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Newspaper, Plus, Search, Filter, Edit3, Trash2, Eye, Calendar, User, Clock, CheckCircle2, ChevronLeft, ChevronRight, RefreshCcw } from 'lucide-react';
 import { blogService, BlogResponse, BlogCreationRequest } from '../../services';
+import MyCKEditor from '../../components/MyCKEditor';
 
 const NewsManagement: React.FC = () => {
    const [blogs, setBlogs] = useState<BlogResponse[]>([]);
@@ -150,12 +151,10 @@ const NewsManagement: React.FC = () => {
                      </div>
                      <div className="flex flex-col gap-3">
                         <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Nội dung bài viết</label>
-                        <textarea
-                           rows={15}
+                        <MyCKEditor 
                            value={content}
-                           onChange={(e) => setContent(e.target.value)}
+                           onChange={setContent}
                            placeholder="Viết nội dung tại đây..."
-                           className="w-full px-6 py-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-medium outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all resize-none"
                         />
                      </div>
                   </div>
