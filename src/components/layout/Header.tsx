@@ -15,6 +15,7 @@ interface HeaderProps {
   onOpenLogin: () => void;
   onOpenRegister: () => void;
   onOpenProfile?: () => void;
+  activeTab?: 'home' | 'blindbox' | 'news';
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -27,7 +28,8 @@ const Header: React.FC<HeaderProps> = ({
   onGoHome,
   onOpenLogin,
   onOpenRegister,
-  onOpenProfile
+  onOpenProfile,
+  activeTab
 }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -140,7 +142,7 @@ const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center justify-between max-w-[1280px] mx-auto gap-10">
           {/* Logo Area */}
           <div className="flex items-center gap-3 shrink-0 cursor-pointer" onClick={onGoHome}>
-            <img src="/nong_san_xau_ma/logo.png" alt="Logo" className="size-10 object-contain rounded-full bg-white" />
+            <img src="logo.png" alt="Logo" className="size-10 object-contain rounded-full bg-white" />
             <h2 className="text-white text-xl font-black leading-tight tracking-tighter uppercase font-display italic">NÔNG SẢN XẤU MÃ</h2>
           </div>
 
@@ -315,17 +317,17 @@ const Header: React.FC<HeaderProps> = ({
 
           <div className="flex items-center gap-12">
             <nav className="flex items-center gap-10">
-              <a href="#goi-mu" className="text-gray-600 text-xs font-bold hover:text-primary transition-all uppercase tracking-tight">GÓI MÙ</a>
+              <a href="#goi-mu" className={`text-xs font-bold hover:text-primary transition-all uppercase tracking-tight ${activeTab === 'blindbox' ? 'text-gray-900 border-b-2 border-[#29a33d] pb-1' : 'text-gray-600'}`}>GÓI MÙ</a>
               <button
                 onClick={onGoHome}
-                className="text-gray-900 text-xs font-black border-b-2 border-[#29a33d] pb-1 uppercase tracking-tight text-nowrap"
+                className={`text-xs font-black pb-1 uppercase tracking-tight text-nowrap transition-all ${activeTab === 'home' ? 'text-gray-900 border-b-2 border-[#29a33d]' : 'text-gray-600 hover:text-primary'}`}
               >
                 TRANG CHỦ
               </button>
               <a href="#" className="text-gray-600 text-xs font-bold hover:text-primary transition-all uppercase tracking-tight">KHUYẾN MÃI</a>
               <button
                 onClick={onOpenNews}
-                className="text-gray-600 text-xs font-bold hover:text-primary transition-all uppercase tracking-tight"
+                className={`text-xs font-bold uppercase tracking-tight transition-all ${activeTab === 'news' ? 'text-gray-900 border-b-2 border-[#29a33d] pb-1' : 'text-gray-600 hover:text-primary'}`}
               >
                 TIN TỨC
               </button>

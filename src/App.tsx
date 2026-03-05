@@ -56,6 +56,7 @@ const App: React.FC = () => {
   const [isTrackingOpen, setIsTrackingOpen] = useState(false);
   const [isNewsOpen, setIsNewsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'home' | 'blindbox' | 'news'>('home');
 
   // Fetch user info when authenticated
   useEffect(() => {
@@ -205,6 +206,7 @@ const App: React.FC = () => {
     setIsSuccessOpen(false);
     setIsTrackingOpen(false);
     setSelectedProductId(null);
+    setActiveTab('news');
   };
 
   const handleProceedToCheckout = () => {
@@ -229,6 +231,7 @@ const App: React.FC = () => {
     setIsNewsOpen(false);
     setIsProfileOpen(false);
     setSelectedProductId(null);
+    setActiveTab('home');
   };
 
   // 1. Handle OAuth Success path detection
@@ -350,6 +353,7 @@ const App: React.FC = () => {
               onOpenLogin={() => setAuthMode('LOGIN')}
               onOpenRegister={() => setAuthMode('REGISTER')}
               onOpenProfile={() => setIsProfileOpen(true)}
+              activeTab={activeTab}
             />
             <div className="flex-1">
               {isTrackingOpen ? <Tracking onBack={handleCloseBuyerSpecialPages} /> :
