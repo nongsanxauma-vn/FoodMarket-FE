@@ -32,6 +32,14 @@ class NotificationService {
   ): Promise<ApiResponse<void>> {
     return httpClient.post<void>('/api/notifications/admin/send-to-groups', payload);
   }
+
+  async markAsRead(id: number): Promise<ApiResponse<void>> {
+    return httpClient.put<void>(`/api/notifications/${id}/read`);
+  }
+
+  async deleteNotification(id: number): Promise<ApiResponse<void>> {
+    return httpClient.delete<void>(`/api/notifications/${id}`);
+  }
 }
 
 export const notificationService = new NotificationService();

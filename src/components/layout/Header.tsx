@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { AppRole, User } from '../../types/index';
-import { Search, ShoppingCart, Bell, Menu, Leaf, User as UserIcon, LogOut, Phone, X } from 'lucide-react';
+import { Search, ShoppingCart, Bell, Menu, Leaf, User as UserIcon, LogOut, Phone, X, CheckCircle2, Trash2, Store, Truck, LayoutDashboard } from 'lucide-react';
 import { notificationService, NotificationItem } from '../../services';
 
 interface HeaderProps {
@@ -33,6 +33,7 @@ const Header: React.FC<HeaderProps> = ({
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loadingNotifs, setLoadingNotifs] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
   // Close notification dropdown when clicking outside
@@ -58,6 +59,26 @@ const Header: React.FC<HeaderProps> = ({
     }
   };
 
+  const handleMarkAsRead = async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+      await notificationService.markAsRead(id);
+    } catch (err) {
+      console.error('Failed to mark as read', err);
+    }
+  };
+
+  const handleDeleteNotification = async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+      await notificationService.deleteNotification(id);
+    } catch (err) {
+      console.error('Failed to delete notification', err);
+    }
+  };
+
   const handleToggleNotifications = () => {
     const next = !showNotifications;
     setShowNotifications(next);
@@ -65,12 +86,23 @@ const Header: React.FC<HeaderProps> = ({
     if (next) fetchNotifications();
   };
 
-  // Chỉ hiển thị Header này cho người mua (BUYER) hoặc Khách chưa login
-  if (user && user.role !== AppRole.BUYER) {
-    return null;
-  }
+  const handleViewDetails = (n: NotificationItem) => {
+    setSelectedNotification(n);
+    if (!n.isRead) {
+      handleMarkAsRead(n.id, { stopPropagation: () => { } } as React.MouseEvent);
+    }
+    // Close the dropdown so it doesn't stay open behind the modal
+    setShowNotifications(false);
+  };
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  const roleLabelMap: Record<string, string> = {
+    [AppRole.BUYER]: 'Người mua',
+    [AppRole.FARMER]: 'Nhà vườn',
+    [AppRole.SHIPPER]: 'Shipper',
+    [AppRole.ADMIN]: 'Quản trị viên',
+  };
 
   return (
     <header className="sticky top-0 z-[60] flex flex-col w-full bg-white shadow-sm font-sans">
@@ -142,9 +174,10 @@ const Header: React.FC<HeaderProps> = ({
                           notifications.map((n) => (
                             <div
                               key={n.id}
-                              className={`px-6 py-4 border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer ${!n.isRead ? 'bg-primary/5' : ''}`}
+                              onClick={() => handleViewDetails(n)}
+                              className={`px-6 py-4 border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer group flex items-start justify-between gap-2 ${!n.isRead ? 'bg-primary/5' : ''}`}
                             >
-                              <div className="flex items-start gap-3">
+                              <div className="flex items-start gap-3 flex-1 min-w-0">
                                 {!n.isRead && (
                                   <span className="mt-1.5 size-2 bg-primary rounded-full shrink-0" />
                                 )}
@@ -155,6 +188,16 @@ const Header: React.FC<HeaderProps> = ({
                                     {n.createAt ? new Date(n.createAt).toLocaleString('vi-VN') : ''}
                                   </p>
                                 </div>
+                              </div>
+                              <div className="flex flex-col items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                {!n.isRead && (
+                                  <button onClick={(e) => handleMarkAsRead(n.id, e)} title="Đánh dấu đã đọc" className="text-gray-400 hover:text-primary transition-colors">
+                                    <CheckCircle2 className="size-4" />
+                                  </button>
+                                )}
+                                <button onClick={(e) => handleDeleteNotification(n.id, e)} title="Xóa thông báo" className="text-gray-400 hover:text-red-500 transition-colors">
+                                  <Trash2 className="size-4" />
+                                </button>
                               </div>
                             </div>
                           ))
@@ -182,8 +225,24 @@ const Header: React.FC<HeaderProps> = ({
                     <div className="absolute top-full right-0 mt-3 w-64 bg-white rounded-[24px] shadow-2xl border border-gray-100 py-3 animate-in fade-in zoom-in-95 duration-200 text-gray-800 overflow-hidden ring-1 ring-black/5">
                       <div className="px-5 py-3 border-b border-gray-50 mb-1">
                         <p className="text-sm font-black truncate">{user?.name}</p>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">{user?.role}</p>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">
+                          {user ? roleLabelMap[user.role] : 'Khách'}
+                        </p>
                       </div>
+
+                      {/* Bổ sung nút quay lại Dashboard nếu không phải Buyer */}
+                      {user && user.role !== AppRole.BUYER && (
+                        <button
+                          onClick={() => { setShowProfileMenu(false); onRoleSwitch(user.role); }}
+                          className="w-full px-5 py-3 text-left text-xs font-black text-primary hover:bg-primary/5 flex items-center gap-3 transition-colors border-b border-gray-50"
+                        >
+                          {user.role === AppRole.ADMIN ? <LayoutDashboard className="size-4" /> :
+                            user.role === AppRole.FARMER ? <Store className="size-4" /> : <Truck className="size-4" />}
+                          {user.role === AppRole.ADMIN ? 'Trang quản trị' :
+                            user.role === AppRole.FARMER ? 'Quản lý cửa hàng' : 'Trang tài xế'}
+                        </button>
+                      )}
+
                       <button onClick={() => { setShowProfileMenu(false); onOpenProfile && onOpenProfile(); }} className="w-full px-5 py-3 text-left text-xs font-bold hover:bg-gray-50 flex items-center gap-3 transition-colors">
                         <UserIcon className="size-4 text-gray-400" /> Hồ sơ của tôi
                       </button>
@@ -250,6 +309,39 @@ const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
       </div>
+      {/* Notification Detail Modal */}
+      {selectedNotification && (
+        <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h3 className="text-lg font-black text-gray-900 truncate pr-4">{selectedNotification.title}</h3>
+              <button
+                onClick={() => setSelectedNotification(null)}
+                className="p-1 hover:bg-gray-100 rounded-full transition-colors shrink-0"
+              >
+                <X className="size-5 text-gray-400 hover:text-gray-600" />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-sm font-medium text-gray-600 leading-relaxed whitespace-pre-wrap">
+                {selectedNotification.message}
+              </p>
+
+              <p className="mt-6 text-xs text-gray-400 font-bold uppercase tracking-widest text-right">
+                {selectedNotification.createAt ? new Date(selectedNotification.createAt).toLocaleString('vi-VN') : ''}
+              </p>
+            </div>
+            <div className="bg-gray-50 px-6 py-4 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={() => setSelectedNotification(null)}
+                className="px-6 py-2 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary-dark transition-colors"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

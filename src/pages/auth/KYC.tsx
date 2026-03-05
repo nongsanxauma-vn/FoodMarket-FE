@@ -1,27 +1,17 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Hourglass, CheckCircle, ArrowLeft, Home, Store, Mail, Phone, MapPin, CreditCard, FileText, User } from 'lucide-react';
+import { ShieldCheck, Hourglass, CheckCircle, ArrowLeft, Home, Store, Mail, Phone, MapPin, CreditCard, FileText, User as UserIcon } from 'lucide-react';
+import { User, KYCStatus } from '../../types';
 
 interface KYCProps {
   onComplete: () => void;
   onBack: () => void;
   role: 'FARMER' | 'SHIPPER';
+  user: User | null;
 }
 
-const KYC: React.FC<KYCProps> = ({ onComplete, onBack, role }) => {
-  const [isSubmitted, setIsSubmitted] = useState(role === 'FARMER');
+const KYC: React.FC<KYCProps> = ({ onComplete, onBack, role, user }) => {
+  const [isSubmitted, setIsSubmitted] = useState(true);
   const [isReviewing, setIsReviewing] = useState(false);
-
-  // Mock data — trong thực tế sẽ lấy từ API hoặc truyền qua props
-  const submittedData = {
-    fullName: 'Người dùng',
-    email: 'user@email.com',
-    phone: '0385xxxxxx',
-    shopName: 'Cửa hàng của tôi',
-    address: 'Địa chỉ đã đăng ký',
-    bankAccount: '********',
-    hasLogo: true,
-    hasAchievement: true,
-  };
 
   // Giao diện hiển thị khi đang chờ Admin duyệt
   const renderPendingStatus = () => (
@@ -86,13 +76,13 @@ const KYC: React.FC<KYCProps> = ({ onComplete, onBack, role }) => {
       {/* Thông tin cá nhân */}
       <div className="space-y-3 mb-6">
         <p className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-3">
-          <User className="size-3.5" /> Thông tin cá nhân
+          <UserIcon className="size-3.5" /> Thông tin cá nhân
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <InfoRow icon={<User className="size-4" />} label="Họ và tên" value={submittedData.fullName} />
-          <InfoRow icon={<Mail className="size-4" />} label="Email" value={submittedData.email} />
-          <InfoRow icon={<Phone className="size-4" />} label="Số điện thoại" value={submittedData.phone} />
-          <InfoRow icon={<CreditCard className="size-4" />} label="Tài khoản NH" value={submittedData.bankAccount} />
+          <InfoRow icon={<UserIcon className="size-4" />} label="Họ và tên" value={user?.name || "Đang tải..."} />
+          <InfoRow icon={<Mail className="size-4" />} label="Email" value={user?.email || "Đang tải..."} />
+          <InfoRow icon={<Phone className="size-4" />} label="Số điện thoại" value={user?.phone || "Chưa cập nhật"} />
+          <InfoRow icon={<CreditCard className="size-4" />} label="Tài khoản NH" value={user?.bankAccount || "Chưa cập nhật"} />
         </div>
       </div>
 
@@ -103,8 +93,8 @@ const KYC: React.FC<KYCProps> = ({ onComplete, onBack, role }) => {
             <Store className="size-3.5" /> Thông tin cửa hàng
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <InfoRow icon={<Store className="size-4" />} label="Tên cửa hàng" value={submittedData.shopName} />
-            <InfoRow icon={<MapPin className="size-4" />} label="Địa chỉ" value={submittedData.address} />
+            <InfoRow icon={<Store className="size-4" />} label="Tên cửa hàng" value={user?.shopName || "Đang tải..."} />
+            <InfoRow icon={<MapPin className="size-4" />} label="Địa chỉ" value={user?.address || "Đang tải..."} />
           </div>
         </div>
       )}
@@ -115,18 +105,18 @@ const KYC: React.FC<KYCProps> = ({ onComplete, onBack, role }) => {
           <FileText className="size-3.5" /> Tài liệu đính kèm
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className={`p-4 rounded-2xl border flex items-center gap-3 ${submittedData.hasLogo ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
-            <CheckCircle className={`size-5 shrink-0 ${submittedData.hasLogo ? 'text-green-500' : 'text-gray-300'}`} />
+          <div className={`p-4 rounded-2xl border flex items-center gap-3 ${user?.avatar ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+            <CheckCircle className={`size-5 shrink-0 ${user?.avatar ? 'text-green-500' : 'text-gray-300'}`} />
             <div>
-              <p className="text-sm font-bold text-gray-800">Ảnh Logo</p>
-              <p className="text-[11px] text-gray-400">{submittedData.hasLogo ? 'Đã tải lên' : 'Chưa tải lên'}</p>
+              <p className="text-sm font-bold text-gray-800">{role === 'FARMER' ? 'Ảnh Logo' : 'Ảnh chân dung'}</p>
+              <p className="text-[11px] text-gray-400">{user?.avatar ? 'Đã tải lên' : 'Chưa tải lên'}</p>
             </div>
           </div>
-          <div className={`p-4 rounded-2xl border flex items-center gap-3 ${submittedData.hasAchievement ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
-            <CheckCircle className={`size-5 shrink-0 ${submittedData.hasAchievement ? 'text-green-500' : 'text-gray-300'}`} />
+          <div className={`p-4 rounded-2xl border flex items-center gap-3 ${user?.achievement ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+            <CheckCircle className={`size-5 shrink-0 ${user?.achievement ? 'text-green-500' : 'text-gray-300'}`} />
             <div>
-              <p className="text-sm font-bold text-gray-800">Chứng chỉ</p>
-              <p className="text-[11px] text-gray-400">{submittedData.hasAchievement ? 'Đã tải lên' : 'Chưa tải lên'}</p>
+              <p className="text-sm font-bold text-gray-800">{role === 'FARMER' ? 'Chứng chỉ' : 'Giấy phép lái xe'}</p>
+              <p className="text-[11px] text-gray-400">{user?.achievement ? 'Đã tải lên' : 'Chưa tải lên'}</p>
             </div>
           </div>
         </div>

@@ -34,11 +34,15 @@ import BadBuyers from './pages/admin/BadBuyers';
 import AdminWallet from './pages/admin/AdminWallet';
 import NotificationManagement from './pages/admin/NotificationManagement';
 import NewsManagement from './pages/admin/NewsManagement';
+import OAuthSuccess from './pages/auth/OAuthSuccess';
+import OAuthRegister from './pages/auth/OAuthRegister';
+import { authService } from './services';
 // import ProductApproval from './pages/admin/ProductApproval';
 import { AppRole, User, KYCStatus } from './types/index';
 
 const App: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(authService.isAuthenticated());
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isKYCRequired, setIsKYCRequired] = useState(false);
   const [authMode, setAuthMode] = useState<'LOGIN' | 'REGISTER' | 'SHIPPER_REGISTER' | null>(null);
   const [role, setRole] = useState<AppRole>(AppRole.BUYER);
@@ -53,14 +57,49 @@ const App: React.FC = () => {
   const [isNewsOpen, setIsNewsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  const currentUser: User | null = isAuthenticated ? {
-    id: 'user-123',
-    name: role === AppRole.SHIPPER ? 'Anh Hùng Shipper' : role === AppRole.FARMER ? 'Bác Ba Nông Dân' : role === AppRole.ADMIN ? 'Admin Tổng' : 'Người dùng Xấu Mã',
-    email: 'user@xauma.vn',
-    role: role,
-    kycStatus: KYCStatus.APPROVED,
-    avatar: role === AppRole.FARMER ? 'https://picsum.photos/seed/farmer_ba/100/100' : 'https://picsum.photos/seed/app_avatar/100/100'
-  } : null;
+  // Fetch user info when authenticated
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      if (isAuthenticated) {
+        try {
+          const response = await authService.getMyInfo();
+          if (response.result) {
+            const userData = response.result;
+            const backendRole = userData.role.name;
+            const accountRole = backendRole === 'SHOP_OWNER' ? AppRole.FARMER :
+              (backendRole === 'SHIPPER' ? AppRole.SHIPPER :
+                (backendRole === 'ADMIN' ? AppRole.ADMIN : AppRole.BUYER));
+
+            const mappedUser: User = {
+              id: userData.id.toString(),
+              name: userData.fullName,
+              email: userData.email,
+              role: accountRole, // Use the actual role from backend
+              kycStatus: userData.status === 'PENDING' ? KYCStatus.PENDING : (userData.status === 'ACTIVE' ? KYCStatus.APPROVED : KYCStatus.REJECTED),
+              avatar: userData.logoUrl || userData.profileImageUrl || (role === AppRole.FARMER ? 'https://picsum.photos/seed/farmer_ba/100/100' : 'https://picsum.photos/seed/app_avatar/100/100'),
+              phone: userData.phoneNumber,
+              address: userData.address,
+              shopName: userData.shopName,
+              bankAccount: userData.bankAccount,
+              description: userData.description,
+              achievement: userData.achievement
+            };
+            setCurrentUser(mappedUser);
+          }
+        } catch (error) {
+          console.error("Failed to fetch user info:", error);
+          if (authService.getToken()) {
+            // Token might be expired
+            handleLogout();
+          }
+        }
+      } else {
+        setCurrentUser(null);
+      }
+    };
+
+    fetchUserInfo();
+  }, [isAuthenticated]);
 
   // Prevent body scroll when modal is open (but NOT for full page views like ProductDetail or News)
   useEffect(() => {
@@ -118,6 +157,7 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
+    authService.logout();
     setIsAuthenticated(false);
     setIsKYCRequired(false);
     setAuthMode(null);
@@ -134,6 +174,13 @@ const App: React.FC = () => {
   const handleKYCComplete = () => {
     setIsKYCRequired(false);
     setIsAuthenticated(true);
+    // Refresh user info after KYC
+    authService.getMyInfo().then(res => {
+      if (res.result) {
+        const userData = res.result;
+        setCurrentUser(prev => prev ? { ...prev, kycStatus: KYCStatus.APPROVED } : null);
+      }
+    });
     setFarmerSubPage('overview');
     setIsProfileOpen(false);
   };
@@ -174,7 +221,6 @@ const App: React.FC = () => {
     setIsSuccessOpen(false);
     setIsTrackingOpen(true);
   };
-
   const handleCloseBuyerSpecialPages = () => {
     setIsCartOpen(false);
     setIsCheckoutOpen(false);
@@ -185,16 +231,44 @@ const App: React.FC = () => {
     setSelectedProductId(null);
   };
 
+  // 1. Handle OAuth Success path detection
+  if (window.location.pathname.endsWith('/oauth-success')) {
+    return <OAuthSuccess onLogin={handleLogin} />;
+  }
+
+  // 2. Handle OAuth Registration route
+  if (window.location.pathname.endsWith('/oauth-register')) {
+    return <OAuthRegister
+      onRegisterSuccess={handleRegister}
+      onGoToLogin={() => {
+        window.history.replaceState({}, document.title, "/nong_san_xau_ma/");
+        setAuthMode('LOGIN');
+      }}
+    />;
+  }
+
+  // Show loading while fetching user info if authenticated
+  if (isAuthenticated && !currentUser) {
+    return (
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-background gap-4">
+        <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <p className="font-bold text-slate-500">Đang tải thông tin tài khoản...</p>
+      </div>
+    );
+  }
+
   // Rendering logic for Auth Screens
-  if (isKYCRequired && (role === AppRole.FARMER || role === AppRole.SHIPPER)) {
+  // Force KYC for Farmers and Shippers if status is PENDING or it's a first-time registration
+  const shouldShowKYC = (isAuthenticated && currentUser?.kycStatus === KYCStatus.PENDING) ||
+    (isKYCRequired && (role === AppRole.FARMER || role === AppRole.SHIPPER));
+
+  if (shouldShowKYC && (role === AppRole.FARMER || role === AppRole.SHIPPER)) {
     return (
       <KYC
         role={role as any}
+        user={currentUser}
         onComplete={handleKYCComplete}
-        onBack={() => {
-          setIsKYCRequired(false);
-          setRole(AppRole.BUYER); // Reset role so they see the Marketplace, not the Dashboard
-        }}
+        onBack={handleLogout}
       />
     );
   }
@@ -300,7 +374,7 @@ const App: React.FC = () => {
       case AppRole.FARMER:
         return (
           <div className="flex h-screen w-full overflow-hidden">
-            <Sidebar role={role} currentPath={farmerSubPage} onNavigate={setFarmerSubPage} onLogout={handleLogout} />
+            <Sidebar role={role} user={currentUser} currentPath={farmerSubPage} onNavigate={setFarmerSubPage} onLogout={handleLogout} />
             <main className="flex-1 overflow-y-auto bg-background">{renderFarmerContent()}</main>
           </div>
         );
@@ -309,7 +383,7 @@ const App: React.FC = () => {
       case AppRole.ADMIN:
         return (
           <div className="flex h-screen w-full overflow-hidden">
-            <Sidebar role={role} currentPath={adminSubPage} onNavigate={setAdminSubPage} onLogout={handleLogout} />
+            <Sidebar role={role} user={currentUser} currentPath={adminSubPage} onNavigate={setAdminSubPage} onLogout={handleLogout} />
             <main className="flex-1 overflow-y-auto bg-background">{renderAdminContent()}</main>
           </div>
         );

@@ -44,7 +44,7 @@ const ShipperManagement: React.FC = () => {
         const all = response.result || [];
         const shippers = all.filter((u) => u.role?.name === 'SHIPPER');
         setAllShippers(shippers);
-        const pending = shippers.filter((u) => u.status !== 'ACTIVE');
+        const pending = shippers.filter((u) => u.status === 'PENDING');
         setPendingShippers(pending);
       } catch (err) {
         console.error('Failed to load shippers', err);
@@ -374,158 +374,141 @@ const ShipperManagement: React.FC = () => {
               </div>
             ) : selectedShipper && (
               <>
-                {/* Header */}
-                <div className="relative bg-gradient-to-br from-indigo-600 to-violet-600 px-8 pt-8 pb-12">
-                  <button
-                    onClick={closeModal}
-                    className="absolute top-4 right-4 size-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-colors"
-                  >
-                    <X className="size-4" />
-                  </button>
-                  <div className="flex items-center gap-4">
-                    <div className="size-16 rounded-2xl bg-white/20 flex items-center justify-center text-white">
-                      <Users className="size-8" />
-                    </div>
+                <button
+                  onClick={closeModal}
+                  className="absolute top-6 right-6 size-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 hover:text-gray-900 transition-colors z-10"
+                >
+                  <X className="size-5" />
+                </button>
+
+                {/* Header Section */}
+                <div className="p-10 border-b border-gray-100">
+                  <div className="flex items-center gap-6">
+                    {selectedShipper.logoUrl ? (
+                      <img src={selectedShipper.logoUrl} className="size-24 rounded-3xl object-cover shadow-md bg-gray-50 flex-shrink-0" alt="Avatar" />
+                    ) : (
+                      <div className="size-24 rounded-3xl bg-blue-50 flex items-center justify-center text-blue-600 flex-shrink-0">
+                        <Users className="size-10" />
+                      </div>
+                    )}
                     <div>
-                      <h3 className="text-xl font-black text-white">
-                        {selectedShipper.fullName || 'Chưa cập nhật'}
-                      </h3>
-                      <p className="text-sm text-white/70 font-medium">ID: {selectedShipper.id}</p>
+                      <span className={`inline-block mb-2 text-[10px] font-black px-3 py-1 rounded-lg uppercase tracking-widest ${selectedShipper.status === 'ACTIVE' ? 'bg-green-50 text-green-600' :
+                        selectedShipper.status === 'INACTIVE' ? 'bg-gray-100 text-gray-600' : 'bg-orange-50 text-orange-600'
+                        }`}>
+                        {selectedShipper.status === 'INACTIVE' ? 'CHỜ KÍCH HOẠT' : selectedShipper.status}
+                      </span>
+                      <h3 className="text-3xl font-black text-gray-900 tracking-tight">{selectedShipper.fullName || 'Người dùng Xấu Mã'}</h3>
+                      <p className="text-gray-500 font-medium text-sm mt-1">ID Shipper: #{selectedShipper.id}</p>
                     </div>
-                  </div>
-                  <div className="absolute -bottom-4 right-8">
-                    <span
-                      className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider shadow-lg ${selectedShipper.status === 'ACTIVE'
-                        ? 'bg-green-500 text-white'
-                        : selectedShipper.status === 'INACTIVE'
-                          ? 'bg-gray-400 text-white'
-                          : 'bg-orange-500 text-white'
-                        }`}
-                    >
-                      {selectedShipper.status}
-                    </span>
                   </div>
                 </div>
 
-                {/* Body */}
-                <div className="px-8 pt-8 pb-6 space-y-5">
-                  {/* Email */}
-                  <div className="flex items-center gap-4">
-                    <div className="size-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500 shrink-0">
-                      <Mail className="size-5" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Email</p>
-                      <p className="text-sm font-bold text-gray-800">{selectedShipper.email || '—'}</p>
-                    </div>
-                  </div>
+                {/* Body Section */}
+                <div className="p-10 space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
 
-                  {/* Phone */}
-                  <div className="flex items-center gap-4">
-                    <div className="size-10 bg-green-50 rounded-xl flex items-center justify-center text-green-500 shrink-0">
-                      <Phone className="size-5" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Số điện thoại</p>
-                      <p className="text-sm font-bold text-gray-800">{selectedShipper.phoneNumber || '—'}</p>
-                    </div>
-                  </div>
-
-                  {/* Address */}
-                  <div className="flex items-center gap-4">
-                    <div className="size-10 bg-purple-50 rounded-xl flex items-center justify-center text-purple-500 shrink-0">
-                      <MapPin className="size-5" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Khu vực hoạt động</p>
-                      <p className="text-sm font-bold text-gray-800">{selectedShipper.address || '—'}</p>
-                    </div>
-                  </div>
-
-                  <hr className="border-gray-100" />
-
-                  {/* License */}
-                  <div className="flex items-center gap-4">
-                    <div className="size-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-500 shrink-0">
-                      <FileText className="size-5" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Số bằng lái xe</p>
-                      <p className="text-sm font-bold text-gray-800">{selectedShipper.license || '—'}</p>
-                    </div>
-                  </div>
-
-                  {/* Vehicle */}
-                  <div className="flex items-center gap-4">
-                    <div className="size-10 bg-rose-50 rounded-xl flex items-center justify-center text-rose-500 shrink-0">
-                      <Bike className="size-5" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Biển số xe</p>
-                      <p className="text-sm font-bold text-gray-800">{selectedShipper.vehicleNumber || '—'}</p>
-                    </div>
-                  </div>
-
-                  {/* Bank Account */}
-                  {selectedShipper.bankAccount && (
-                    <div className="flex items-center gap-4">
-                      <div className="size-10 bg-teal-50 rounded-xl flex items-center justify-center text-teal-500 shrink-0">
-                        <CreditCard className="size-5" />
+                  {/* Account Info */}
+                  <div>
+                    <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[16px]">contact_phone</span> Thông tin liên hệ
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">EMAIL</p>
+                        <p className="font-bold text-gray-900 mt-1 truncate" title={selectedShipper.email}>{selectedShipper.email || 'N/A'}</p>
                       </div>
-                      <div>
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tài khoản ngân hàng</p>
-                        <p className="text-sm font-bold text-gray-800">{selectedShipper.bankAccount}</p>
+                      <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">SỐ ĐIỆN THOẠI</p>
+                        <p className="font-bold text-gray-900 mt-1">{selectedShipper.phoneNumber || 'N/A'}</p>
                       </div>
                     </div>
-                  )}
-
-                  {/* Description */}
-                  {selectedShipper.description && (
-                    <div className="bg-gray-50 rounded-2xl p-4">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Mô tả</p>
-                      <p className="text-sm text-gray-700 leading-relaxed">{selectedShipper.description}</p>
+                    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 mt-4">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">KHU VỰC HOẠT ĐỘNG</p>
+                      <p className="font-bold text-gray-900 mt-1">{selectedShipper.address || 'N/A'}</p>
                     </div>
-                  )}
+                  </div>
+
+                  {/* Operation Info */}
+                  <div>
+                    <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[16px]">local_shipping</span> Thông tin hoạt động
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4 flex-wrap">
+                      <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">BẰNG LÁI XE (CCCD)</p>
+                        <p className="font-bold text-gray-900 mt-1">{selectedShipper.license || 'N/A'}</p>
+                      </div>
+                      <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">BIỂN SỐ XE</p>
+                        <p className="font-bold text-gray-900 mt-1">{selectedShipper.vehicleNumber || 'N/A'}</p>
+                      </div>
+                    </div>
+                  </div>
 
                   {/* Document Images */}
-                  {(selectedShipper.logoUrl || selectedShipper.achievement) && (
-                    <>
-                      <hr className="border-gray-100" />
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Giấy tờ đã nộp</p>
-                      <div className="grid grid-cols-2 gap-3">
-                        {/* Portrait - logoUrl */}
-                        {selectedShipper.logoUrl && (
-                          <div className="space-y-2">
-                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Ảnh chân dung</p>
-                            <a href={selectedShipper.logoUrl} target="_blank" rel="noopener noreferrer">
-                              <img
-                                src={selectedShipper.logoUrl}
-                                alt="Ảnh chân dung"
-                                className="w-full h-36 object-cover rounded-2xl border-2 border-gray-100 hover:border-primary/50 transition-colors cursor-pointer"
-                              />
-                            </a>
-                          </div>
-                        )}
-                        {/* Driver License - achievement */}
-                        {selectedShipper.achievement && (
-                          <div className="space-y-2">
-                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Bằng lái xe</p>
-                            <a href={selectedShipper.achievement} target="_blank" rel="noopener noreferrer">
-                              <img
-                                src={selectedShipper.achievement}
-                                alt="Bằng lái xe"
-                                className="w-full h-36 object-cover rounded-2xl border-2 border-gray-100 hover:border-primary/50 transition-colors cursor-pointer"
-                              />
-                            </a>
+                  <div>
+                    <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[16px]">folder_open</span> Giấy tờ đã nộp
+                    </h4>
+
+                    <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-4 mb-4 text-xs text-blue-800 leading-relaxed font-medium">
+                      <AlertCircle className="size-4 inline mr-1.5 -mt-0.5" />
+                      Lưu ý: Hệ thống hiện tại lưu trữ <strong>Ảnh chân dung</strong> và <strong>Bằng lái xe</strong> (Ảnh đăng ký xe không hiển thị do giới hạn lưu trữ máy chủ).
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Driver License - achievement */}
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider text-center">BẰNG LÁI XE / CCCD</p>
+                        {selectedShipper.achievement ? (
+                          <a href={selectedShipper.achievement} target="_blank" rel="noopener noreferrer" className="block">
+                            <div className="h-40 w-full bg-gray-100 rounded-2xl border border-gray-200 overflow-hidden relative group">
+                              <img src={selectedShipper.achievement} className="w-full h-full object-cover bg-white group-hover:scale-105 transition-transform duration-500" alt="Bằng lái xe" />
+                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span className="text-white font-bold bg-black/50 px-3 py-1.5 rounded-full backdrop-blur-md flex items-center gap-1.5 text-xs">
+                                  <span className="material-symbols-outlined text-sm">open_in_new</span> Phóng to
+                                </span>
+                              </div>
+                            </div>
+                          </a>
+                        ) : (
+                          <div className="h-40 w-full bg-gray-50 border border-gray-200 border-dashed rounded-2xl flex items-center justify-center text-gray-400">
+                            <span className="text-[10px] font-bold uppercase">Chưa tải lên</span>
                           </div>
                         )}
                       </div>
-                    </>
-                  )}
+
+                      {/* Portrait - logoUrl */}
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider text-center">ẢNH CHÂN DUNG</p>
+                        {selectedShipper.logoUrl ? (
+                          <a href={selectedShipper.logoUrl} target="_blank" rel="noopener noreferrer" className="block">
+                            <div className="h-40 w-full bg-gray-100 rounded-2xl border border-gray-200 overflow-hidden relative group">
+                              <img src={selectedShipper.logoUrl} className="w-full h-full object-contain bg-white group-hover:scale-105 transition-transform duration-500 py-2" alt="Ảnh chân dung" />
+                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span className="text-white font-bold bg-black/50 px-3 py-1.5 rounded-full backdrop-blur-md flex items-center gap-1.5 text-xs">
+                                  <span className="material-symbols-outlined text-sm">open_in_new</span> Phóng to
+                                </span>
+                              </div>
+                            </div>
+                          </a>
+                        ) : (
+                          <div className="h-40 w-full bg-gray-50 border border-gray-200 border-dashed rounded-2xl flex items-center justify-center text-gray-400">
+                            <span className="text-[10px] font-bold uppercase">Chưa tải lên</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Footer Actions */}
-                <div className="px-8 pb-8 flex gap-3">
+                <div className="p-10 border-t border-gray-100 bg-gray-50/50 rounded-b-[40px] flex justify-end gap-4">
+                  <button
+                    onClick={closeModal}
+                    className="px-6 py-4 bg-white border border-gray-200 text-gray-700 text-xs font-black rounded-2xl uppercase tracking-widest hover:bg-gray-50 transition-all shadow-sm"
+                  >
+                    Đóng lại
+                  </button>
                   {selectedShipper.status !== 'ACTIVE' && (
                     <button
                       onClick={() => {
@@ -534,17 +517,11 @@ const ShipperManagement: React.FC = () => {
                           closeModal();
                         }
                       }}
-                      className="flex-1 py-3 bg-indigo-600 text-white text-xs font-black rounded-2xl shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all uppercase tracking-widest"
+                      className="px-8 py-4 bg-emerald-600 text-white text-xs font-black rounded-2xl uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20"
                     >
-                      Duyệt hồ sơ
+                      Duyệt hồ sơ này
                     </button>
                   )}
-                  <button
-                    onClick={closeModal}
-                    className="flex-1 py-3 bg-gray-100 text-gray-600 text-xs font-black rounded-2xl hover:bg-gray-200 transition-colors uppercase tracking-widest"
-                  >
-                    Đóng
-                  </button>
                 </div>
               </>
             )}

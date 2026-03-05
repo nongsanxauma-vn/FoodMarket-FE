@@ -5,6 +5,7 @@
 
 // Export services
 export { authService } from './auth.service';
+export * from './otp.service';
 export { otpService } from './otp.service';
 export { passwordService } from './password.service';
 export { userService } from './user.service';
