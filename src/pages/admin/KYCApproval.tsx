@@ -5,9 +5,11 @@ import { userService, UserResponse } from '../../services';
 
 const KYCApproval: React.FC = () => {
   const [pendingUsers, setPendingUsers] = useState<UserResponse[]>([]);
+  const [approvedToday, setApprovedToday] = useState<UserResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<number | null>(null);
+  const [viewingUser, setViewingUser] = useState<UserResponse | null>(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -18,9 +20,13 @@ const KYCApproval: React.FC = () => {
         const all = response.result || [];
         // Chờ duyệt: SHOP_OWNER hoặc SHIPPER chưa ACTIVE
         const pending = all.filter(
-          (u) => (u.role?.name === 'SHOP_OWNER' || u.role?.name === 'SHIPPER') && u.status !== 'ACTIVE'
+          (u) => (u.role?.name === 'SHOP_OWNER' || u.role?.name === 'SHIPPER') && u.status === 'PENDING'
         );
         setPendingUsers(pending);
+        const approvedToday = all.filter(
+          (u) => (u.role?.name === 'SHOP_OWNER' || u.role?.name === 'SHIPPER') && u.status === 'ACTIVE'
+        );
+        setApprovedToday(approvedToday);
       } catch (err) {
         console.error('Failed to load users for KYC', err);
         setError('Không thể tải danh sách hồ sơ KYC. Vui lòng kiểm tra quyền Admin hoặc thử lại sau.');
@@ -88,8 +94,10 @@ const KYCApproval: React.FC = () => {
               <span className="material-symbols-outlined">verified_user</span>
             </div>
             <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ĐÃ DUYỆT HÔM NAY</p>
-              <h4 className="text-xl font-black text-gray-900">15</h4>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ĐÃ DUYỆT </p>
+              <h4 className="text-xl font-black text-gray-900">
+                {loading ? '...' : approvedToday.length}
+              </h4>
             </div>
           </div>
         </div>
@@ -198,13 +206,21 @@ const KYCApproval: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-10 py-6 text-right">
-                      <button
-                        onClick={() => u.id && u.role?.name && handleApprove(u.id, u.role.name)}
-                        disabled={!!approvingId}
-                        className="px-6 py-3 bg-emerald-600 text-white text-[10px] font-black rounded-xl uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
-                      >
-                        {approvingId === u.id ? 'ĐANG XỬ LÝ...' : 'DUYỆT NGAY'}
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => setViewingUser(u)}
+                          className="px-4 py-3 bg-gray-100 text-gray-700 text-[10px] font-black rounded-xl uppercase tracking-widest hover:bg-gray-200 transition-all shadow-sm"
+                        >
+                          XEM CHI TIẾT
+                        </button>
+                        <button
+                          onClick={() => u.id && u.role?.name && handleApprove(u.id, u.role.name)}
+                          disabled={!!approvingId}
+                          className="px-4 py-3 bg-emerald-600 text-white text-[10px] font-black rounded-xl uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
+                        >
+                          {approvingId === u.id ? 'ĐANG XỬ LÝ...' : 'DUYỆT NGAY'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -264,7 +280,151 @@ const KYCApproval: React.FC = () => {
           <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-transparent opacity-50" />
         </div>
       </div>
-    </div>
+      {/* Modal chi tiết hồ sơ */}
+      {viewingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm shadow-2xl animate-in fade-in">
+          <div className="bg-white rounded-[40px] w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl relative">
+            <button
+              onClick={() => setViewingUser(null)}
+              className="absolute top-6 right-6 size-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+
+            <div className="p-10 border-b border-gray-100">
+              <div className="flex items-center gap-6">
+                <img src={getImageUrl(viewingUser.logoUrl)} className="size-24 rounded-3xl object-cover shadow-md bg-gray-50" alt="Avatar" />
+                <div>
+                  <span className={`inline-block mb-2 text-[10px] font-black px-3 py-1 rounded-lg uppercase tracking-widest ${viewingUser.role?.name === 'SHOP_OWNER' ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'}`}>
+                    {viewingUser.role?.name === 'SHOP_OWNER' ? 'Nhà vườn' : 'Shipper'}
+                  </span>
+                  <h3 className="text-3xl font-black text-gray-900 tracking-tight">{viewingUser.fullName || 'Người dùng Xấu Mã'}</h3>
+                  <p className="text-gray-500 font-medium text-sm mt-1">{viewingUser.email}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-10 space-y-8">
+              {/* Thông tin liên hệ */}
+              <div>
+                <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px]">contact_phone</span> Thông tin liên hệ
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">SỐ ĐIỆN THOẠI</p>
+                    <p className="font-bold text-gray-900 mt-1">{viewingUser.phoneNumber || 'N/A'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ĐỊA CHỈ</p>
+                    <p className="font-bold text-gray-900 mt-1">{viewingUser.address || 'N/A'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Thông tin Cửa hàng / Shipper */}
+              <div>
+                <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px]">{viewingUser.role?.name === 'SHOP_OWNER' ? 'store' : 'local_shipping'}</span>
+                  {viewingUser.role?.name === 'SHOP_OWNER' ? 'Thông tin cửa hàng' : 'Thông tin hoạt động'}
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  {viewingUser.role?.name === 'SHOP_OWNER' ? (
+                    <>
+                      <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">TÊN CỬA HÀNG</p>
+                        <p className="font-bold text-gray-900 mt-1">{viewingUser.shopName || 'N/A'}</p>
+                      </div>
+                      <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">MÔ TẢ</p>
+                        <p className="font-bold text-gray-900 mt-1 line-clamp-2">{viewingUser.description || 'N/A'}</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">BẰNG LÁI / CCCD</p>
+                        <p className="font-bold text-gray-900 mt-1">{viewingUser.license || 'N/A'}</p>
+                      </div>
+                      <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">BIỂN SỐ XE</p>
+                        <p className="font-bold text-gray-900 mt-1">{viewingUser.vehicleNumber || 'N/A'}</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Ngân hàng */}
+              <div>
+                <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px]">account_balance</span> Thông tin thanh toán
+                </h4>
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">NGÂN HÀNG</p>
+                      <p className="font-bold text-gray-900 mt-1">{(viewingUser as any).bankName || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">SỐ TÀI KHOẢN</p>
+                      <p className="font-bold text-gray-900 mt-1">{viewingUser.bankAccount || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">CHỦ TÀI KHOẢN</p>
+                      <p className="font-bold text-gray-900 mt-1">{(viewingUser as any).bankAccountHolder || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Giấy tờ chứng chỉ */}
+              <div>
+                <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px]">folder_open</span> Tài liệu đính kèm
+                </h4>
+                {viewingUser.achievement ? (
+                  <a href={getImageUrl(viewingUser.achievement)} target="_blank" rel="noopener noreferrer" className="block w-full">
+                    <div className="h-48 w-full bg-gray-100 rounded-2xl border border-gray-200 overflow-hidden relative group">
+                      <img src={getImageUrl(viewingUser.achievement)} className="w-full h-full object-contain bg-white group-hover:scale-105 transition-transform duration-500" alt="Chứng chỉ" />
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="text-white font-bold bg-black/50 px-4 py-2 rounded-full backdrop-blur-md flex items-center gap-2">
+                          <span className="material-symbols-outlined text-sm">open_in_new</span> Mở xem toàn màn hình
+                        </span>
+                      </div>
+                    </div>
+                  </a>
+                ) : (
+                  <div className="bg-gray-50 border border-gray-100 border-dashed rounded-2xl p-6 text-center">
+                    <p className="text-gray-400 font-bold text-sm">Chưa tải lên chứng chỉ/hoặc giấy phép</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-10 border-t border-gray-100 bg-gray-50/50 rounded-b-[40px] flex justify-end gap-4">
+              <button
+                onClick={() => setViewingUser(null)}
+                className="px-6 py-4 bg-white border border-gray-200 text-gray-700 text-xs font-black rounded-2xl uppercase tracking-widest hover:bg-gray-50 transition-all shadow-sm"
+              >
+                ĐÓNG LẠI
+              </button>
+              <button
+                onClick={() => {
+                  if (viewingUser.id && viewingUser.role?.name) {
+                    handleApprove(viewingUser.id, viewingUser.role.name);
+                    setViewingUser(null);
+                  }
+                }}
+                className="px-8 py-4 bg-emerald-600 text-white text-xs font-black rounded-2xl uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20"
+              >
+                DUYỆT HỒ SƠ NÀY
+              </button>
+            </div>
+          </div>
+        </div >
+      )}
+    </div >
   );
 };
 

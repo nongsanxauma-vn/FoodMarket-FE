@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { AppRole } from '../../types/index';
+import { AppRole, User } from '../../types/index';
 import {
   LayoutDashboard,
   Package,
@@ -24,12 +24,13 @@ import {
 
 interface SidebarProps {
   role: AppRole;
+  user: User | null;
   currentPath: string;
   onNavigate: (path: string) => void;
   onLogout: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ role, currentPath, onNavigate, onLogout }) => {
+const Sidebar: React.FC<SidebarProps> = ({ role, user, currentPath, onNavigate, onLogout }) => {
   const farmerMenu = [
     { name: 'Tổng quan', icon: LayoutDashboard, id: 'overview' },
     { name: 'Sản phẩm', icon: Package, id: 'products' },
@@ -78,8 +79,8 @@ const Sidebar: React.FC<SidebarProps> = ({ role, currentPath, onNavigate, onLogo
               key={item.id}
               onClick={() => onNavigate(item.id)}
               className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 group ${isActive
-                  ? 'bg-primary/5 text-primary border border-primary/10'
-                  : 'text-gray-400 hover:bg-gray-50'
+                ? 'bg-primary/5 text-primary border border-primary/10'
+                : 'text-gray-400 hover:bg-gray-50'
                 }`}
             >
               <item.icon className={`size-5 shrink-0 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:translate-x-1'}`} />
@@ -95,8 +96,8 @@ const Sidebar: React.FC<SidebarProps> = ({ role, currentPath, onNavigate, onLogo
         <div className="bg-gray-50/80 rounded-3xl p-4 border border-gray-100 flex items-center gap-4 group">
           <div className="relative shrink-0">
             <img
-              className="size-10 rounded-xl border-2 border-white shadow-sm object-cover"
-              src={role === AppRole.FARMER ? "https://picsum.photos/seed/farmer_ba/100/100" : "https://picsum.photos/seed/admin_avatar/100/100"}
+              className="size-10 rounded-xl border-2 border-white shadow-sm object-cover bg-orange-100"
+              src={user?.avatar || (role === AppRole.FARMER ? "https://picsum.photos/seed/farmer_ba/100/100" : "https://picsum.photos/seed/admin_avatar/100/100")}
               alt="User"
             />
             <div className="absolute -bottom-1 -right-1 size-4 bg-primary rounded-full border-2 border-white flex items-center justify-center">
@@ -104,7 +105,9 @@ const Sidebar: React.FC<SidebarProps> = ({ role, currentPath, onNavigate, onLogo
             </div>
           </div>
           <div className="flex flex-col min-w-0">
-            <p className="text-xs font-black text-gray-900 truncate uppercase tracking-tight">{role === AppRole.FARMER ? 'Bác Ba Nông Dân' : 'Admin Tổng'}</p>
+            <p className="text-xs font-black text-gray-900 truncate uppercase tracking-tight">
+              {user?.name || (role === AppRole.FARMER ? 'Bác Ba Nông Dân' : 'Admin Tổng')}
+            </p>
             <p className="text-[8px] text-primary uppercase tracking-widest font-black">Trạng thái: Online</p>
           </div>
         </div>

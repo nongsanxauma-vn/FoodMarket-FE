@@ -1,6 +1,5 @@
-
 import React, { useEffect, useState } from 'react';
-import { Camera, ShieldCheck, Mail, Phone, MapPin, Star, Award, Leaf, FileText, Plus, Save, ExternalLink, User, CheckCircle2 } from 'lucide-react';
+import { Camera, ShieldCheck, Mail, Phone, MapPin, Star, Award, Leaf, FileText, Plus, Save, ExternalLink, User, CheckCircle2, Hourglass, ShieldAlert } from 'lucide-react';
 import { authService, UserResponse } from '../../services';
 
 const Profile: React.FC = () => {
@@ -116,9 +115,19 @@ const Profile: React.FC = () => {
             <h3 className="text-3xl font-black text-gray-900">
               {fullName || user?.fullName || 'Người dùng'}
             </h3>
-            <span className="flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase rounded-full">
-              <ShieldCheck className="size-3" /> Đã xác thực KYC
-            </span>
+            {user?.status === 'PENDING' ? (
+              <span className="flex items-center gap-1 px-3 py-1 bg-orange-100 text-orange-600 text-[10px] font-black uppercase rounded-full border border-orange-200">
+                <Hourglass className="size-3" /> Đang chờ duyệt
+              </span>
+            ) : user?.status === 'ACTIVE' ? (
+              <span className="flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase rounded-full border border-primary/20">
+                <ShieldCheck className="size-3" /> Đã xác thực KYC
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 px-3 py-1 bg-red-100 text-red-600 text-[10px] font-black uppercase rounded-full border border-red-200">
+                <ShieldAlert className="size-3" /> Chưa xác thực
+              </span>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-6">
             <div className="flex flex-col">

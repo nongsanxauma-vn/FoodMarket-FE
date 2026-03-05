@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Bike, User, Phone, Mail, Lock, MapPin, CreditCard, FileText, Camera, ArrowRight, ArrowLeft, CheckCircle2, Shield } from 'lucide-react';
-import { shipperService } from '../../services';
+import { Bike, User, Phone, Mail, Lock, MapPin, CreditCard, FileText, Camera, ArrowRight, ArrowLeft, CheckCircle2, Shield, X } from 'lucide-react';
+import { shipperService, otpService } from '../../services';
 
 interface ShipperRegisterProps {
   onComplete: () => void;
@@ -16,11 +16,17 @@ const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack })
   });
 
   const [uploadedFiles, setUploadedFiles] = useState({
-    driverLicense: null as File | null, vehicleRegistration: null as File | null, portrait: null as File | null,
+    driverLicense: null as File | null, portrait: null as File | null,
   });
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // OTP State
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const handleFileUpload = (field: keyof typeof uploadedFiles, file: File) => {
     setUploadedFiles({ ...uploadedFiles, [field]: file });
@@ -28,7 +34,7 @@ const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack })
 
   const validateStep = (currentStep: number): boolean => {
     setError(null);
-    
+
     switch (currentStep) {
       case 1:
         if (!formData.fullName || !formData.phone || !formData.email || !formData.password || !formData.confirmPassword || !formData.city || !formData.address) {
@@ -51,7 +57,7 @@ const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack })
         }
         break;
       case 3:
-        if (!uploadedFiles.driverLicense || !uploadedFiles.vehicleRegistration || !uploadedFiles.portrait) {
+        if (!uploadedFiles.driverLicense || !uploadedFiles.portrait) {
           setError('Vui lòng tải lên đầy đủ giấy tờ');
           return false;
         }
@@ -66,14 +72,44 @@ const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack })
     return true;
   };
 
-  const handleSubmit = async () => {
+  const handleSendOtp = async () => {
     if (!validateStep(4)) return;
-    
     setIsLoading(true);
     setError(null);
-
     try {
-      // Tạo description từ các thông tin bổ sung
+      await otpService.sendOtp(formData.email);
+      setShowOtpModal(true);
+    } catch (err: any) {
+      console.error('Send OTP failed:', err);
+      setError(err?.data?.message || 'Không thể gửi mã xác thực. Vui lòng kiểm tra email và thử lại.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otpCode || otpCode.length < 6) {
+      setOtpError('Mã OTP không hợp lệ');
+      return;
+    }
+
+    setIsVerifying(true);
+    setOtpError(null);
+    try {
+      await otpService.verifyOtp(formData.email, otpCode);
+      // Nếu thành công thì tiến hành đăng ký
+      await performRegistration();
+    } catch (err: any) {
+      console.error('Verify OTP failed:', err);
+      setOtpError(err?.data?.message || 'Mã xác thực không đúng hoặc đã hết hạn.');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const performRegistration = async () => {
+    setIsLoading(true);
+    try {
       const description = `Loại xe: ${formData.vehicleType === 'motorbike' ? 'Xe máy' : 'Ô tô'}. ` +
         `Thành phố: ${formData.city}. ` +
         `Ngân hàng: ${formData.bankName} - ${formData.bankAccount} - ${formData.bankAccountName}`;
@@ -84,22 +120,20 @@ const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack })
         email: formData.email,
         password: formData.password,
         address: formData.address,
-        license: formData.driverLicense, // Số bằng lái xe
-        vehicleNumber: formData.licensePlate, // Biển số xe
+        license: formData.driverLicense,
+        vehicleNumber: formData.licensePlate,
         description: description,
-        // Không gửi bankAccount vì backend sẽ set về null cho SHIPPER
       };
-
-      console.log('Shipper registration data:', registerData);
-      console.log('Uploaded files:', uploadedFiles);
 
       const response = await shipperService.register(registerData, uploadedFiles);
 
       if (response.result) {
+        setShowOtpModal(false);
         onComplete();
       }
     } catch (err: any) {
       console.error('Shipper registration failed:', err);
+      setShowOtpModal(false);
       setError(err?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.');
     } finally {
       setIsLoading(false);
@@ -127,23 +161,23 @@ const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack })
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-green-400/10 rounded-full blur-3xl" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl" />
       </div>
-      
+
       <div className="w-full max-w-[900px] bg-white rounded-[40px] shadow-2xl overflow-hidden flex border animate-in fade-in duration-700 relative z-10">
-        
+
         {/* Left Sidebar */}
         <div className="w-[280px] bg-gradient-to-br from-[#1a4d2e] to-[#2d6b3f] p-8 text-white flex flex-col justify-between relative overflow-hidden">
           <div className="relative z-10">
             <button onClick={onBack} className="flex items-center gap-2 text-white/70 hover:text-white mb-8 transition-colors font-bold text-xs uppercase">
               <ArrowLeft className="size-4" /> Quay lại
             </button>
-            
+
             <div className="size-14 bg-white rounded-2xl flex items-center justify-center text-primary mb-5 shadow-xl">
               <Bike className="size-7" />
             </div>
-            
+
             <h1 className="text-3xl font-black font-display leading-tight mb-2 uppercase">ĐĂNG KÝ</h1>
             <h2 className="text-2xl font-black text-white/50 font-display mb-4">SHIPPER</h2>
-            
+
             <p className="text-sm text-white/90 font-medium leading-relaxed mb-8">
               Trở thành đối tác vận chuyển và kiếm thu nhập linh hoạt.
             </p>
@@ -151,10 +185,9 @@ const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack })
             <div className="space-y-3">
               {steps.map((s) => (
                 <div key={s.number} className="flex items-center gap-3">
-                  <div className={`size-10 rounded-xl flex items-center justify-center font-black text-sm transition-all ${
-                    step === s.number ? 'bg-white text-primary shadow-lg' :
+                  <div className={`size-10 rounded-xl flex items-center justify-center font-black text-sm transition-all ${step === s.number ? 'bg-white text-primary shadow-lg' :
                     step > s.number ? 'bg-primary/30 text-white' : 'bg-white/10 text-white/50'
-                  }`}>
+                    }`}>
                     {step > s.number ? <CheckCircle2 className="size-5" /> : s.number}
                   </div>
                   <p className={`text-sm font-bold uppercase ${step === s.number ? 'text-white' : 'text-white/50'}`}>
@@ -191,30 +224,30 @@ const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack })
                   <h3 className="text-xl font-black text-gray-900 mb-1 uppercase">Thông tin cá nhân</h3>
                   <p className="text-sm text-gray-500">Điền đầy đủ thông tin chính xác</p>
                 </div>
-                
+
                 {error && (
                   <div className="p-3 bg-red-50 border border-red-200 rounded-2xl">
                     <p className="text-sm text-red-600 font-semibold">{error}</p>
                   </div>
                 )}
-                
+
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
                   <input type="text" value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                    placeholder="Họ và tên" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base" 
+                    placeholder="Họ và tên" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base"
                     required disabled={isLoading} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="relative">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
                     <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="Số điện thoại" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base" 
+                      placeholder="Số điện thoại" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base"
                       required disabled={isLoading} />
                   </div>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
                     <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="Email" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base" 
+                      placeholder="Email" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base"
                       required disabled={isLoading} />
                   </div>
                 </div>
@@ -222,13 +255,13 @@ const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack })
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
                     <input type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      placeholder="Mật khẩu" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base" 
+                      placeholder="Mật khẩu" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base"
                       required disabled={isLoading} />
                   </div>
                   <div className="relative">
                     <Shield className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
                     <input type="password" value={formData.confirmPassword} onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                      placeholder="Xác nhận mật khẩu" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base" 
+                      placeholder="Xác nhận mật khẩu" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base"
                       required disabled={isLoading} />
                   </div>
                 </div>
@@ -243,7 +276,7 @@ const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack })
                 <div className="relative">
                   <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
                   <input type="text" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    placeholder="Địa chỉ chi tiết" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base" 
+                    placeholder="Địa chỉ chi tiết" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base"
                     required disabled={isLoading} />
                 </div>
               </div>
@@ -256,13 +289,13 @@ const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack })
                   <h3 className="text-xl font-black text-gray-900 mb-1 uppercase">Phương tiện</h3>
                   <p className="text-sm text-gray-500">Thông tin xe vận chuyển</p>
                 </div>
-                
+
                 {error && (
                   <div className="p-3 bg-red-50 border border-red-200 rounded-2xl">
                     <p className="text-sm text-red-600 font-semibold">{error}</p>
                   </div>
                 )}
-                
+
                 <div>
                   <label className="text-sm font-bold text-gray-600 uppercase mb-3 block">Loại xe</label>
                   <div className="grid grid-cols-2 gap-3">
@@ -279,13 +312,13 @@ const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack })
                 <div className="relative">
                   <Bike className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
                   <input type="text" value={formData.licensePlate} onChange={(e) => setFormData({ ...formData, licensePlate: e.target.value })}
-                    placeholder="Biển số xe" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base uppercase" 
+                    placeholder="Biển số xe" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base uppercase"
                     required disabled={isLoading} />
                 </div>
                 <div className="relative">
                   <FileText className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
                   <input type="text" value={formData.driverLicense} onChange={(e) => setFormData({ ...formData, driverLicense: e.target.value })}
-                    placeholder="Số bằng lái xe" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base" 
+                    placeholder="Số bằng lái xe" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base"
                     required disabled={isLoading} />
                 </div>
               </div>
@@ -298,15 +331,15 @@ const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack })
                   <h3 className="text-xl font-black text-gray-900 mb-1 uppercase">Giấy tờ</h3>
                   <p className="text-sm text-gray-500">Tải lên ảnh rõ ràng</p>
                 </div>
-                
+
                 {error && (
                   <div className="p-3 bg-red-50 border border-red-200 rounded-2xl mb-2">
                     <p className="text-sm text-red-600 font-semibold">{error}</p>
                   </div>
                 )}
-                
-                {(['driverLicense', 'vehicleRegistration', 'portrait'] as const).map((field) => {
-                  const labels = { driverLicense: 'Bằng lái xe', vehicleRegistration: 'Đăng ký xe', portrait: 'Ảnh chân dung' };
+
+                {(['driverLicense', 'portrait'] as const).map((field) => {
+                  const labels = { driverLicense: 'Bằng lái xe / CCCD', portrait: 'Ảnh chân dung' };
                   return (
                     <div key={field}>
                       <input type="file" id={field} accept="image/*" onChange={(e) => e.target.files && handleFileUpload(field, e.target.files[0])} className="hidden" disabled={isLoading} />
@@ -332,13 +365,13 @@ const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack })
                   <h3 className="text-xl font-black text-gray-900 mb-1 uppercase">Thanh toán</h3>
                   <p className="text-sm text-gray-500">Nhận thu nhập từ giao hàng</p>
                 </div>
-                
+
                 {error && (
                   <div className="p-3 bg-red-50 border border-red-200 rounded-2xl">
                     <p className="text-sm text-red-600 font-semibold">{error}</p>
                   </div>
                 )}
-                
+
                 <select value={formData.bankName} onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
                   className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base cursor-pointer"
                   required disabled={isLoading}>
@@ -352,13 +385,13 @@ const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack })
                 <div className="relative">
                   <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
                   <input type="text" value={formData.bankAccount} onChange={(e) => setFormData({ ...formData, bankAccount: e.target.value })}
-                    placeholder="Số tài khoản" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base" 
+                    placeholder="Số tài khoản" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base"
                     required disabled={isLoading} />
                 </div>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
                   <input type="text" value={formData.bankAccountName} onChange={(e) => setFormData({ ...formData, bankAccountName: e.target.value })}
-                    placeholder="Tên chủ tài khoản" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base uppercase" 
+                    placeholder="Tên chủ tài khoản" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base uppercase"
                     required disabled={isLoading} />
                 </div>
                 <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20 mt-4">
@@ -379,11 +412,14 @@ const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack })
                   Quay lại
                 </button>
               )}
-              <button onClick={() => step < 4 ? handleNext() : handleSubmit()} type="button"
+              <button onClick={() => step < 4 ? handleNext() : handleSendOtp()} type="button"
                 disabled={isLoading}
                 className="flex-1 py-3.5 bg-primary text-white rounded-2xl font-bold text-base flex items-center justify-center gap-2 hover:bg-primary-dark shadow-lg shadow-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                 {isLoading ? (
-                  <>Đang xử lý...</>
+                  <div className="flex items-center gap-2">
+                    <div className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Đang xử lý...
+                  </div>
                 ) : step < 4 ? (
                   <>Tiếp tục <ArrowRight className="size-5" /></>
                 ) : (
@@ -394,6 +430,72 @@ const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack })
           </div>
         </div>
       </div>
+
+      {/* OTP Verification Modal */}
+      {showOtpModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-[32px] w-full max-w-md p-8 shadow-2xl relative translate-y-0 animate-in slide-in-from-bottom-4 duration-300">
+            <button
+              onClick={() => setShowOtpModal(false)}
+              disabled={isVerifying}
+              className="absolute top-6 right-6 size-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 hover:text-gray-900 transition-colors disabled:opacity-50"
+            >
+              <X className="size-4" />
+            </button>
+
+            <div className="text-center mb-8">
+              <div className="mx-auto size-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-4">
+                <Shield className="size-8" />
+              </div>
+              <h3 className="text-2xl font-black text-gray-900 mb-2 uppercase tracking-tight">Xác thực Email</h3>
+              <p className="text-sm text-gray-500">
+                Nhập mã 6 số được gửi đến <br />
+                <strong className="text-gray-900 block mt-1">{formData.email}</strong>
+              </p>
+            </div>
+
+            {otpError && (
+              <div className="mb-6 p-3 bg-red-50 border border-red-100 rounded-xl text-center">
+                <p className="text-sm text-red-600 font-bold">{otpError}</p>
+              </div>
+            )}
+
+            <input
+              type="text"
+              value={otpCode}
+              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder="000000"
+              className="w-full text-center text-4xl tracking-[0.5em] font-black py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-primary focus:bg-white outline-none transition-colors mb-6 placeholder:text-gray-300 placeholder:font-medium"
+              disabled={isVerifying}
+            />
+
+            <button
+              onClick={handleVerifyOtp}
+              disabled={isVerifying || otpCode.length < 6}
+              className="w-full py-4 bg-primary text-white rounded-2xl font-black tracking-widest uppercase flex items-center justify-center gap-2 hover:bg-primary-dark shadow-xl shadow-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isVerifying ? (
+                <>
+                  <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Đang xác thực...
+                </>
+              ) : (
+                'Xác nhận'
+              )}
+            </button>
+
+            <div className="mt-6 text-center">
+              <button
+                onClick={handleSendOtp}
+                className="text-sm font-bold text-gray-500 hover:text-primary transition-colors underline underline-offset-4 disabled:opacity-50"
+                disabled={isVerifying || isLoading}
+              >
+                Gửi lại mã OTP
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

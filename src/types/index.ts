@@ -20,6 +20,12 @@ export interface User {
   avatar: string;
   email: string;
   kycStatus: KYCStatus;
+  phone?: string;
+  address?: string;
+  shopName?: string;
+  bankAccount?: string;
+  description?: string;
+  achievement?: string;
 }
 
 export interface Product {
