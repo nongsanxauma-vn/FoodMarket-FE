@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Camera, ShieldCheck, Mail, Phone, MapPin, Star, Award, Leaf, FileText, Plus, Save, ExternalLink, User, CheckCircle2, Hourglass, ShieldAlert } from 'lucide-react';
-import { authService, UserResponse } from '../../services';
+import { Camera, ShieldCheck, Mail, Phone, MapPin, Star, Award, Leaf, FileText, Plus, Save, ExternalLink, User, CheckCircle2, Hourglass, ShieldAlert, Package, ShoppingBag, TrendingUp, Loader2 } from 'lucide-react';
+import { authService, UserResponse, productService, ProductResponse, orderService, OrderResponse } from '../../services';
 
 const Profile: React.FC = () => {
   const [user, setUser] = useState<UserResponse | null>(null);
@@ -14,6 +14,11 @@ const Profile: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  
+  // Real statistics
+  const [products, setProducts] = useState<ProductResponse[]>([]);
+  const [orders, setOrders] = useState<OrderResponse[]>([]);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -30,6 +35,9 @@ const Profile: React.FC = () => {
           setAddress(u.address || '');
           setShopName(u.shopName || '');
           setDescription(u.description || '');
+          
+          // Fetch statistics
+          await fetchStatistics(u.id);
         }
       } catch (err) {
         console.error('Failed to load profile', err);
@@ -41,6 +49,23 @@ const Profile: React.FC = () => {
 
     fetchProfile();
   }, []);
+
+  const fetchStatistics = async (userId: number) => {
+    setStatsLoading(true);
+    try {
+      const [productsRes, ordersRes] = await Promise.all([
+        productService.getByShopId(userId).catch(() => ({ result: [] })),
+        orderService.getAllOrders().catch(() => ({ result: [] }))
+      ]);
+      
+      if (productsRes.result) setProducts(productsRes.result);
+      if (ordersRes.result) setOrders(ordersRes.result);
+    } catch (err) {
+      console.error('Failed to load statistics', err);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!user) return;
@@ -58,6 +83,7 @@ const Profile: React.FC = () => {
       if (response.result) {
         setUser(response.result);
         setSuccess('Lưu thay đổi thành công.');
+        setTimeout(() => setSuccess(null), 3000);
       }
     } catch (err) {
       console.error('Failed to update profile', err);
@@ -67,245 +93,321 @@ const Profile: React.FC = () => {
     }
   };
 
+  // Calculate real statistics
+  const totalProducts = products.length;
+  const activeProducts = products.filter(p => p.status === 'AVAILABLE').length;
+  const totalOrders = orders.length;
+  const completedOrders = orders.filter(o => o.status === 'COMPLETED').length;
+  const totalRevenue = orders
+    .filter(o => o.status === 'COMPLETED')
+    .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+  const getStatusBadge = () => {
+    if (user?.status === 'PENDING') {
+      return (
+        <span className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-600 text-[10px] font-black uppercase rounded-full border border-orange-200">
+          <Hourglass className="size-3.5" /> Đang chờ duyệt
+        </span>
+      );
+    } else if (user?.status === 'ACTIVE') {
+      return (
+        <span className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-600 text-[10px] font-black uppercase rounded-full border border-green-200">
+          <ShieldCheck className="size-3.5" /> Đã xác thực
+        </span>
+      );
+    } else {
+      return (
+        <span className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 text-[10px] font-black uppercase rounded-full border border-red-200">
+          <ShieldAlert className="size-3.5" /> Chưa xác thực
+        </span>
+      );
+    }
+  };
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return 'N/A';
+    return new Date(dateStr).toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' });
+  };
+
   return (
-    <div className="flex flex-col gap-8 p-8 animate-in fade-in duration-500 pb-20">
-      <div className="flex justify-between items-center">
+    <div className="flex flex-col gap-6 p-6 animate-in fade-in duration-500 pb-20">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-black font-display text-gray-900">Hồ sơ cá nhân</h2>
-          <p className="text-gray-400 font-medium text-sm mt-1">Quản lý thông tin cá nhân của bạn.</p>
+          <h2 className="text-2xl font-black font-display text-gray-900">Hồ sơ Shop</h2>
+          <p className="text-gray-500 font-medium text-sm mt-1">Quản lý thông tin và thống kê cửa hàng của bạn</p>
         </div>
         <button
           onClick={handleSave}
           disabled={saving || loading}
-          className="px-8 py-3 bg-primary text-white rounded-2xl font-black flex items-center gap-2 shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all transform active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          className="px-6 py-2.5 bg-primary text-white rounded-xl font-black flex items-center gap-2 shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all transform active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
         >
-          <Save className="size-5" /> Lưu thay đổi
+          {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+          {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
         </button>
       </div>
 
-      {loading && (
-        <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm p-6 text-sm text-gray-600">
-          Đang tải hồ sơ của bạn...
-        </div>
-      )}
-
+      {/* Alerts */}
       {error && (
-        <div className="bg-red-50 rounded-[32px] border border-red-100 shadow-sm p-6 text-sm text-red-700">
+        <div className="bg-red-50 rounded-2xl border border-red-100 p-4 text-sm text-red-700 font-medium">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="bg-emerald-50 rounded-[32px] border border-emerald-100 shadow-sm p-6 text-sm text-emerald-700">
-          {success}
+        <div className="bg-green-50 rounded-2xl border border-green-100 p-4 text-sm text-green-700 font-medium flex items-center gap-2">
+          <CheckCircle2 className="size-4" /> {success}
         </div>
       )}
 
-      <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-10 flex flex-col md:flex-row items-center gap-10">
-        <div className="relative group">
-          <div className="size-32 rounded-[40px] overflow-hidden border-4 border-white shadow-xl bg-orange-100">
-            <img src="https://picsum.photos/seed/farmer_avatar/200/200" className="w-full h-full object-cover" />
-          </div>
-          <button className="absolute -bottom-2 -right-2 size-10 bg-primary text-white rounded-2xl shadow-lg border-4 border-white flex items-center justify-center hover:scale-110 transition-transform">
-            <Camera className="size-5" />
-          </button>
+      {loading ? (
+        <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
+          <Loader2 className="size-8 animate-spin text-primary mx-auto mb-3" />
+          <p className="text-sm text-gray-600 font-medium">Đang tải hồ sơ...</p>
         </div>
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-4">
-            <h3 className="text-3xl font-black text-gray-900">
-              {fullName || user?.fullName || 'Người dùng'}
-            </h3>
-            {user?.status === 'PENDING' ? (
-              <span className="flex items-center gap-1 px-3 py-1 bg-orange-100 text-orange-600 text-[10px] font-black uppercase rounded-full border border-orange-200">
-                <Hourglass className="size-3" /> Đang chờ duyệt
-              </span>
-            ) : user?.status === 'ACTIVE' ? (
-              <span className="flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase rounded-full border border-primary/20">
-                <ShieldCheck className="size-3" /> Đã xác thực KYC
-              </span>
-            ) : (
-              <span className="flex items-center gap-1 px-3 py-1 bg-red-100 text-red-600 text-[10px] font-black uppercase rounded-full border border-red-200">
-                <ShieldAlert className="size-3" /> Chưa xác thực
-              </span>
-            )}
-          </div>
-          <div className="flex flex-wrap items-center gap-6">
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Mã định danh</span>
-              <span className="text-sm font-bold text-gray-700 flex items-center gap-1">
-                <User className="size-3" /> ID: {user?.id ?? '—'}
-              </span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tham gia</span>
-              <span className="text-sm font-bold text-gray-700">Tháng 05, 2023</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Đánh giá</span>
-              <span className="text-sm font-bold text-gray-700 flex items-center gap-1">4.9 <Star className="size-3 text-yellow-500 fill-yellow-500" /></span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Contact Info */}
-        <div className="lg:col-span-2 bg-white rounded-[40px] border border-gray-100 shadow-sm p-10">
-          <div className="flex items-center gap-3 mb-10">
-            <div className="size-10 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
-              <span className="material-symbols-outlined">contact_page</span>
-            </div>
-            <h4 className="font-black text-gray-800 uppercase tracking-tight">Thông tin liên hệ</h4>
-          </div>
-
-          <div className="space-y-8">
-            <div className="flex flex-col gap-3">
-              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Họ và tên chủ vườn</label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-6 py-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-8">
-              <div className="flex flex-col gap-3">
-                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Số điện thoại</label>
-                <input
-                  type="text"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  className="w-full px-6 py-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all"
-                />
-              </div>
-              <div className="flex flex-col gap-3">
-                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Email</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled
-                  className="w-full px-6 py-4 bg-gray-100 border border-transparent rounded-2xl text-sm font-bold outline-none text-gray-500"
-                />
-              </div>
-            </div>
-            <div className="flex flex-col gap-3">
-              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Địa chỉ vườn</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className="w-full pl-6 pr-12 py-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all"
-                />
-                <MapPin className="absolute right-4 top-1/2 -translate-y-1/2 size-5 text-primary" />
-              </div>
-              <p className="text-[10px] text-gray-400 font-medium italic">* Định vị chính xác để hỗ trợ tính phí ship &lt;10km cho khách hàng.</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Reputation & Certificates - Only for Shop Owners */}
-        {(user?.role?.name === 'SHOP_OWNER' || user?.role?.name === 'FARMER') && (
-          <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-10 flex flex-col gap-10">
-            <div className="flex items-center gap-3">
-              <div className="size-10 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
-                <Award className="size-5" />
-              </div>
-              <h4 className="font-black text-gray-800 uppercase tracking-tight">Chứng chỉ & Uy tín</h4>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-6 bg-green-50/30 rounded-3xl border border-primary/5 text-center">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ĐIỂM TIN CẬY</p>
-                <h3 className="text-4xl font-black text-primary my-1">980</h3>
-                <span className="text-[10px] font-black text-primary uppercase">Cấp độ: Kim Cương</span>
-              </div>
-              <div className="p-6 bg-yellow-50/30 rounded-3xl border border-yellow-100/50 text-center">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ĐÁNH GIÁ TRUNG BÌNH</p>
-                <h3 className="text-4xl font-black text-yellow-600 my-1">4.9/5</h3>
-                <span className="text-[10px] font-black text-yellow-600 uppercase">2,450 lượt mua</span>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Danh sách chứng chỉ</p>
-              <div className="p-5 bg-gray-50/80 rounded-3xl border border-gray-100 flex items-center justify-between group">
-                <div className="flex items-center gap-4">
-                  <div className="size-10 bg-white rounded-2xl flex items-center justify-center text-primary shadow-sm">
-                    <CheckCircle2 className="size-5" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-black text-gray-900 uppercase">Chứng chỉ VietGAP</p>
-                    <p className="text-[10px] text-gray-400 font-bold">Hiệu lực: 12/2025</p>
-                  </div>
+      ) : (
+        <>
+          {/* Profile Header Card */}
+          <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl border border-gray-100 shadow-sm p-6">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="relative group">
+                <div className="size-24 rounded-2xl overflow-hidden border-4 border-white shadow-lg bg-gradient-to-br from-green-100 to-blue-100">
+                  <img 
+                    src={`https://ui-avatars.com/api/?name=${encodeURIComponent(fullName || 'User')}&background=63b34a&color=fff&size=200&bold=true`}
+                    className="w-full h-full object-cover" 
+                    alt="Avatar"
+                  />
                 </div>
-                <button className="text-[10px] font-black text-primary hover:underline flex items-center gap-1 uppercase">
-                  Xem ảnh gốc <ExternalLink className="size-3" />
+                <button className="absolute -bottom-1 -right-1 size-8 bg-primary text-white rounded-lg shadow-lg border-2 border-white flex items-center justify-center hover:scale-110 transition-transform">
+                  <Camera className="size-4" />
                 </button>
               </div>
-              <div className="p-5 bg-gray-50/80 rounded-3xl border border-gray-100 flex items-center justify-between group">
-                <div className="flex items-center gap-4">
-                  <div className="size-10 bg-white rounded-2xl flex items-center justify-center text-primary shadow-sm">
-                    <Leaf className="size-5" />
+              
+              <div className="flex-1 text-center md:text-left">
+                <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
+                  <h3 className="text-2xl font-black text-gray-900">
+                    {shopName || fullName || 'Cửa hàng'}
+                  </h3>
+                  {getStatusBadge()}
+                </div>
+                
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm">
+                  <div className="flex items-center gap-1.5 text-gray-600">
+                    <User className="size-4" />
+                    <span className="font-bold">ID: {user?.id}</span>
                   </div>
-                  <div>
-                    <p className="text-xs font-black text-gray-900 uppercase">Chứng nhận Organic (Hữu cơ)</p>
-                    <p className="text-[10px] text-gray-400 font-bold">Hiệu lực: 06/2024</p>
+                  <div className="flex items-center gap-1.5 text-gray-600">
+                    <Mail className="size-4" />
+                    <span className="font-medium">{email}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-gray-600">
+                    <Phone className="size-4" />
+                    <span className="font-medium">{phoneNumber || 'Chưa cập nhật'}</span>
                   </div>
                 </div>
-                <button className="text-[10px] font-black text-primary hover:underline flex items-center gap-1 uppercase">
-                  Xem ảnh gốc <ExternalLink className="size-3" />
-                </button>
               </div>
-              <button className="w-full py-4 border-2 border-dashed border-gray-200 rounded-[28px] text-gray-400 flex items-center justify-center gap-2 hover:border-primary/40 hover:text-primary transition-all">
-                <Plus className="size-4" /> <span className="text-xs font-black uppercase tracking-widest">Tải lên chứng chỉ mới</span>
-              </button>
             </div>
-          </div>
-        )}
-      </div>
-
-      {/* Shop Configuration - Only for Shop Owners */}
-      {(user?.role?.name === 'SHOP_OWNER' || user?.role?.name === 'FARMER') && (
-        <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-10">
-          <div className="flex items-center gap-3 mb-10">
-            <div className="size-10 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
-              <span className="material-symbols-outlined">storefront</span>
-            </div>
-            <h4 className="font-black text-gray-800 uppercase tracking-tight">Cấu hình cửa hàng & Vận hành</h4>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-            <div className="flex flex-col gap-3">
-              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Giờ mở cửa</label>
-              <div className="relative">
-                <input type="text" defaultValue="06:00 AM" className="w-full pl-6 pr-12 py-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all" />
-                <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">schedule</span>
+          {/* Statistics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="size-10 bg-blue-50 rounded-xl flex items-center justify-center">
+                  <Package className="size-5 text-blue-600" />
+                </div>
+                {statsLoading && <Loader2 className="size-4 animate-spin text-gray-400" />}
               </div>
+              <p className="text-xs font-bold text-gray-500 uppercase mb-1">Sản phẩm</p>
+              <h4 className="text-2xl font-black text-gray-900">{totalProducts}</h4>
+              <p className="text-[10px] text-gray-400 font-medium mt-1">{activeProducts} đang bán</p>
             </div>
-            <div className="flex flex-col gap-3">
-              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Giờ đóng cửa</label>
-              <div className="relative">
-                <input type="text" defaultValue="06:00 PM" className="w-full pl-6 pr-12 py-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all" />
-                <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">schedule</span>
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="size-10 bg-green-50 rounded-xl flex items-center justify-center">
+                  <ShoppingBag className="size-5 text-green-600" />
+                </div>
+                {statsLoading && <Loader2 className="size-4 animate-spin text-gray-400" />}
               </div>
+              <p className="text-xs font-bold text-gray-500 uppercase mb-1">Đơn hàng</p>
+              <h4 className="text-2xl font-black text-gray-900">{totalOrders}</h4>
+              <p className="text-[10px] text-gray-400 font-medium mt-1">{completedOrders} hoàn thành</p>
             </div>
-            <div className="flex flex-col gap-3">
-              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Mô tả phương pháp canh tác</label>
-              <textarea
-                rows={3}
-                className="w-full px-6 py-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-medium outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all resize-none"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="size-10 bg-purple-50 rounded-xl flex items-center justify-center">
+                  <TrendingUp className="size-5 text-purple-600" />
+                </div>
+                {statsLoading && <Loader2 className="size-4 animate-spin text-gray-400" />}
+              </div>
+              <p className="text-xs font-bold text-gray-500 uppercase mb-1">Doanh thu</p>
+              <h4 className="text-2xl font-black text-gray-900">{(totalRevenue / 1000000).toFixed(1)}M</h4>
+              <p className="text-[10px] text-gray-400 font-medium mt-1">Tổng cộng</p>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="size-10 bg-yellow-50 rounded-xl flex items-center justify-center">
+                  <Star className="size-5 text-yellow-600" />
+                </div>
+              </div>
+              <p className="text-xs font-bold text-gray-500 uppercase mb-1">Đánh giá</p>
+              <h4 className="text-2xl font-black text-gray-900">N/A</h4>
+              <p className="text-[10px] text-gray-400 font-medium mt-1">Chưa có đánh giá</p>
             </div>
           </div>
-        </div>
+
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Contact Info */}
+            <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+              <div className="flex items-center gap-2 mb-6">
+                <div className="size-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
+                  <User className="size-4" />
+                </div>
+                <h4 className="font-black text-gray-800 uppercase tracking-tight text-sm">Thông tin cửa hàng</h4>
+              </div>
+
+              <div className="space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Tên cửa hàng</label>
+                    <input
+                      type="text"
+                      value={shopName}
+                      onChange={(e) => setShopName(e.target.value)}
+                      placeholder="Nhập tên cửa hàng"
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all"
+                    />
+                  </div>
+                  
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Họ và tên chủ shop</label>
+                    <input
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Nhập họ tên"
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Số điện thoại</label>
+                    <input
+                      type="tel"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      placeholder="Nhập số điện thoại"
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all"
+                    />
+                  </div>
+                  
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Email</label>
+                    <input
+                      type="email"
+                      value={email}
+                      disabled
+                      className="w-full px-4 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-sm font-medium text-gray-500 cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Địa chỉ</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="Nhập địa chỉ cửa hàng"
+                      className="w-full pl-4 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all"
+                    />
+                    <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Mô tả cửa hàng</label>
+                  <textarea
+                    rows={3}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Giới thiệu về cửa hàng, phương pháp canh tác..."
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all resize-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Shop Info & Certificates */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+              <div className="flex items-center gap-2 mb-6">
+                <div className="size-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
+                  <Award className="size-4" />
+                </div>
+                <h4 className="font-black text-gray-800 uppercase tracking-tight text-sm">Thông tin bổ sung</h4>
+              </div>
+
+              <div className="space-y-4">
+                {/* Role Badge */}
+                <div className="p-4 bg-gradient-to-br from-green-50 to-blue-50 rounded-xl border border-green-100">
+                  <p className="text-[10px] font-black text-gray-500 uppercase mb-2">Vai trò</p>
+                  <p className="text-sm font-black text-gray-900">{user?.role?.name || 'N/A'}</p>
+                </div>
+
+                {/* Join Date */}
+                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                  <p className="text-[10px] font-black text-gray-500 uppercase mb-2">Ngày tham gia</p>
+                  <p className="text-sm font-bold text-gray-700">{formatDate(user?.createdAt)}</p>
+                </div>
+
+                {/* Certificates Section */}
+                <div className="pt-4 border-t border-gray-100">
+                  <p className="text-[10px] font-black text-gray-500 uppercase mb-3">Chứng chỉ</p>
+                  
+                  <div className="space-y-2">
+                    <div className="p-3 bg-gray-50 rounded-lg border border-gray-100 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="size-8 bg-white rounded-lg flex items-center justify-center">
+                          <CheckCircle2 className="size-4 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-gray-900">VietGAP</p>
+                          <p className="text-[9px] text-gray-500">Chưa cập nhật</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-gray-50 rounded-lg border border-gray-100 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="size-8 bg-white rounded-lg flex items-center justify-center">
+                          <Leaf className="size-4 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-gray-900">Organic</p>
+                          <p className="text-[9px] text-gray-500">Chưa cập nhật</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button className="w-full py-2.5 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 flex items-center justify-center gap-2 hover:border-primary/40 hover:text-primary transition-all text-xs font-bold">
+                      <Plus className="size-3.5" /> Tải lên chứng chỉ
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
 };
 
-// Add fix: Export default
 export default Profile;

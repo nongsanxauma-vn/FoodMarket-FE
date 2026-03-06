@@ -37,7 +37,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId, onBack, isAuth
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState('mota');
   const [viewShopMode, setViewShopMode] = useState(false);
-  const [selectedFarm, setSelectedFarm] = useState<string | null>(null);
+  const [selectedShopId, setSelectedShopId] = useState<number | null>(null);
   const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
@@ -81,11 +81,11 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId, onBack, isAuth
   }, [productId]);
 
   // Shop View
-  if (viewShopMode && selectedFarm) {
-    return <ShopProducts farmName={selectedFarm} onBack={() => {
+  if (viewShopMode && selectedShopId) {
+    return <ShopProducts shopId={selectedShopId} onBack={() => {
       setViewShopMode(false);
-      setSelectedFarm(null);
-    }} />;
+      setSelectedShopId(null);
+    }} isAuthenticated={isAuthenticated} onOpenLogin={onOpenLogin} />;
   }
 
   if (isLoading) {
@@ -236,10 +236,12 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId, onBack, isAuth
                 </div>
                 <div className="flex gap-3 mt-4">
                   <button onClick={() => {
-                    setViewShopMode(true);
-                    setSelectedFarm(farmName);
+                    if (product.shopId) {
+                      setViewShopMode(true);
+                      setSelectedShopId(product.shopId);
+                    }
                   }} className="px-5 py-2.5 bg-white text-primary font-black text-[10px] uppercase tracking-widest rounded-xl border border-primary/20 hover:bg-primary hover:text-white transition-all shadow-sm">
-                    Xem Trang Trại
+                    Xem Cửa Hàng
                   </button>
                 </div>
               </div>
