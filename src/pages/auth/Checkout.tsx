@@ -17,6 +17,11 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
    const [recipientPhone, setRecipientPhone] = useState('');
    const [recipientAddress, setRecipientAddress] = useState('');
    const [note, setNote] = useState('Giao giờ hành chính');
+   
+   // PayOS QR Code state
+   const [showQRCode, setShowQRCode] = useState(false);
+   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
 
    useEffect(() => {
       const fetchData = async () => {
@@ -96,10 +101,21 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
                   paymentGateway: 'PAYOS'
                });
 
-               if (paymentRes.result && paymentRes.result.payOsCheckoutUrl) {
-                  // Redirect to PayOS
-                  window.location.href = paymentRes.result.payOsCheckoutUrl;
-                  return;
+               if (paymentRes.result) {
+                  // Redirect trực tiếp sang trang PayOS để quét mã
+                  if (paymentRes.result.checkoutUrl) {
+                     window.location.href = paymentRes.result.checkoutUrl;
+                     return;
+                  }
+                  
+                  // Fallback: hiển thị QR nếu không có checkout URL
+                  if (paymentRes.result.qrCodeUrl) {
+                     setQrCodeUrl(paymentRes.result.qrCodeUrl);
+                     setCheckoutUrl(paymentRes.result.checkoutUrl || null);
+                     setShowQRCode(true);
+                     setIsProcessing(false);
+                     return;
+                  }
                }
             } else {
                // Wallet Payment
@@ -382,6 +398,68 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
             </div>
          </div>
          </div>
+
+         {/* QR Code Modal */}
+         {showQRCode && qrCodeUrl && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+               <div className="bg-white w-full max-w-md rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+                  <div className="p-8 flex flex-col items-center text-center gap-6">
+                     <div className="size-16 bg-blue-50 rounded-full flex items-center justify-center">
+                        <span className="material-symbols-outlined text-4xl text-blue-500">qr_code_scanner</span>
+                     </div>
+
+                     <div>
+                        <h3 className="text-2xl font-black text-gray-900 mb-2">Quét mã QR để thanh toán</h3>
+                        <p className="text-sm text-gray-500 font-medium">
+                           Mở ứng dụng ngân hàng và quét mã QR bên dưới
+                        </p>
+                     </div>
+
+                     {/* QR Code Image */}
+                     <div className="w-full max-w-xs aspect-square bg-white border-4 border-gray-100 rounded-3xl p-4 shadow-lg">
+                        <img 
+                           src={qrCodeUrl} 
+                           alt="PayOS QR Code" 
+                           className="w-full h-full object-contain"
+                           onError={(e) => {
+                              console.error('QR Code load error');
+                              e.currentTarget.src = 'https://via.placeholder.com/300x300?text=QR+Code+Error';
+                           }}
+                        />
+                     </div>
+
+                     <div className="w-full space-y-3">
+                        {checkoutUrl && (
+                           <a
+                              href={checkoutUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full py-4 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-500/20"
+                           >
+                              <span className="material-symbols-outlined">open_in_new</span>
+                              Mở trang thanh toán PayOS
+                           </a>
+                        )}
+                        
+                        <button
+                           onClick={() => {
+                              setShowQRCode(false);
+                              setQrCodeUrl(null);
+                              setCheckoutUrl(null);
+                           }}
+                           className="w-full py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-2xl transition-all"
+                        >
+                           Đóng
+                        </button>
+                     </div>
+
+                     <p className="text-xs text-gray-400 font-medium">
+                        Sau khi thanh toán thành công, đơn hàng sẽ được xử lý tự động
+                     </p>
+                  </div>
+               </div>
+            </div>
+         )}
       </div>
    );
 };
