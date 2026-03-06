@@ -10,7 +10,10 @@ import Checkout from './pages/auth/Checkout';
 import Success from './pages/auth/Success';
 import Tracking from './pages/auth/Tracking';
 import MyOrders from './pages/auth/MyOrders';
+import PaymentSuccess from './pages/auth/PaymentSuccess';
+import PaymentCancel from './pages/auth/PaymentCancel';
 import News from './pages/News/News';
+import NewsDetail from './pages/News/NewsDetail';
 import FarmerDashboard from './pages/farmer/Dashboard';
 import Products from './pages/farmer/Products';
 import AddProduct from './pages/farmer/AddProduct';
@@ -60,6 +63,7 @@ const App: React.FC = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [currentOrderId, setCurrentOrderId] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<'home' | 'blindbox' | 'news'>('home');
+  const [selectedNewsId, setSelectedNewsId] = useState<number | null>(null);
 
 
   // Fetch user info when authenticated
@@ -243,6 +247,7 @@ const App: React.FC = () => {
     setIsNewsOpen(false);
     setIsProfileOpen(false);
     setSelectedProductId(null);
+    setSelectedNewsId(null);
     setActiveTab('home');
   };
 
@@ -260,6 +265,16 @@ const App: React.FC = () => {
         setAuthMode('LOGIN');
       }}
     />;
+  }
+
+  // 3. Handle Payment Success callback from PayOS
+  if (window.location.pathname.includes('/payment/success') || window.location.pathname.includes('/withdraw/success')) {
+    return <PaymentSuccess />;
+  }
+
+  // 4. Handle Payment Cancel callback from PayOS
+  if (window.location.pathname.includes('/payment/cancel') || window.location.pathname.includes('/withdraw/cancel')) {
+    return <PaymentCancel />;
   }
 
   // Show loading while fetching user info if authenticated

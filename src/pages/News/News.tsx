@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  Clock,
   ChevronRight,
   Search,
   Share2,
@@ -12,11 +11,13 @@ import {
   Loader2,
 } from "lucide-react";
 import { blogService, BlogResponse } from "../../services";
+import NewsDetail from "./NewsDetail";
 
 const News: React.FC = () => {
   const [articles, setArticles] = useState<BlogResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedBlogId, setSelectedBlogId] = useState<number | null>(null);
 
   useEffect(() => {
     // Đảm bảo scroll hoạt động mượt mà
@@ -25,9 +26,18 @@ const News: React.FC = () => {
 
     const fetchBlogs = async () => {
       try {
+        console.log('[News] Starting to fetch published blogs...');
         const res = await blogService.getPublishedBlogs();
+        console.log('[News] Published blogs response:', res);
+        
         if (res.result) {
           setArticles(res.result);
+          console.log(`[News] Loaded ${res.result.length} articles`);
+          res.result.forEach((article, index) => {
+            console.log(`[News] Article ${index + 1}: ID=${article.id}, Title="${article.title}"`);
+          });
+        } else {
+          console.error('[News] No result in published blogs response');
         }
       } catch (error) {
         console.error("Fetch blogs failed:", error);
@@ -69,6 +79,15 @@ const News: React.FC = () => {
     );
   }
 
+  // Show detail view if a blog is selected
+  if (selectedBlogId !== null) {
+    console.log(`[News] Showing detail for blog ID: ${selectedBlogId}`);
+    return <NewsDetail blogId={selectedBlogId} onBack={() => {
+      console.log(`[News] Returning to news list from blog ID: ${selectedBlogId}`);
+      setSelectedBlogId(null);
+    }} />;
+  }
+
   return (
     <div className="bg-white min-h-screen font-sans pb-20 overflow-y-auto">
       {/* 1. Header Navigation & Search Bar (Sticky) */}
@@ -103,7 +122,10 @@ const News: React.FC = () => {
       <div className="max-w-[1200px] mx-auto px-6">
         {/* 2. Featured Article (Tin tiêu điểm) */}
         {featured && (
-          <div className="group cursor-pointer py-16">
+          <div className="group cursor-pointer py-16" onClick={() => {
+            console.log(`[News] Clicked featured article with ID: ${featured.id}`);
+            setSelectedBlogId(featured.id);
+          }}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
               {/* Image Container */}
               <div className="relative aspect-[1.3/1] rounded-[50px] overflow-hidden shadow-sm border border-gray-100">
@@ -146,7 +168,10 @@ const News: React.FC = () => {
         {/* 3. News Grid (Các tin bài khác) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-20 mt-10">
           {others.map((article) => (
-            <div key={article.id} className="flex flex-col group cursor-pointer">
+            <div key={article.id} className="flex flex-col group cursor-pointer" onClick={() => {
+              console.log(`[News] Clicked article with ID: ${article.id}`);
+              setSelectedBlogId(article.id);
+            }}>
               <div className="relative aspect-[4/3] rounded-[35px] overflow-hidden mb-8 shadow-sm border border-gray-50">
                 <img 
                   src={article.pictureUrl || `https://picsum.photos/seed/${article.id}/600/400`} 

@@ -126,8 +126,7 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
   const shopsCount = Object.keys(groupedItems).length;
 
   return (
-    <div className="fixed inset-0 z-50 bg-background overflow-y-auto animate-in fade-in duration-500">
-      <div className="min-h-screen pb-20">
+    <div className="min-h-screen bg-background pb-20 animate-in fade-in duration-500">
       <div className="max-w-[1280px] mx-auto px-4 md:px-10 lg:px-40 py-12">
         
         {/* Back Button */}
@@ -229,7 +228,7 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
 
             {/* Order Summary */}
             <div className="lg:col-span-4 flex flex-col gap-6">
-              <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-10 flex flex-col gap-8 sticky top-32">
+              <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-10 flex flex-col gap-8">
                 <h4 className="text-xl font-black text-gray-900 uppercase tracking-tight">Tóm tắt đơn hàng</h4>
 
                 <div className="space-y-4">
@@ -279,7 +278,6 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
             </div>
           </div>
         )}
-      </div>
       </div>
     </div>
   );

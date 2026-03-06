@@ -10,7 +10,7 @@ interface SuccessProps {
 
 const Success: React.FC<SuccessProps> = ({ onViewMyOrders, onGoHome, orderId }) => {
   return (
-    <div className="fixed inset-0 z-50 bg-white overflow-y-auto flex items-center justify-center py-20 px-4 animate-in fade-in zoom-in-95 duration-500">
+    <div className="min-h-screen bg-white flex items-center justify-center py-20 px-4 animate-in fade-in zoom-in-95 duration-500">
       <div className="max-w-md w-full text-center flex flex-col items-center">
         <div className="size-24 bg-green-50 rounded-full flex items-center justify-center text-primary mb-8 relative">
            <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping opacity-20" />
