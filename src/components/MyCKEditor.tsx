@@ -5,7 +5,7 @@ import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
 import TextAlign from '@tiptap/extension-text-align';
 import Underline from '@tiptap/extension-underline';
-import { TOKEN_KEY } from '../services/api.config';
+import { TOKEN_KEY, API_BASE_URL } from '../services/api.config';
 
 import './MyCKEditor.css';
 
@@ -32,11 +32,14 @@ const MyCKEditor: React.FC<MyCKEditorProps> = ({ value, onChange, placeholder = 
 
     try {
       const formData = new FormData();
-      formData.append('upload', file);
+      formData.append('file', file); // Backend expect 'file', not 'upload'
 
-      console.log('Uploading image:', file.name);
+      const uploadUrl = `${API_BASE_URL}/blogs/upload-image`;
+      console.log('[MyCKEditor] Uploading image:', file.name);
+      console.log('[MyCKEditor] Upload URL:', uploadUrl);
+      console.log('[MyCKEditor] Token:', token ? 'Present' : 'Missing');
 
-      const response = await fetch('http://localhost:8080/swp391/blogs/upload-image', {
+      const response = await fetch(uploadUrl, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -44,16 +47,16 @@ const MyCKEditor: React.FC<MyCKEditorProps> = ({ value, onChange, placeholder = 
         body: formData,
       });
 
-      console.log('Upload response status:', response.status);
+      console.log('[MyCKEditor] Upload response status:', response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Upload error response:', errorText);
+        console.error('[MyCKEditor] Upload error response:', errorText);
         throw new Error(`Server error ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();
-      console.log('Upload response data:', data);
+      console.log('[MyCKEditor] Upload response data:', data);
       
       const imageUrl = data.url || data.result?.url;
       
@@ -66,12 +69,12 @@ const MyCKEditor: React.FC<MyCKEditorProps> = ({ value, onChange, placeholder = 
         alert('Ảnh tải lên thành công!');
       }
     } catch (error: any) {
-      console.error('Image upload error:', error);
+      console.error('[MyCKEditor] Image upload error:', error);
       
       let errorMsg = 'Không thể tải ảnh lên';
       
       if (error.message.includes('Failed to fetch')) {
-        errorMsg = '⚠️ Lỗi kết nối: Backend server không chạy trên port 8080. Vui lòng kiểm tra server lại.';
+        errorMsg = `⚠️ Lỗi kết nối: Không thể kết nối đến Backend server.\n\nKiểm tra:\n1. Backend có đang chạy không?\n2. URL: ${API_BASE_URL}/blogs/upload-image\n3. Mở Console để xem chi tiết`;
       } else if (error.message.includes('Server error')) {
         errorMsg = error.message;
       } else {

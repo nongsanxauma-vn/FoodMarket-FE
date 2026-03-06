@@ -65,9 +65,8 @@ const Orders: React.FC<OrdersProps> = ({ onPrepareOrder }) => {
     if (!window.confirm(`Xác nhận chuẩn bị đơn hàng #${orderId}?`)) return;
     try {
       setIsProcessing(true);
-      // WORKAROUND: Backend blocks updates to CONFIRMED orders
-      // So we skip CONFIRMED and go directly to SHIPPING
-      // TODO: Backend should fix validation to allow CONFIRMED → SHIPPING
+      // Backend coi CONFIRMED là final state (không thể update sau khi CONFIRMED)
+      // Nên Frontend bỏ qua CONFIRMED, chuyển thẳng PENDING → SHIPPING
       const updateData = { status: 'SHIPPING' };
       console.log('[Orders] Sending update request:', updateData);
       await orderService.updateOrder(orderId, updateData);
