@@ -98,8 +98,7 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background overflow-y-auto animate-in fade-in duration-500">
-      <div className="min-h-screen pb-20">
+    <div className="min-h-screen bg-background pb-20 animate-in fade-in duration-500">
       <div className="max-w-[1280px] mx-auto px-4 md:px-10 lg:px-40 py-12">
         
         {/* Header */}
@@ -297,7 +296,6 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
             })}
           </div>
         )}
-      </div>
       </div>
     </div>
   );

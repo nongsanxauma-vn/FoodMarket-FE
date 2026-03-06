@@ -43,9 +43,17 @@ class HttpClient {
       '/otp-verification/send-otp',
       '/otp-verification/verify-otp',
       '/forgot-password/reset',
+      '/blogs/published',
+      '/blogs', // Tất cả blog endpoints
     ];
 
-    return publicEndpoints.some(endpoint => url.includes(endpoint));
+    return publicEndpoints.some(endpoint => {
+      // Kiểm tra đặc biệt cho /blogs và /blogs/{id}
+      if (endpoint === '/blogs') {
+        return url.startsWith('/blogs');
+      }
+      return url.includes(endpoint);
+    });
   }
 
   /**
