@@ -62,11 +62,9 @@ const Sidebar: React.FC<SidebarProps> = ({ role, user, currentPath, onNavigate, 
       {/* Header Logo Area */}
       <div className="p-8 pb-4">
         <div className="flex items-center gap-3 px-2 cursor-pointer" onClick={() => onNavigate(role === AppRole.ADMIN ? 'admin-overview' : 'overview')}>
-          <div className="bg-primary size-10 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-primary/30 shrink-0">
-            <Leaf className="size-6 fill-current" />
-          </div>
+          <img src="/nong_san_xau_ma/logo.png" alt="Logo" className="size-10 rounded-full shrink-0" />
           <div>
-            <h1 className="text-xl font-black leading-none font-display text-gray-900 tracking-tight uppercase">XẤU MÃ</h1>
+            <h1 className="text-xl font-black leading-none font-display text-gray-900 tracking-tight uppercase">NÔNG SẢN XẤU MÃ</h1>
             <p className="text-gray-400 text-[9px] font-bold mt-1 tracking-widest uppercase">{role === AppRole.ADMIN ? 'HỆ THỐNG QUẢN TRỊ' : 'NÔNG TRẠI XANH'}</p>
           </div>
         </div>
