@@ -28,7 +28,8 @@ const FarmerRoutes = () => {
             <Route path="overview" element={<FarmerDashboard onNavigate={(path) => navigate(`/farmer/${path}`)} />} />
             <Route path="products" element={<Products onNavigate={(path) => navigate(`/farmer/${path}`)} />} />
             <Route path="add-product" element={<AddProduct onBack={() => navigate('/farmer/products')} />} />
-            <Route path="combo-builder" element={<ComboBuilder onBack={() => navigate('/farmer/overview')} />} />
+            <Route path="combo-builder" element={<ComboBuilder onBack={() => navigate('/farmer/products')} />} />
+            <Route path="combo-builder/:comboId" element={<ComboBuilder onBack={() => navigate('/farmer/products')} />} />
             <Route path="wallet" element={<Wallet />} />
             <Route path="orders" element={<Orders onPrepareOrder={(id) => navigate(`/farmer/order-prep/${id}`)} />} />
             <Route path="order-prep/:orderId" element={<OrderPreparation orderId="" onBack={() => navigate('/farmer/orders')} onComplete={() => navigate('/farmer/orders')} />} />

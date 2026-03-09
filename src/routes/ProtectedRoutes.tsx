@@ -8,6 +8,7 @@ import Success from '../pages/auth/Success';
 import Tracking from '../pages/auth/Tracking';
 import MyOrders from '../pages/auth/MyOrders';
 import Profile from '../pages/farmer/Profile';
+import UserProfile from '../pages/auth/UserProfile';
 import KYC from '../pages/auth/KYC';
 import { AppRole } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -45,7 +46,7 @@ const ProtectedRoutes = () => {
             } />
             <Route path="/profile" element={
                 <ProtectedRoute>
-                    <Profile />
+                    <UserProfile />
                 </ProtectedRoute>
             } />
             <Route path="/kyc" element={

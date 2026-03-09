@@ -12,7 +12,7 @@ import {
   Loader2,
   AlertCircle
 } from 'lucide-react';
-import { productService, ProductResponse, cartService } from '../../services';
+import { productService, ProductResponse, cartService, reviewService, ReviewResponse } from '../../services';
 import ShopProducts from './ShopProducts';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -37,6 +37,8 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
   const [viewShopMode, setViewShopMode] = useState(false);
   const [selectedShopId, setSelectedShopId] = useState<number | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [reviews, setReviews] = useState<ReviewResponse[]>([]);
+  const [isReviewsLoading, setIsReviewsLoading] = useState(false);
 
   const handleBack = () => {
     if (propOnBack) propOnBack();
@@ -69,6 +71,25 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
 
     if (productId) fetchProductDetails();
   }, [productId]);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!product?.shopId) return;
+      try {
+        setIsReviewsLoading(true);
+        const res = await reviewService.getByShopId(product.shopId);
+        if (res.result) {
+          setReviews(res.result);
+        }
+      } catch (err) {
+        console.error('Failed to fetch reviews:', err);
+      } finally {
+        setIsReviewsLoading(false);
+      }
+    };
+
+    if (product?.shopId) fetchReviews();
+  }, [product?.shopId]);
 
   if (viewShopMode && selectedShopId) {
     return <ShopProducts shopId={selectedShopId} onBack={() => setViewShopMode(false)} isAuthenticated={isAuthenticated} onOpenLogin={() => navigate('/login')} />;
@@ -136,9 +157,12 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
             <h1 className="text-3xl font-black font-display text-gray-800 mb-2 leading-tight">{product.productName}</h1>
             <div className="flex items-center gap-4 text-sm mt-3">
               <div className="flex text-yellow-400">
-                {[...Array(5)].map((_, i) => <Star key={i} className={`size-4 ${i < 4 ? 'fill-yellow-400' : ''}`} />)}
+                {[...Array(5)].map((_, i) => {
+                  const avg = reviews.length > 0 ? reviews.reduce((acc, r) => acc + r.ratingStar, 0) / reviews.length : 4.5;
+                  return <Star key={i} className={`size-4 ${i < Math.round(avg) ? 'fill-yellow-400' : ''}`} />;
+                })}
               </div>
-              <span className="text-gray-400 font-bold text-xs">(128 đánh giá)</span>
+              <span className="text-gray-400 font-bold text-xs">({reviews.length || 128} đánh giá)</span>
             </div>
           </div>
 
@@ -225,6 +249,52 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
         </div>
         <div className="max-w-4xl mx-auto">
           {activeTab === 'Mô tả chi tiết' && <div className="text-gray-600 text-sm leading-loose whitespace-pre-wrap bg-gray-50 p-8 rounded-[32px] border border-gray-100">{product.description || "Nông sản sạch tận vườn."}</div>}
+
+          {activeTab.startsWith('Đánh giá') && (
+            <div className="space-y-8">
+              {isReviewsLoading ? (
+                <div className="flex justify-center py-10"><Loader2 className="animate-spin text-primary" /></div>
+              ) : reviews.length > 0 ? (
+                reviews.map((review) => (
+                  <div key={review.id} className="bg-gray-50 p-8 rounded-[32px] border border-gray-100 animate-in fade-in slide-in-from-bottom-2">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
+                          {review.buyerId}
+                        </div>
+                        <div>
+                          <p className="font-black text-gray-900 text-sm">Người dùng #{review.buyerId}</p>
+                          <div className="flex text-yellow-400 mt-1">
+                            {[...Array(5)].map((_, i) => (
+                              <Star key={i} className={`size-3 ${i < review.ratingStar ? 'fill-yellow-400' : ''}`} />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Gần đây</span>
+                    </div>
+                    <p className="text-gray-600 text-sm leading-relaxed mb-6">{review.comment}</p>
+                    {review.evidence && (
+                      <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 w-32 aspect-square">
+                        <img src={review.evidence} alt="Bằng chứng" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                    {review.replyFromShop && (
+                      <div className="bg-white p-6 rounded-2xl border border-primary/10 relative">
+                        <div className="absolute -top-3 left-6 bg-primary text-white text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-primary/20">Phản hồi từ Nhà vườn</div>
+                        <p className="text-gray-600 text-sm italic">{review.replyFromShop}</p>
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-20 bg-gray-50 rounded-[32px] border border-dashed border-gray-200">
+                  <Star className="size-12 text-gray-200 mx-auto mb-4" />
+                  <p className="text-gray-400 font-black uppercase tracking-widest text-[10px]">Chưa có đánh giá nào cho cửa hàng này</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

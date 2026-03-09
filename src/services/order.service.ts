@@ -15,6 +15,7 @@ export interface OrderCreationRequest {
 }
 
 export interface OrderItemResponse {
+    orderDetailId: number;
     productId: number;
     productName: string;
     quantity: number;

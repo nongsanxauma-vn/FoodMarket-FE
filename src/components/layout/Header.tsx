@@ -296,7 +296,17 @@ const Header: React.FC<HeaderProps> = ({
                         </button>
                       )}
 
-                      <button onClick={() => { setShowProfileMenu(false); navigate('/profile'); }} className="w-full px-5 py-3 text-left text-xs font-bold hover:bg-gray-50 flex items-center gap-3 transition-colors">
+                      <button
+                        onClick={() => {
+                          setShowProfileMenu(false);
+                          if (user?.role === AppRole.FARMER) {
+                            navigate('/farmer/profile');
+                          } else {
+                            navigate('/profile');
+                          }
+                        }}
+                        className="w-full px-5 py-3 text-left text-xs font-bold hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                      >
                         <UserIcon className="size-4 text-gray-400" /> Hồ sơ của tôi
                       </button>
                       <button onClick={() => { setShowProfileMenu(false); navigate('/my-orders'); }} className="w-full px-5 py-3 text-left text-xs font-bold hover:bg-gray-50 flex items-center gap-3 transition-colors">
