@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { XCircle, Loader2, ShoppingCart, ArrowRight, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const PaymentCancel: React.FC = () => {
+  const navigate = useNavigate();
   const [countdown, setCountdown] = useState(5);
 
   // Get params from URL
@@ -16,7 +18,7 @@ const PaymentCancel: React.FC = () => {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          window.location.href = '/';
+          navigate('/');
           return 0;
         }
         return prev - 1;
@@ -27,11 +29,11 @@ const PaymentCancel: React.FC = () => {
   }, []);
 
   const handleGoToCart = () => {
-    window.location.href = '/';
+    navigate('/cart');
   };
 
   const handleGoHome = () => {
-    window.location.href = '/';
+    navigate('/');
   };
 
   return (
@@ -52,7 +54,7 @@ const PaymentCancel: React.FC = () => {
 
           {/* Description */}
           <p className="text-sm text-gray-500 font-medium leading-relaxed mb-8">
-            Bạn đã hủy thanh toán qua PayOS. Đơn hàng của bạn vẫn còn trong giỏ hàng, 
+            Bạn đã hủy thanh toán qua PayOS. Đơn hàng của bạn vẫn còn trong giỏ hàng,
             bạn có thể thanh toán lại bất cứ lúc nào.
           </p>
 
@@ -91,7 +93,7 @@ const PaymentCancel: React.FC = () => {
               <ShoppingCart className="size-5" />
               Quay lại giỏ hàng
             </button>
-            
+
             <button
               onClick={handleGoHome}
               className="w-full py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-2xl flex items-center justify-center gap-2 transition-all"

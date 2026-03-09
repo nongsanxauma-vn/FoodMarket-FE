@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bike, User, Phone, Mail, Lock, MapPin, CreditCard, FileText, Camera, ArrowRight, ArrowLeft, CheckCircle2, Shield, X } from 'lucide-react';
 import { shipperService, otpService } from '../../services';
+import { useAuth } from '../../contexts/AuthContext';
+import { AppRole } from '../../types';
 
 interface ShipperRegisterProps {
-  onComplete: () => void;
   onBack: () => void;
 }
 
-const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack }) => {
+const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onBack }) => {
+  const { login } = useAuth();
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     fullName: '', phone: '', email: '', password: '', confirmPassword: '',
@@ -129,7 +133,8 @@ const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack })
 
       if (response.result) {
         setShowOtpModal(false);
-        onComplete();
+        login(AppRole.SHIPPER);
+        navigate('/kyc');
       }
     } catch (err: any) {
       console.error('Shipper registration failed:', err);

@@ -1,65 +1,57 @@
+
 import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Star,
   ShoppingCart,
   ChevronRight,
   Plus,
   Minus,
-  ArrowRight,
   Heart,
   Share2,
-  Facebook,
-  Twitter,
-  Linkedin,
-  Instagram,
-  MapPin,
-  Award,
-  Leaf,
   Loader2,
   AlertCircle
 } from 'lucide-react';
 import { productService, ProductResponse, cartService } from '../../services';
 import ShopProducts from './ShopProducts';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface ProductDetailProps {
-  productId: string;
-  onBack: () => void;
-  isAuthenticated?: boolean;
-  onOpenLogin?: () => void;
+  productId?: string;
+  onBack?: () => void;
 }
 
-const ProductDetail: React.FC<ProductDetailProps> = ({ productId, onBack, isAuthenticated = false, onOpenLogin = () => { } }) => {
+const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId, onBack: propOnBack }) => {
+  const { productId: urlProductId } = useParams<{ productId: string }>();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const productId = propProductId || urlProductId || '';
+
   const [product, setProduct] = useState<ProductResponse | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<ProductResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [quantity, setQuantity] = useState(1);
-  const [activeTab, setActiveTab] = useState('mota');
+  const [activeTab, setActiveTab] = useState('Mô tả chi tiết');
   const [viewShopMode, setViewShopMode] = useState(false);
   const [selectedShopId, setSelectedShopId] = useState<number | null>(null);
   const [isAdding, setIsAdding] = useState(false);
 
-  useEffect(() => {
-    setTimeout(() => {
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
-      window.scrollTo(0, 0);
-    }, 0);
+  const handleBack = () => {
+    if (propOnBack) propOnBack();
+    else navigate('/');
+  };
 
+  useEffect(() => {
     const fetchProductDetails = async () => {
       try {
         setIsLoading(true);
         setError(null);
-
-        // Fetch detailed product
         const idNum = Number(productId);
         const res = await productService.getById(idNum);
         if (res.result) {
           setProduct(res.result);
-
-          // Optionally fetch some other products to show as related
-          // (Right now, we can just get all and filter, or just get all and slice)
           const allRes = await productService.getAll();
           if (allRes.result) {
             setRelatedProducts(allRes.result.filter(p => p.id !== idNum).slice(0, 4));
@@ -75,17 +67,11 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId, onBack, isAuth
       }
     };
 
-    if (productId) {
-      fetchProductDetails();
-    }
+    if (productId) fetchProductDetails();
   }, [productId]);
 
-  // Shop View
   if (viewShopMode && selectedShopId) {
-    return <ShopProducts shopId={selectedShopId} onBack={() => {
-      setViewShopMode(false);
-      setSelectedShopId(null);
-    }} isAuthenticated={isAuthenticated} onOpenLogin={onOpenLogin} />;
+    return <ShopProducts shopId={selectedShopId} onBack={() => setViewShopMode(false)} isAuthenticated={isAuthenticated} onOpenLogin={() => navigate('/login')} />;
   }
 
   if (isLoading) {
@@ -103,29 +89,26 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId, onBack, isAuth
         <div className="bg-red-50 border border-red-100 p-8 rounded-3xl flex flex-col items-center gap-4 text-red-600 font-bold max-w-lg text-center">
           <AlertCircle className="size-10" />
           <p>{error || 'Sản phẩm không khả dụng'}</p>
-          <button onClick={onBack} className="mt-4 px-6 py-2 bg-white text-red-600 rounded-xl shadow-sm hover:shadow-md transition-shadow">Quay lại trang chủ</button>
+          <button onClick={handleBack} className="mt-4 px-6 py-2 bg-white text-red-600 rounded-xl shadow-sm hover:shadow-md transition-shadow">Quay lại trang chủ</button>
         </div>
       </div>
     );
   }
 
-  // Define dynamic properties from backend response
-  const farmName = product.shopName || (product.shopId ? `Nông trại #${product.shopId}` : (product.shopOwnerId ? `Shop ID: ${product.shopOwnerId}` : 'Nông trại đối tác'));
+  const farmName = product.shopName || (product.shopId ? `Nông trại #${product.shopId}` : 'Nông trại đối tác');
   const isOutOfStock = product.stockQuantity <= 0;
 
   return (
     <div className="flex-1 bg-white pb-20">
-      {/* Breadcrumb */}
       <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between border-b border-gray-100 mb-8">
         <nav className="flex items-center gap-2 text-sm text-gray-500">
-          <span className="cursor-pointer hover:text-primary" onClick={onBack}>Trang chủ</span>
+          <span className="cursor-pointer hover:text-primary" onClick={handleBack}>Trang chủ</span>
           <ChevronRight className="size-4" />
           <span className="text-gray-900 font-medium">{product.productName}</span>
         </nav>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-2 gap-12 mb-20 animate-in fade-in duration-500">
-        {/* Left: Media */}
         <div className="flex gap-4">
           <div className="flex flex-col gap-3 w-20 hidden md:flex">
             {[1, 2, 3, 4].map(i => (
@@ -144,7 +127,6 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId, onBack, isAuth
           </div>
         </div>
 
-        {/* Right: Product Info */}
         <div className="flex flex-col gap-6">
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -166,7 +148,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId, onBack, isAuth
               <span className="text-gray-400 font-bold uppercase text-xs mt-2">/ {product.unit || 'KG'}</span>
             </div>
             <p className="text-gray-500 text-sm leading-relaxed mt-6 whitespace-pre-wrap">
-              {product.description || "Sản phẩm sạch được thu hoạch ngay tại vườn. Không sử dụng thuốc trừ sâu, phân bón hóa học. Đảm bảo an toàn tuyệt đối cho sức khỏe."}
+              {product.description || "Sản phẩm sạch được thu hoạch ngay tại vườn."}
             </p>
           </div>
 
@@ -186,9 +168,8 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId, onBack, isAuth
             <button
               disabled={isOutOfStock || isAdding}
               onClick={async () => {
-                if (!isAuthenticated) {
-                  onOpenLogin();
-                } else {
+                if (!isAuthenticated) navigate('/login');
+                else {
                   try {
                     setIsAdding(true);
                     await cartService.addToCart({ productId: Number(productId), quantity });
@@ -202,7 +183,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId, onBack, isAuth
                   }
                 }
               }}
-              className="flex-1 bg-primary text-white h-14 rounded-xl font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all flex items-center justify-center gap-3 disabled:bg-gray-300 disabled:text-gray-500 disabled:shadow-none hover:-translate-y-1 transform disabled:transform-none"
+              className="flex-1 bg-primary text-white h-14 rounded-xl font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all flex items-center justify-center gap-3 disabled:bg-gray-300 disabled:text-gray-500 hover:-translate-y-1 transform disabled:transform-none"
             >
               {isAdding ? <Loader2 className="size-5 animate-spin" /> : <ShoppingCart className="size-5" />}
               {isAdding ? 'Đang thêm...' : (isOutOfStock ? 'Hết hàng' : 'Thêm vào giỏ')}
@@ -211,122 +192,51 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId, onBack, isAuth
         </div>
       </div>
 
-      {/* Farmer Information Section */}
       <div className="max-w-7xl mx-auto px-4 mb-20">
         <div className="bg-gradient-to-br from-green-50 to-white rounded-[32px] border border-green-100 shadow-sm p-10 relative overflow-hidden">
-          <Leaf className="absolute -bottom-10 -right-10 size-64 text-green-100 opacity-50 rotate-45 pointer-events-none" />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
-            {/* Left: Farm Info */}
             <div className="flex items-start gap-5">
               <div className="size-24 rounded-2xl overflow-hidden bg-white shadow-sm flex-shrink-0 border-4 border-white">
-                <img
-                  src={`https://picsum.photos/seed/shop${product.shopOwnerId}/100/100`}
-                  alt={farmName}
-                  className="w-full h-full object-cover"
-                />
+                <img src={`https://picsum.photos/seed/shop${product.shopOwnerId}/100/100`} alt={farmName} className="w-full h-full object-cover" />
               </div>
               <div className="flex-1 pt-1">
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div>
-                    <h4 className="font-black text-gray-900 text-lg mb-1">{farmName}</h4>
-                    <p className="text-[10px] text-primary font-bold uppercase tracking-widest flex items-center gap-1">
-                      <Award className="size-3" /> Nông trại uy tín
-                    </p>
-                  </div>
-                </div>
+                <h4 className="font-black text-gray-900 text-lg mb-1">{farmName}</h4>
                 <div className="flex gap-3 mt-4">
-                  <button onClick={() => {
-                    if (product.shopId) {
-                      setViewShopMode(true);
-                      setSelectedShopId(product.shopId);
-                    }
-                  }} className="px-5 py-2.5 bg-white text-primary font-black text-[10px] uppercase tracking-widest rounded-xl border border-primary/20 hover:bg-primary hover:text-white transition-all shadow-sm">
-                    Xem Cửa Hàng
-                  </button>
+                  <button onClick={() => { if (product.shopId) { setViewShopMode(true); setSelectedShopId(product.shopId); } }} className="px-5 py-2.5 bg-white text-primary font-black text-[10px] uppercase tracking-widest rounded-xl border border-primary/20 hover:bg-primary hover:text-white transition-all shadow-sm">Xem Cửa Hàng</button>
                 </div>
               </div>
             </div>
-
-            {/* Right: Farm Stats */}
             <div className="lg:col-span-2 flex items-center">
               <div className="grid grid-cols-3 gap-8 w-full bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                <div className="text-center">
-                  <p className="text-2xl font-black text-primary mb-1">4.9</p>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Đánh Giá (1K+)</p>
-                </div>
-                <div className="text-center border-l border-r border-gray-100 px-4">
-                  <p className="text-2xl font-black text-gray-900 mb-1">98%</p>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Tỉ Lệ Phản Hồi</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-black text-gray-900 mb-1">3 Năm</p>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Tham Gia</p>
-                </div>
+                <div className="text-center"><p className="text-2xl font-black text-primary mb-1">4.9</p><p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Đánh Giá (1K+)</p></div>
+                <div className="text-center border-l border-r border-gray-100 px-4"><p className="text-2xl font-black text-gray-900 mb-1">98%</p><p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Tỉ Lệ Phản Hồi</p></div>
+                <div className="text-center"><p className="text-2xl font-black text-gray-900 mb-1">3 Năm</p><p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Tham Gia</p></div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Product Tabs Section */}
       <div className="max-w-7xl mx-auto px-4 border-t border-gray-100 pt-16 mb-20">
         <div className="flex justify-center gap-12 -mt-px mb-12">
           {['Mô tả chi tiết', 'Chứng nhận', 'Đánh giá (128)'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`pb-4 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === tab ? 'border-primary text-primary' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
-            >
-              {tab}
-            </button>
+            <button key={tab} onClick={() => setActiveTab(tab)} className={`pb-4 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === tab ? 'border-primary text-primary' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>{tab}</button>
           ))}
         </div>
         <div className="max-w-4xl mx-auto">
-          {activeTab === 'Mô tả chi tiết' && (
-            <div className="text-gray-600 text-sm leading-loose whitespace-pre-wrap bg-gray-50 p-8 rounded-[32px] border border-gray-100">
-              {product.description || "Nông sản được thu hoạch tận vườn với quy trình gieo trồng nghiêm ngặt."}
-            </div>
-          )}
-          {activeTab === 'Chứng nhận' && (
-            <div className="flex justify-center gap-6">
-              <div className="p-6 border border-gray-100 rounded-2xl flex flex-col items-center bg-green-50/30">
-                <Award className="size-10 text-green-500 mb-4" />
-                <span className="text-sm font-bold text-gray-800">VietGAP</span>
-              </div>
-              <div className="p-6 border border-gray-100 rounded-2xl flex flex-col items-center bg-blue-50/30">
-                <Leaf className="size-10 text-blue-500 mb-4" />
-                <span className="text-sm font-bold text-gray-800">100% Organic</span>
-              </div>
-            </div>
-          )}
-          {activeTab === 'Đánh giá (128)' && (
-            <div className="text-center text-gray-500 text-sm py-10">
-              Tính năng đánh giá đang được cập nhật.
-            </div>
-          )}
+          {activeTab === 'Mô tả chi tiết' && <div className="text-gray-600 text-sm leading-loose whitespace-pre-wrap bg-gray-50 p-8 rounded-[32px] border border-gray-100">{product.description || "Nông sản sạch tận vườn."}</div>}
         </div>
       </div>
 
-      {/* Related Products */}
       {relatedProducts.length > 0 && (
         <div className="max-w-7xl mx-auto px-4 mt-32">
-          <h2 className="text-2xl font-black font-display text-gray-900 uppercase mb-12 flex items-center gap-4">
-            Gợi ý mua kèm <span className="h-px bg-gray-200 flex-1"></span>
-          </h2>
+          <h2 className="text-2xl font-black font-display text-gray-900 uppercase mb-12 flex items-center gap-4">Gợi ý mua kèm <span className="h-px bg-gray-200 flex-1"></span></h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {relatedProducts.map((p) => (
-              <div key={p.id} onClick={() => window.location.href = `/product?id=${p.id}`} className="group cursor-pointer">
-                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-gray-50 mb-4 border border-gray-100">
-                  <img src={p.imageUrl || 'https://picsum.photos/seed/product/400/300'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={p.productName} />
-                  <button className="absolute bottom-4 right-4 size-10 bg-primary text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 hover:scale-110 shadow-lg">
-                    <Plus className="size-5" />
-                  </button>
-                </div>
+              <div key={p.id} onClick={() => navigate(`/product/${p.id}`)} className="group cursor-pointer">
+                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-gray-50 mb-4 border border-gray-100"><img src={p.imageUrl || 'https://picsum.photos/seed/product/400/300'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={p.productName} /></div>
                 <h4 className="font-extrabold text-gray-900 text-sm mb-1 line-clamp-1">{p.productName}</h4>
-                <div className="flex gap-2 text-sm mt-2 items-center">
-                  <span className="text-primary font-black text-lg">{(p.sellingPrice || 0).toLocaleString('vi-VN')}đ</span>
-                  <span className="text-[10px] text-gray-400 font-bold uppercase">/{p.unit}</span>
-                </div>
+                <div className="flex gap-2 text-sm mt-2 items-center"><span className="text-primary font-black text-lg">{(p.sellingPrice || 0).toLocaleString('vi-VN')}đ</span><span className="text-[10px] text-gray-400 font-bold uppercase">/{p.unit}</span></div>
               </div>
             ))}
           </div>

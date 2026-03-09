@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle2, Loader2, Package, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const PaymentSuccess: React.FC = () => {
+  const navigate = useNavigate();
   const [countdown, setCountdown] = useState(5);
 
   // Get params from URL
@@ -16,7 +18,7 @@ const PaymentSuccess: React.FC = () => {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          window.location.href = '/';
+          navigate('/');
           return 0;
         }
         return prev - 1;
@@ -27,11 +29,11 @@ const PaymentSuccess: React.FC = () => {
   }, []);
 
   const handleGoToMyOrders = () => {
-    window.location.href = '/';
+    navigate('/my-orders');
   };
 
   const handleGoHome = () => {
-    window.location.href = '/';
+    navigate('/');
   };
 
   return (
@@ -52,7 +54,7 @@ const PaymentSuccess: React.FC = () => {
 
           {/* Description */}
           <p className="text-sm text-gray-500 font-medium leading-relaxed mb-8">
-            Đơn hàng của bạn đã được thanh toán thành công qua PayOS. 
+            Đơn hàng của bạn đã được thanh toán thành công qua PayOS.
             Chúng tôi sẽ xử lý đơn hàng trong thời gian sớm nhất.
           </p>
 
@@ -83,7 +85,7 @@ const PaymentSuccess: React.FC = () => {
               <Package className="size-5" />
               Xem đơn hàng của tôi
             </button>
-            
+
             <button
               onClick={handleGoHome}
               className="w-full py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-2xl flex items-center justify-center gap-2 transition-all"

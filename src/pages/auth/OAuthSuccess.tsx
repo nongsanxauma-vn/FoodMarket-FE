@@ -1,14 +1,14 @@
 
 import React, { useEffect, useState } from 'react';
 import { authService } from '../../services';
+import { useAuth } from '../../contexts/AuthContext';
 import { AppRole } from '../../types';
+import { useNavigate } from 'react-router-dom';
 import { Loader2, AlertCircle } from 'lucide-react';
 
-interface OAuthSuccessProps {
-    onLogin: (role: AppRole) => void;
-}
-
-const OAuthSuccess: React.FC<OAuthSuccessProps> = ({ onLogin }) => {
+const OAuthSuccess: React.FC = () => {
+    const { setIsAuthenticated, user } = useAuth();
+    const navigate = useNavigate();
     const [status, setStatus] = useState<'LOADING' | 'ERROR'>('LOADING');
     const [errorMsg, setErrorMsg] = useState('');
 
@@ -45,7 +45,19 @@ const OAuthSuccess: React.FC<OAuthSuccessProps> = ({ onLogin }) => {
                     window.history.replaceState({}, document.title, "/nong_san_xau_ma/");
 
                     // 4. Trigger login callback
-                    onLogin(userRole);
+                    setIsAuthenticated(true);
+
+                    // Navigate based on role & status
+                    if (userRole === AppRole.ADMIN) navigate('/admin');
+                    else if (userRole === AppRole.FARMER) {
+                        if (userInfo.result.status === 'PENDING') navigate('/kyc');
+                        else navigate('/farmer');
+                    }
+                    else if (userRole === AppRole.SHIPPER) {
+                        if (userInfo.result.status === 'PENDING') navigate('/kyc');
+                        else navigate('/shipper');
+                    }
+                    else navigate('/');
                 } else {
                     throw new Error('Không thể tải thông tin người dùng.');
                 }
@@ -57,7 +69,7 @@ const OAuthSuccess: React.FC<OAuthSuccessProps> = ({ onLogin }) => {
         };
 
         handleAuth();
-    }, [onLogin]);
+    }, [setIsAuthenticated]);
 
     if (status === 'ERROR') {
         return (
@@ -71,7 +83,7 @@ const OAuthSuccess: React.FC<OAuthSuccessProps> = ({ onLogin }) => {
                         {errorMsg}
                     </p>
                     <button
-                        onClick={() => window.location.href = '/'}
+                        onClick={() => navigate('/')}
                         className="w-full py-4 bg-primary text-white font-black rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-primary/20"
                     >
                         QUAY LẠI TRANG CHỦ

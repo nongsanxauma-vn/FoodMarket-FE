@@ -3,9 +3,12 @@ import React from 'react';
 import { Phone, Mail, Facebook, MapPin } from 'lucide-react';
 
 const Footer: React.FC = () => {
+  const containerClass = 'w-full max-w-[1280px] mx-auto';
+  const outerPaddingClass = 'px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12';
+
   return (
-    <footer className="bg-[#5DBE61] text-white py-16 px-4 md:px-40 mt-12">
-      <div className="max-w-[1280px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
+    <footer className={`bg-[#5DBE61] text-white py-16 ${outerPaddingClass} mt-12 w-full`}>
+      <div className={`${containerClass} grid grid-cols-1 md:grid-cols-4 gap-12`}>
         {/* Column 1: Logo & Brand Info */}
         <div className="flex flex-col gap-6">
           <div className="flex items-center gap-3">
@@ -67,8 +70,8 @@ const Footer: React.FC = () => {
         </div>
       </div>
 
-      {/* Bottom */}
-      <div className="max-w-[1280px] mx-auto mt-12 pt-8 border-t border-white/20 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-green-100 font-medium">
+      {/* Bottom (cùng container với phần trên để thẳng hàng) */}
+      <div className={`${containerClass} mt-12 pt-8 border-t border-white/20 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-green-100 font-medium`}>
         <p>Copyright © 2026 by Nông Sản Xâu Mã. All rights reserved</p>
         <div className="flex gap-4">
           <a className="hover:text-white underline" href="#">Điều khoản sử dụng</a>

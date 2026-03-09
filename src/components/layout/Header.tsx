@@ -1,38 +1,24 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { AppRole, User } from '../../types/index';
-import { Search, ShoppingCart, Bell, Menu, Leaf, User as UserIcon, LogOut, Phone, X, CheckCircle2, Trash2, Store, Truck, LayoutDashboard, Package } from 'lucide-react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { AppRole, User, KYCStatus } from '../../types/index';
+import { Search, ShoppingCart, Bell, Menu, User as UserIcon, LogOut, Phone, X, CheckCircle2, Trash2, Store, Truck, LayoutDashboard, Package } from 'lucide-react';
 import { notificationService, NotificationItem, cartService } from '../../services';
 
+import { useAuth } from '../../contexts/AuthContext';
+
 interface HeaderProps {
-  user: User | null;
-  isAuthenticated: boolean;
-  onRoleSwitch: (role: AppRole) => void;
-  onOpenCart?: () => void;
-  onLogout: () => void;
-  onOpenNews?: () => void;
-  onGoHome: () => void;
-  onOpenLogin: () => void;
-  onOpenRegister: () => void;
-  onOpenProfile?: () => void;
-  onOpenMyOrders?: () => void;
+  // Kept for backward compatibility but mostly internal refactored
+  onRoleSwitch?: (role: AppRole) => void;
   activeTab?: 'home' | 'blindbox' | 'news';
 }
 
 const Header: React.FC<HeaderProps> = ({
-  user,
-  isAuthenticated,
-  onRoleSwitch,
-  onOpenCart,
-  onLogout,
-  onOpenNews,
-  onGoHome,
-  onOpenLogin,
-  onOpenRegister,
-  onOpenProfile,
-  onOpenMyOrders,
-  activeTab
+  activeTab: activeTabProp
 }) => {
+  const { user, isAuthenticated, logout: onLogout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -40,6 +26,12 @@ const Header: React.FC<HeaderProps> = ({
   const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
   const [cartCount, setCartCount] = useState(0);
   const notifRef = useRef<HTMLDivElement>(null);
+
+  // Determine active tab based on location if not provided
+  const activeTab = activeTabProp || (
+    location.pathname === '/' ? 'home' :
+      location.pathname.startsWith('/news') ? 'news' : undefined
+  );
 
   // Close notification dropdown when clicking outside
   useEffect(() => {
@@ -137,16 +129,37 @@ const Header: React.FC<HeaderProps> = ({
     [AppRole.ADMIN]: 'Quản trị viên',
   };
 
+  const handleDashboardRedirect = () => {
+    setShowProfileMenu(false);
+    if (!user) return;
+
+    // Block PENDING farmers/shippers from dashboard
+    if (user.kycStatus === KYCStatus.PENDING && (user.role === AppRole.FARMER || user.role === AppRole.SHIPPER)) {
+      navigate('/kyc');
+      return;
+    }
+
+    switch (user.role) {
+      case AppRole.ADMIN: navigate('/admin'); break;
+      case AppRole.FARMER: navigate('/farmer'); break;
+      case AppRole.SHIPPER: navigate('/shipper'); break;
+      default: navigate('/'); break;
+    }
+  };
+
+  const containerClass = 'w-full max-w-[1280px] mx-auto';
+  const outerPaddingClass = 'px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12';
+
   return (
     <header className="sticky top-0 z-[60] flex flex-col w-full bg-white shadow-sm font-sans">
       {/* Top Bar - Dark Green Section */}
-      <div className="bg-[#5DBE61] text-white px-4 md:px-10 lg:px-40 py-4">
-        <div className="flex items-center justify-between max-w-[1280px] mx-auto gap-10">
+      <div className={`bg-[#5DBE61] text-white ${outerPaddingClass} py-4 w-full`}>
+        <div className={`flex items-center justify-between ${containerClass} gap-4 md:gap-10`}>
           {/* Logo Area */}
-          <div className="flex items-center gap-3 shrink-0 cursor-pointer" onClick={onGoHome}>
-            <img src="logo.png" alt="Logo" className="size-10 object-contain rounded-full bg-white" />
+          <Link to="/" className="flex items-center gap-3 shrink-0 cursor-pointer">
+            <img src="/nong_san_xau_ma/logo.png" alt="Logo" className="size-10 object-contain rounded-full bg-white" />
             <h2 className="text-white text-xl font-black leading-tight tracking-tighter uppercase font-display italic">NÔNG SẢN XẤU MÃ</h2>
-          </div>
+          </Link>
 
           {/* Search Bar */}
           <div className="flex-1 max-w-[700px] relative">
@@ -181,7 +194,6 @@ const Header: React.FC<HeaderProps> = ({
                   {/* Notification Dropdown */}
                   {showNotifications && (
                     <div className="absolute top-full right-0 mt-3 w-96 bg-white rounded-[24px] shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-gray-800 ring-1 ring-black/5">
-                      {/* Header */}
                       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
                         <h4 className="text-sm font-black text-gray-900 uppercase tracking-tight">Thông báo</h4>
                         <button onClick={() => setShowNotifications(false)} className="text-gray-300 hover:text-gray-600 transition-colors">
@@ -189,7 +201,6 @@ const Header: React.FC<HeaderProps> = ({
                         </button>
                       </div>
 
-                      {/* Body */}
                       <div className="max-h-80 overflow-y-auto">
                         {loadingNotifs ? (
                           <div className="p-8 text-center">
@@ -238,7 +249,7 @@ const Header: React.FC<HeaderProps> = ({
                   )}
                 </div>
 
-                <button onClick={onOpenCart} className="relative text-white hover:opacity-80 transition-opacity">
+                <button onClick={() => navigate('/cart')} className="relative text-white hover:opacity-80 transition-opacity">
                   <ShoppingCart className="size-6" />
                   {cartCount > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 bg-[#FAD973] text-[#38543a] text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-[#38543a]">
@@ -265,27 +276,34 @@ const Header: React.FC<HeaderProps> = ({
                         </p>
                       </div>
 
-                      {/* Bổ sung nút quay lại Dashboard nếu không phải Buyer */}
                       {user && user.role !== AppRole.BUYER && (
                         <button
-                          onClick={() => { setShowProfileMenu(false); onRoleSwitch(user.role); }}
-                          className="w-full px-5 py-3 text-left text-xs font-black text-primary hover:bg-primary/5 flex items-center gap-3 transition-colors border-b border-gray-50"
+                          onClick={handleDashboardRedirect}
+                          className={`w-full px-5 py-3 text-left text-xs font-black flex items-center gap-3 transition-colors border-b border-gray-50 ${user.kycStatus === KYCStatus.PENDING ? 'text-gray-400' : 'text-primary hover:bg-primary/5'
+                            }`}
                         >
                           {user.role === AppRole.ADMIN ? <LayoutDashboard className="size-4" /> :
                             user.role === AppRole.FARMER ? <Store className="size-4" /> : <Truck className="size-4" />}
-                          {user.role === AppRole.ADMIN ? 'Trang quản trị' :
-                            user.role === AppRole.FARMER ? 'Quản lý cửa hàng' : 'Trang tài xế'}
+                          <div className="flex-1">
+                            {user.role === AppRole.ADMIN ? 'Trang quản trị' :
+                              user.role === AppRole.FARMER ? 'Quản lý cửa hàng' : 'Trang tài xế'}
+                          </div>
+                          {user.kycStatus === KYCStatus.PENDING && (
+                            <span className="bg-orange-100 text-orange-600 text-[8px] px-2 py-0.5 rounded-full">
+                              CHỜ DUYỆT
+                            </span>
+                          )}
                         </button>
                       )}
 
-                      <button onClick={() => { setShowProfileMenu(false); onOpenProfile && onOpenProfile(); }} className="w-full px-5 py-3 text-left text-xs font-bold hover:bg-gray-50 flex items-center gap-3 transition-colors">
+                      <button onClick={() => { setShowProfileMenu(false); navigate('/profile'); }} className="w-full px-5 py-3 text-left text-xs font-bold hover:bg-gray-50 flex items-center gap-3 transition-colors">
                         <UserIcon className="size-4 text-gray-400" /> Hồ sơ của tôi
                       </button>
-                      <button onClick={() => { setShowProfileMenu(false); onOpenMyOrders && onOpenMyOrders(); }} className="w-full px-5 py-3 text-left text-xs font-bold hover:bg-gray-50 flex items-center gap-3 transition-colors">
+                      <button onClick={() => { setShowProfileMenu(false); navigate('/my-orders'); }} className="w-full px-5 py-3 text-left text-xs font-bold hover:bg-gray-50 flex items-center gap-3 transition-colors">
                         <Package className="size-4 text-gray-400" /> Đơn hàng của tôi
                       </button>
                       <div className="h-px bg-gray-50 mx-3 my-1" />
-                      <button onClick={onLogout} className="w-full px-5 py-3 text-left text-xs font-black text-red-500 hover:bg-red-50 flex items-center gap-3 transition-colors">
+                      <button onClick={() => { setShowProfileMenu(false); onLogout(); }} className="w-full px-5 py-3 text-left text-xs font-black text-red-500 hover:bg-red-50 flex items-center gap-3 transition-colors">
                         <LogOut className="size-4" /> Đăng xuất
                       </button>
                     </div>
@@ -295,13 +313,13 @@ const Header: React.FC<HeaderProps> = ({
             ) : (
               <div className="flex items-center gap-3">
                 <button
-                  onClick={onOpenLogin}
+                  onClick={() => navigate('/login')}
                   className="px-6 py-2.5 text-sm font-black uppercase tracking-widest hover:opacity-80 transition-opacity"
                 >
                   Đăng nhập
                 </button>
                 <button
-                  onClick={onOpenRegister}
+                  onClick={() => navigate('/register')}
                   className="px-6 py-2.5 bg-[#FAD973] text-[#38543a] rounded-full text-sm font-black uppercase tracking-widest shadow-lg shadow-black/10 hover:scale-105 transition-all"
                 >
                   Đăng ký
@@ -312,9 +330,9 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Sub Header - Navigation */}
-      <div className="bg-white border-b border-gray-100 px-4 md:px-10 lg:px-40 h-14 flex items-center">
-        <div className="flex items-center justify-between w-full max-w-[1280px] mx-auto">
+      {/* Sub Header - Navigation (cùng padding & max-width với top bar để thẳng hàng) */}
+      <div className={`bg-white border-b border-gray-100 ${outerPaddingClass} h-14 flex items-center w-full`}>
+        <div className={`flex items-center justify-between ${containerClass}`}>
           <button className="flex items-center gap-3 text-gray-800 hover:text-primary transition-colors group">
             <Menu className="size-4 group-hover:scale-110 transition-transform" />
             <span className="text-xs font-bold uppercase tracking-tight">DANH MỤC SẢN PHẨM</span>
@@ -323,19 +341,19 @@ const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-12">
             <nav className="flex items-center gap-10">
               <a href="#goi-mu" className={`text-xs font-bold hover:text-primary transition-all uppercase tracking-tight ${activeTab === 'blindbox' ? 'text-gray-900 border-b-2 border-[#29a33d] pb-1' : 'text-gray-600'}`}>GÓI MÙ</a>
-              <button
-                onClick={onGoHome}
+              <Link
+                to="/"
                 className={`text-xs font-black pb-1 uppercase tracking-tight text-nowrap transition-all ${activeTab === 'home' ? 'text-gray-900 border-b-2 border-[#29a33d]' : 'text-gray-600 hover:text-primary'}`}
               >
                 TRANG CHỦ
-              </button>
+              </Link>
               <a href="#" className="text-gray-600 text-xs font-bold hover:text-primary transition-all uppercase tracking-tight">KHUYẾN MÃI</a>
-              <button
-                onClick={onOpenNews}
+              <Link
+                to="/news"
                 className={`text-xs font-bold uppercase tracking-tight transition-all ${activeTab === 'news' ? 'text-gray-900 border-b-2 border-[#29a33d] pb-1' : 'text-gray-600 hover:text-primary'}`}
               >
                 TIN TỨC
-              </button>
+              </Link>
             </nav>
 
             <div className="h-6 w-px bg-gray-100 mx-2" />
