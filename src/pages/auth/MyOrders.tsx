@@ -3,8 +3,10 @@ import {
   Package, Clock, Truck, CheckCircle2, XCircle, Eye,
   ArrowLeft, RefreshCw, AlertCircle, Filter, Search
 } from 'lucide-react';
-import { orderService, OrderResponse } from '../../services/order.service';
+import { orderService, OrderResponse, OrderItemResponse } from '../../services/order.service';
 import { authService } from '../../services/auth.service';
+import { reviewService } from '../../services/review.service';
+import { Star, Camera, X, Loader2 } from 'lucide-react';
 
 interface MyOrdersProps {
   onBack: () => void;
@@ -19,6 +21,14 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
   const [filter, setFilter] = useState<OrderStatusFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Review state
+  const [selectedItem, setSelectedItem] = useState<OrderItemResponse | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [evidence, setEvidence] = useState<File | null>(null);
+  const [submittingReview, setSubmittingReview] = useState(false);
+
   const fetchOrders = async () => {
     try {
       setLoading(true);
@@ -29,24 +39,24 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
       }
 
       console.log('Fetching orders for user:', userInfo.result.id);
-      
+
       // Sử dụng getOrdersByUserId thay vì getAllOrders
       const response = await orderService.getOrdersByUserId(userInfo.result.id);
-      
+
       console.log('Orders response:', response);
-      
+
       if (response.result) {
         // Filter orders by current user
         const myOrders = response.result.filter(
           order => order.items && order.items.length > 0
         );
-        setOrders(myOrders.sort((a, b) => 
+        setOrders(myOrders.sort((a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         ));
       }
     } catch (error: any) {
       console.error('Failed to fetch orders:', error);
-      
+
       // Hiển thị lỗi cho user
       if (error.status === 401) {
         alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
@@ -55,6 +65,33 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleReviewSubmit = async () => {
+    if (!selectedItem) return;
+    try {
+      setSubmittingReview(true);
+      const res = await reviewService.createReview({
+        orderDetailId: selectedItem.orderDetailId,
+        ratingStar: rating,
+        comment: comment
+      }, evidence || undefined);
+
+      if (res.result) {
+        alert('Cảm ơn bạn đã đánh giá sản phẩm!');
+        setShowReviewModal(false);
+        setSelectedItem(null);
+        setRating(5);
+        setComment('');
+        setEvidence(null);
+        fetchOrders(); // Refresh to update UI if needed
+      }
+    } catch (err: any) {
+      console.error('Failed to submit review:', err);
+      alert(err.message || 'Không thể gửi đánh giá. Vui lòng thử lại.');
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -81,7 +118,7 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
 
   const filteredOrders = orders.filter(order => {
     const matchesFilter = filter === 'ALL' || order.status === filter;
-    const matchesSearch = searchQuery === '' || 
+    const matchesSearch = searchQuery === '' ||
       order.id.toString().includes(searchQuery) ||
       order.recipientName.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesFilter && matchesSearch;
@@ -98,10 +135,9 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background overflow-y-auto animate-in fade-in duration-500">
-      <div className="min-h-screen pb-20">
+    <div className="min-h-screen bg-background pb-20 animate-in fade-in duration-500">
       <div className="max-w-[1280px] mx-auto px-4 md:px-10 lg:px-40 py-12">
-        
+
         {/* Header */}
         <div className="flex items-center gap-4 mb-10">
           <button
@@ -147,11 +183,10 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
                 <button
                   key={status}
                   onClick={() => setFilter(status)}
-                  className={`px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all ${
-                    filter === status
+                  className={`px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all ${filter === status
                       ? 'bg-primary text-white shadow-lg shadow-primary/20'
                       : 'bg-gray-50 text-gray-400 hover:bg-gray-100'
-                  }`}
+                    }`}
                 >
                   {status === 'ALL' ? 'Tất cả' : getStatusConfig(status).label}
                 </button>
@@ -173,7 +208,7 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
             </div>
             <h3 className="text-2xl font-black text-gray-900 mb-2">Chưa có đơn hàng nào</h3>
             <p className="text-gray-500 mb-8">
-              {filter !== 'ALL' 
+              {filter !== 'ALL'
                 ? `Không tìm thấy đơn hàng với trạng thái "${getStatusConfig(filter).label}"`
                 : 'Hãy bắt đầu mua sắm để tạo đơn hàng đầu tiên nhé!'
               }
@@ -241,9 +276,19 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
                         </p>
                         <div className="space-y-2">
                           {order.items?.slice(0, 3).map((item, idx) => (
-                            <div key={idx} className="flex justify-between text-sm">
+                            <div key={idx} className="flex justify-between items-center text-sm py-1">
                               <span className="text-gray-600">{item.productName} x{item.quantity}</span>
-                              <span className="font-bold text-gray-900">{item.unitPrice.toLocaleString('vi-VN')}đ</span>
+                              <div className="flex items-center gap-4">
+                                <span className="font-bold text-gray-900">{item.unitPrice.toLocaleString('vi-VN')}đ</span>
+                                {order.status === 'DELIVERED' && (
+                                  <button
+                                    onClick={() => { setSelectedItem(item); setShowReviewModal(true); }}
+                                    className="text-primary font-black text-[10px] uppercase tracking-wider hover:underline"
+                                  >
+                                    Đánh giá
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           ))}
                           {(order.items?.length || 0) > 3 && (
@@ -298,7 +343,103 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
           </div>
         )}
       </div>
-      </div>
+
+      {/* Review Modal */}
+      {showReviewModal && selectedItem && (
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="px-10 py-8 border-b border-gray-50 flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-black text-gray-900">Đánh giá sản phẩm</h3>
+                <p className="text-gray-400 font-bold text-sm mt-1">{selectedItem.productName}</p>
+              </div>
+              <button
+                onClick={() => setShowReviewModal(false)}
+                className="size-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 hover:text-gray-900 transition-all"
+              >
+                <X className="size-6" />
+              </button>
+            </div>
+
+            <div className="p-10 space-y-8">
+              {/* Rating */}
+              <div className="flex flex-col items-center gap-4">
+                <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Độ hài lòng của bạn</p>
+                <div className="flex gap-3">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      onClick={() => setRating(star)}
+                      className="transition-transform hover:scale-125 focus:outline-none"
+                    >
+                      <Star
+                        className={`size-10 ${star <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'} transition-colors`}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Comment */}
+              <div className="space-y-3">
+                <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Nhận xét của bạn</p>
+                <textarea
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="Hãy chia sẻ cảm nhận của bạn về sản phẩm này nhé..."
+                  className="w-full h-32 p-6 bg-gray-50 border border-gray-100 rounded-3xl text-sm font-medium outline-none focus:border-primary transition-all resize-none"
+                />
+              </div>
+
+              {/* Evidence Upload */}
+              <div className="space-y-3">
+                <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Hình ảnh thực tế (không bắt buộc)</p>
+                <div className="flex items-center gap-4">
+                  <label className="size-20 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all group">
+                    <Camera className="size-6 text-gray-300 group-hover:text-primary transition-colors" />
+                    <span className="text-[8px] font-black text-gray-300 mt-1 uppercase group-hover:text-primary">Tải lên</span>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={(e) => setEvidence(e.target.files?.[0] || null)}
+                    />
+                  </label>
+                  {evidence && (
+                    <div className="relative size-20 rounded-2xl overflow-hidden border border-gray-100 group">
+                      <img
+                        src={URL.createObjectURL(evidence)}
+                        alt="Evidence"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        onClick={() => setEvidence(null)}
+                        className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="size-5 text-white" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="px-10 py-8 bg-gray-50 border-t border-gray-100">
+              <button
+                onClick={handleReviewSubmit}
+                disabled={submittingReview || !comment.trim()}
+                className="w-full py-5 bg-primary text-white font-black rounded-[24px] shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+              >
+                {submittingReview ? (
+                  <Loader2 className="size-5 animate-spin" />
+                ) : (
+                  'Gửi đánh giá ngay'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

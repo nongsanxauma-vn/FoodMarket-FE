@@ -193,6 +193,25 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
     }
   };
 
+  const handleDeleteCombo = async (id: number) => {
+    if (!window.confirm(`Bạn có chắc muốn xóa combo/hộp mù ID #${id}? Hành động này không thể hoàn tác.`)) return;
+
+    try {
+      setIsDeleting(true);
+      await comboService.delete(id);
+      alert('Đã xóa thành công!');
+      fetchData();
+    } catch (err: any) {
+      alert(err?.data?.message || 'Có lỗi khi xóa combo/hộp mù');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleEditCombo = (id: number) => {
+    onNavigate(`combo-builder/${id}`);
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[600px] gap-4">
@@ -367,10 +386,22 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex items-center justify-end gap-2">
-                        <button disabled={isDeleting} className="size-9 bg-gray-50 text-gray-400 rounded-xl flex items-center justify-center hover:bg-gray-100 transition-colors disabled:opacity-50 cursor-not-allowed">
+                        <button
+                          onClick={() => handleEditCombo(c.id)}
+                          disabled={isDeleting}
+                          title="Chỉnh sửa combo"
+                          className="size-9 bg-gray-50 text-primary rounded-xl flex items-center justify-center hover:bg-primary/10 transition-colors disabled:opacity-50 cursor-pointer"
+                        >
+                          <Edit3 className="size-4" />
+                        </button>
+                        <button disabled={isDeleting} className="size-9 bg-gray-50 text-gray-400 rounded-xl flex items-center justify-center hover:bg-gray-100 transition-colors disabled:opacity-50">
                           <EyeOff className="size-4" />
                         </button>
-                        <button disabled={isDeleting} className="size-9 bg-gray-50 text-red-400 rounded-xl flex items-center justify-center hover:bg-red-50 transition-colors disabled:opacity-50 cursor-not-allowed">
+                        <button
+                          onClick={() => handleDeleteCombo(c.id)}
+                          disabled={isDeleting}
+                          className="size-9 bg-gray-50 text-red-400 rounded-xl flex items-center justify-center hover:bg-red-50 transition-colors disabled:opacity-50"
+                        >
                           <Trash2 className="size-4" />
                         </button>
                       </div>

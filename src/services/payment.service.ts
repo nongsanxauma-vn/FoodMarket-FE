@@ -11,10 +11,15 @@ export interface PaymentResponse {
     id: number;
     orderId: number;
     amount: number;
-    paymentMethod: string;
+    paymentGateway: string;
     status: string;
-    transactionId?: string;
-    payOsCheckoutUrl?: string; // Tùy thuộc vào design BE trả về gì, nhưng ta cứ đón nhận URL nếu có
+    paymentDate?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    // PayOS fields
+    payosOrderCode?: string;
+    checkoutUrl?: string;
+    qrCodeUrl?: string;
 }
 
 class PaymentService {

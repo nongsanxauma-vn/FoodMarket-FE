@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppRole } from '../../types/index';
+import { useAuth } from '../../contexts/AuthContext';
 import { ArrowLeft } from 'lucide-react';
 import { authService, otpService } from '../../services';
 import OTPVerification from '../../components/auth/OTPVerification';
 
 interface RegisterProps {
-  onRegister: (role: AppRole) => void;
   onGoToLogin: () => void;
   onGoToShipperRegister?: () => void;
 }
@@ -33,7 +34,20 @@ const InputField = ({
   </div>
 );
 
-const Register: React.FC<RegisterProps> = ({ onRegister, onGoToLogin, onGoToShipperRegister }) => {
+const Register: React.FC<RegisterProps> = ({ onGoToLogin, onGoToShipperRegister }) => {
+  const { login, isAuthenticated, user } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  React.useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.role === AppRole.ADMIN) navigate('/admin');
+      else if (user.role === AppRole.FARMER) navigate('/farmer');
+      else if (user.role === AppRole.SHIPPER) navigate('/shipper');
+      else navigate('/');
+    }
+  }, [isAuthenticated, user, navigate]);
+
   const [selectedRole, setSelectedRole] = useState<AppRole>(AppRole.FARMER);
   const [agreed, setAgreed] = useState(false);
   const [fullName, setFullName] = useState('');
@@ -71,7 +85,11 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onGoToLogin, onGoToShip
               );
               if (response.result) {
                 setSuccess('Đăng ký thành công! Đang chuyển hướng...');
-                setTimeout(() => { onRegister(selectedRole); }, 1500);
+                setTimeout(() => {
+                  login(selectedRole);
+                  if (selectedRole === AppRole.FARMER) navigate('/kyc');
+                  else navigate('/');
+                }, 1500);
               }
             } catch (err: any) {
               setError(err?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.');
@@ -159,7 +177,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onGoToLogin, onGoToShip
   const isFarmer = selectedRole === AppRole.FARMER;
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background-light font-sans">
+    <div className="flex min-h-screen w-full bg-background-light font-sans">
 
       {/* ── LEFT ── Brand image panel */}
       <div className="hidden lg:block lg:w-1/2 relative h-full shrink-0">

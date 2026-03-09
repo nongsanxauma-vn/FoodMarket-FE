@@ -40,10 +40,17 @@ class HttpClient {
     const publicEndpoints = [
       '/auth/login',
       '/users/register',
-      '/otp-verification/send-otp',
-      '/otp-verification/verify-otp',
-      '/forgot-password/reset',
+      '/otp-verification',
+      '/forgot-password',
+      '/blogs',
+      '/products',
+      '/mystery-boxes',
+      '/payment', // Cho phép callback thanh toán
+      '/withdraw', // Cho phép callback rút tiền
     ];
+
+    // Các trường hợp ngoại lệ (vẫn cần auth)
+    if (url === '/mystery-boxes/me') return false;
 
     return publicEndpoints.some(endpoint => url.includes(endpoint));
   }
@@ -131,15 +138,19 @@ class HttpClient {
 
       if (!response.ok) {
         console.error(`[HTTP] Error ${response.status}:`, responseData);
-        
-        // Nếu 401, có thể token hết hạn
+
+        // Nếu 401, chỉ redirect về home nếu đó KHÔNG phải là public endpoint
         if (response.status === 401) {
-          console.error('[HTTP] Unauthorized - Token may be expired');
-          // Clear token và redirect to login
-          localStorage.removeItem(TOKEN_KEY);
-          window.location.href = '/';
+          console.error('[HTTP] Unauthorized - Endpoint:', url);
+          if (!this.isPublicEndpoint(url)) {
+            console.error('[HTTP] Redirecting to login/home...');
+            localStorage.removeItem(TOKEN_KEY);
+            // Sử dụng path tương đối hoặc bao gồm basename để tránh nhảy ra khỏi app
+            const basename = '/nong_san_xau_ma/';
+            window.location.href = basename;
+          }
         }
-        
+
         throw {
           status: response.status,
           data: responseData,

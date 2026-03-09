@@ -1,16 +1,18 @@
-
-import React, { useState } from 'react';
-import { AppRole } from '../../types';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { AppRole, KYCStatus } from '../../types';
 import { Facebook } from "lucide-react";
 import { authService } from '../../services';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface LoginProps {
-  onLogin: (role: AppRole) => void;
   onGoToRegister: () => void;
   onForgotPassword?: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin, onGoToRegister, onForgotPassword }) => {
+const Login: React.FC<LoginProps> = ({ onGoToRegister, onForgotPassword }) => {
+  const { login, isAuthenticated, user } = useAuth();
+  const navigate = useNavigate();
   const [selectedRole, setSelectedRole] = useState<AppRole>(AppRole.BUYER);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
@@ -18,17 +20,24 @@ const Login: React.FC<LoginProps> = ({ onLogin, onGoToRegister, onForgotPassword
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.role === AppRole.ADMIN) navigate('/admin');
+      else if (user.role === AppRole.FARMER) navigate('/farmer');
+      else if (user.role === AppRole.SHIPPER) navigate('/shipper');
+      else navigate('/');
+    }
+  }, [isAuthenticated, user, navigate]);
+
   const handleGoogleLogin = () => {
-    console.log("Google Login clicked! Redirecting to Backend...");
-    setIsLoading(true);
-    // Redirect to backend OAuth2 initiation endpoint
-    // We pass the selected role as a query parameter so the SuccessHandler knows what role to assign for new users
+    // ...
     const backendOAuthUrl = `http://localhost:8080/api/v1/oauth2/authorization/google?role=${selectedRole === AppRole.FARMER ? 'SHOP_OWNER' : selectedRole}`;
     window.location.href = backendOAuthUrl;
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background-light">
+    <div className="flex min-h-[calc(100vh-100px)] w-full bg-background-light">
       {/* Left Side: Brand Image Panel - Static background */}
       <div className="hidden lg:block lg:w-1/2 relative h-full shrink-0">
         <div className="absolute inset-0 bg-black/10 z-10"></div>
@@ -76,11 +85,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, onGoToRegister, onForgotPassword
               const response = await authService.login({ email, password });
 
               if (response.result?.authenticated) {
-                // Lấy thông tin user sau khi login thành công
                 const userInfo = await authService.getMyInfo();
 
                 if (userInfo.result) {
-                  // Map role từ backend sang frontend
                   const roleMap: Record<string, AppRole> = {
                     'BUYER': AppRole.BUYER,
                     'SHOP_OWNER': AppRole.FARMER,
@@ -89,7 +96,19 @@ const Login: React.FC<LoginProps> = ({ onLogin, onGoToRegister, onForgotPassword
                   };
 
                   const userRole = roleMap[userInfo.result.role?.name || 'BUYER'] || AppRole.BUYER;
-                  onLogin(userRole);
+                  login(userRole);
+
+                  // Navigate based on role & status
+                  if (userRole === AppRole.ADMIN) navigate('/admin');
+                  else if (userRole === AppRole.FARMER) {
+                    if (userInfo.result.status === 'PENDING') navigate('/kyc');
+                    else navigate('/farmer');
+                  }
+                  else if (userRole === AppRole.SHIPPER) {
+                    if (userInfo.result.status === 'PENDING') navigate('/kyc');
+                    else navigate('/shipper');
+                  }
+                  else navigate('/');
                 }
               }
             } catch (err: any) {
@@ -229,9 +248,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, onGoToRegister, onForgotPassword
               </button>
             </p>
           </div>
-        </div>
-      </div>
-    </div>
+        </div >
+      </div >
+    </div >
   );
 };
 
