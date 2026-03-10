@@ -1,0 +1,58 @@
+# Phân tích Hệ thống Routing - FoodMarket-FE
+
+Dưới đây là phân tích chi tiết về cấu trúc và hiệu suất của các file trong thư mục `src/routes`.
+
+## 1. Chức năng của các File
+
+| File | Chức năng chính |
+| :--- | :--- |
+| **AppRouter.tsx** | File điều hướng chính, tổ chức cấu trúc routing tổng thể. Chia các Route thành 2 nhóm lớn: Buyer/Auth (dùng [MainLayout](file:///c:/Users/kjt/Desktop/code_SWD/FoodMarket-FE/src/routes/MainLayout.tsx#8-21)) và Admin/Farmer/Shipper (dùng Layout riêng). |
+| **ProtectedRoute.tsx** | Hợp phần (Wrapper) bảo vệ route. Kiểm tra: Trạng thái đăng nhập, Quyền (Role), và Trạng thái KYC. Hiển thị Spinner khi đang kiểm tra Auth. |
+| **PublicRoutes.tsx** | Chứa các trang công khai (Home, Chi tiết sản phẩm, Tin tức). Có logic điều hướng người dùng đã đăng nhập về Dashboard tương ứng với Role của họ. |
+| **AuthRoutes.tsx** | Các trang xác thực: Đăng nhập, Đăng ký (User & Shipper), OAuth. |
+| **ProtectedRoutes.tsx** | Các trang dành cho người dùng đã đăng nhập: Giỏ hàng, Thanh toán, Đơn hàng của tôi, Profile, KYC. |
+| **AdminRoutes.tsx** | Quản lý route dành riêng cho Admin (Dashboard, Duyệt KYC, Quản lý tin tức, Shipper, Ví...). |
+| **FarmerRoutes.tsx** | Quản lý route dành cho Nông dân (Sản phẩm, Đơn hàng, Ví, Blind Box...). |
+| **ShipperRoutes.tsx** | Quản lý route dành cho Shipper (hiện tại có Dashboard). |
+| **MainLayout.tsx** | Layout chung cho phía Buyer (có Header & Footer). |
+| **AdminLayout.tsx** | Layout cho Admin (có Sidebar tích hợp điều hướng). |
+| **FarmerLayout.tsx** | Layout cho Farmer (có Sidebar tích hợp điều hướng). |
+
+---
+
+## 2. Đánh giá Tối ưu hóa
+
+Hiện tại, mã nguồn đã có cấu trúc tốt, phân chia rõ ràng (Separation of Concerns). Tuy nhiên, **vẫn chưa được tối ưu hóa hoàn toàn**. Dưới đây là các điểm cần cải thiện:
+
+### ⚠️ Vấn đề nghiêm trọng nhất: Thiếu Code Splitting
+Tất cả các Page (Dashboard, ProductDetail, NewsDetail...) đều được import **Component tĩnh** ở đầu các file route.
+- **Hậu quả:** Toàn bộ code của ứng dụng sẽ được gộp chung vào một file `bundle.js` duy nhất. Người dùng chỉ vào trang chủ cũng phải tải code của trang Admin, Farmer... làm chậm tốc độ load trang đầu tiên (FCP/LCP).
+- **Giải pháp:** Sử dụng `React.lazy()` và `Suspense`.
+
+### 🛠️ Cấu trúc Component Route
+Các file route hiện đang được gọi như hàm trong [AppRouter.tsx](file:///c:/Users/kjt/Desktop/code_SWD/FoodMarket-FE/src/routes/AppRouter.tsx) (ví dụ: `{PublicRoutes()}`).
+- **Vấn đề:** Trong React, gọi hàm trực tiếp trong JSX có thể khiến React không tối ưu được quá trình Diffing và Re-rendering hiệu quả bằng việc dùng Component (`<PublicRoutes />`).
+- **Giải pháp:** Chuyển sang định dạng Component và sử dụng Nested Routes đồng nhất.
+
+### 🔄 Logic điều hướng (Redirection)
+Logic điều hướng trong [PublicRoutes.tsx](file:///c:/Users/kjt/Desktop/code_SWD/FoodMarket-FE/src/routes/PublicRoutes.tsx) đang trộn lẫn với định nghĩa route. Mặc dù hoạt động tốt, nhưng khi số lượng role tăng lên, logic này nên được tách ra một hook hoặc component chuyên biệt để dễ bảo trì.
+
+---
+
+## 3. Kiến nghị Tối ưu hóa
+
+Tôi đề xuất thực hiện các thay đổi sau để ứng dụng chạy nhanh và chuyên nghiệp hơn:
+
+1.  **Áp dụng Lazy Loading:**
+    ```tsx
+    const AdminDashboard = React.lazy(() => import('../pages/admin/Dashboard'));
+    ```
+2.  **Sử dụng Suspense:** Bao bọc [AppRouter](file:///c:/Users/kjt/Desktop/code_SWD/FoodMarket-FE/src/routes/AppRouter.tsx#12-32) bằng `<Suspense>` với một Loading UI đẹp mắt để hiển thị trong lúc tải các chunk code.
+3.  **Chuẩn hóa Layout:** Đồng nhất cách xử lý `currentPath` và điều hướng trong [AdminLayout](file:///c:/Users/kjt/Desktop/code_SWD/FoodMarket-FE/src/routes/AdminLayout.tsx#8-38) và [FarmerLayout](file:///c:/Users/kjt/Desktop/code_SWD/FoodMarket-FE/src/routes/FarmerLayout.tsx#8-37) để tránh lặp code.
+
+> [!TIP]
+> Việc áp dụng Lazy Loading có thể giảm kích thước file bundle ban đầu từ 30-50%, giúp ứng dụng mượt mà hơn trên thiết bị di động hoặc mạng yếu.
+
+---
+
+**Bạn có muốn tôi thực hiện các tối ưu hóa này ngay bây giờ không?**

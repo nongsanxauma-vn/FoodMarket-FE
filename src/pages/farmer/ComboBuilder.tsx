@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import {
   ArrowLeft,
   Save,
@@ -22,6 +23,9 @@ interface SelectedIngredient {
 }
 
 const ComboBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+  const { comboId } = useParams<{ comboId: string }>();
+  const isEditMode = !!comboId;
+
   const [availableProducts, setAvailableProducts] = useState<ProductResponse[]>([]);
   const [selectedIngredients, setSelectedIngredients] = useState<SelectedIngredient[]>([]);
   const [comboName, setComboName] = useState('');
@@ -30,25 +34,49 @@ const ComboBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [isSaved, setIsSaved] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load farmer's actual products
   useEffect(() => {
-    const loadProducts = async () => {
+    const loadData = async () => {
+      setIsLoading(true);
       try {
         const userRes = await authService.getMyInfo();
+        let productsList: ProductResponse[] = [];
+
         if (userRes.result && userRes.result.id) {
           const res = await productService.getByShopId(Number(userRes.result.id));
           if (res.result) {
-            setAvailableProducts(res.result);
+            productsList = res.result;
+            setAvailableProducts(productsList);
+          }
+        }
+
+        if (isEditMode) {
+          const comboRes = await comboService.getById(Number(comboId));
+          if (comboRes.result) {
+            const combo = comboRes.result;
+            setComboName(combo.comboName);
+            setComboDescription(combo.description || '');
+            setComboPrice(combo.discountPrice.toString());
+
+            // Map items to SelectedIngredient
+            const selected = combo.items.map(item => {
+              const product = productsList.find(p => p.id === item.productId);
+              return {
+                productId: item.productId,
+                productName: product?.productName || `Sản phẩm #${item.productId}`,
+                quantity: item.quantity
+              };
+            });
+            setSelectedIngredients(selected);
           }
         }
       } catch (err) {
-        console.error('Failed to load products', err);
+        console.error('Failed to load data', err);
       } finally {
         setIsLoading(false);
       }
     };
-    loadProducts();
-  }, []);
+    loadData();
+  }, [comboId, isEditMode]);
 
   // Get suggested dishes based on selected ingredients (will be empty for real DB IDs unless updated in constants)
   const suggestedDishes = useMemo(() => {
@@ -120,16 +148,22 @@ const ComboBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }
 
     try {
-      await comboService.create({
+      const payload = {
         comboName,
         description: comboDescription,
-        discountPrice: Number(comboPrice) || 0,
-        type: 'CUSTOM',
+        discountPrice: priceNum,
+        type: 'CUSTOM' as const,
         items: selectedIngredients.map(ing => ({
           productId: ing.productId,
           quantity: ing.quantity
         }))
-      });
+      };
+
+      if (isEditMode) {
+        await comboService.update(Number(comboId), payload);
+      } else {
+        await comboService.create(payload);
+      }
 
       setIsSaved(true);
       setTimeout(() => {

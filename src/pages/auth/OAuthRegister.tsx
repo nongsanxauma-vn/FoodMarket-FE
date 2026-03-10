@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { AppRole } from '../../types';
 import { ArrowLeft, CheckCircle, Store, User, Truck, ShieldAlert } from 'lucide-react';
 import { authService, otpService } from '../../services';
+import { useAuth } from '../../contexts/AuthContext';
 import OTPVerification from '../../components/auth/OTPVerification';
 
 interface OAuthRegisterProps {
-    onRegisterSuccess: (role: AppRole) => void;
     onGoToLogin: () => void;
 }
 
@@ -32,7 +32,8 @@ const InputField = ({
     </div>
 );
 
-const OAuthRegister: React.FC<OAuthRegisterProps> = ({ onRegisterSuccess, onGoToLogin }) => {
+const OAuthRegister: React.FC<OAuthRegisterProps> = ({ onGoToLogin }) => {
+    const { login } = useAuth();
     const [selectedRole, setSelectedRole] = useState<AppRole>(AppRole.BUYER);
     const [agreed, setAgreed] = useState(false);
 
@@ -194,7 +195,7 @@ const OAuthRegister: React.FC<OAuthRegisterProps> = ({ onRegisterSuccess, onGoTo
                                         setTimeout(() => {
                                             // Clear URL params
                                             window.history.replaceState({}, document.title, "/nong_san_xau_ma/");
-                                            onRegisterSuccess(selectedRole);
+                                            login(selectedRole);
                                         }, 1000);
                                     } else {
                                         // If login fails for some reason but registration succeeded
@@ -219,7 +220,7 @@ const OAuthRegister: React.FC<OAuthRegisterProps> = ({ onRegisterSuccess, onGoTo
     }
 
     return (
-        <div className="flex h-screen w-screen overflow-hidden bg-background-light font-sans">
+        <div className="flex min-h-screen w-full bg-background-light font-sans">
             {/* ── LEFT ── Brand image panel */}
             <div className="hidden lg:block lg:w-1/2 relative h-full shrink-0">
                 <div className="absolute inset-0 bg-black/20 z-10" />

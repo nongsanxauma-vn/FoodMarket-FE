@@ -60,6 +60,7 @@ export interface UserResponse {
   username?: string;
   profileImageUrl?: string;
   kycStatus?: string;
+  createdAt?: string;
 }
 
 export interface IntrospectRequest {

@@ -1,7 +1,4 @@
-/**
- * Services Index
- * Export tất cả các services để dễ dàng import
- */
+
 
 // Export services
 export { authService } from './auth.service';
@@ -19,6 +16,7 @@ export { blogService } from './blog.service';
 export { paymentService } from './payment.service';
 export { comboService } from './combo.service';
 export { cartService } from './cart.service';
+export { reviewService } from './review.service';
 export { httpClient } from './http.client';
 
 // Export types
@@ -41,6 +39,7 @@ export type {
     ProductComboRequest
 } from './combo.service';
 export type { AddCartItemRequest, CartItemResponse, CartResponse } from './cart.service';
+export type { ReviewResponse, ReviewCreateRequest, ReviewReplyRequest } from './review.service';
 export type { ApiResponse, RequestConfig } from './http.client';
 export type { UserUpdateRequest } from './user.service';
 

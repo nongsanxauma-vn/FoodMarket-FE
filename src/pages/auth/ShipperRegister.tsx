@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bike, User, Phone, Mail, Lock, MapPin, CreditCard, FileText, Camera, ArrowRight, ArrowLeft, CheckCircle2, Shield, X } from 'lucide-react';
 import { shipperService, otpService } from '../../services';
+import { useAuth } from '../../contexts/AuthContext';
+import { AppRole } from '../../types';
 
 interface ShipperRegisterProps {
-  onComplete: () => void;
   onBack: () => void;
 }
 
-const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack }) => {
+const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onBack }) => {
+  const { login } = useAuth();
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     fullName: '', phone: '', email: '', password: '', confirmPassword: '',
@@ -129,7 +133,8 @@ const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack })
 
       if (response.result) {
         setShowOtpModal(false);
-        onComplete();
+        login(AppRole.SHIPPER);
+        navigate('/kyc');
       }
     } catch (err: any) {
       console.error('Shipper registration failed:', err);
@@ -165,32 +170,32 @@ const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack })
       <div className="w-full max-w-[900px] bg-white rounded-[40px] shadow-2xl overflow-hidden flex border animate-in fade-in duration-700 relative z-10">
 
         {/* Left Sidebar */}
-        <div className="w-[280px] bg-gradient-to-br from-[#1a4d2e] to-[#2d6b3f] p-8 text-white flex flex-col justify-between relative overflow-hidden">
+        <div className="w-[240px] bg-gradient-to-br from-[#1a4d2e] to-[#2d6b3f] p-6 text-white flex flex-col justify-between relative overflow-hidden">
           <div className="relative z-10">
             <button onClick={onBack} className="flex items-center gap-2 text-white/70 hover:text-white mb-8 transition-colors font-bold text-xs uppercase">
               <ArrowLeft className="size-4" /> Quay lại
             </button>
 
-            <div className="size-14 bg-white rounded-2xl flex items-center justify-center text-primary mb-5 shadow-xl">
-              <Bike className="size-7" />
+            <div className="size-12 bg-white rounded-xl flex items-center justify-center text-primary mb-4 shadow-xl">
+              <Bike className="size-6" />
             </div>
 
-            <h1 className="text-3xl font-black font-display leading-tight mb-2 uppercase">ĐĂNG KÝ</h1>
-            <h2 className="text-2xl font-black text-white/50 font-display mb-4">SHIPPER</h2>
+            <h1 className="text-2xl font-black font-display leading-tight mb-1 uppercase">ĐĂNG KÝ</h1>
+            <h2 className="text-xl font-black text-white/50 font-display mb-3">SHIPPER</h2>
 
-            <p className="text-sm text-white/90 font-medium leading-relaxed mb-8">
+            <p className="text-[13px] text-white/90 font-medium leading-relaxed mb-6">
               Trở thành đối tác vận chuyển và kiếm thu nhập linh hoạt.
             </p>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
               {steps.map((s) => (
-                <div key={s.number} className="flex items-center gap-3">
-                  <div className={`size-10 rounded-xl flex items-center justify-center font-black text-sm transition-all ${step === s.number ? 'bg-white text-primary shadow-lg' :
+                <div key={s.number} className="flex items-center gap-2.5">
+                  <div className={`size-8 rounded-lg flex items-center justify-center font-black text-xs transition-all ${step === s.number ? 'bg-white text-primary shadow-lg' :
                     step > s.number ? 'bg-primary/30 text-white' : 'bg-white/10 text-white/50'
                     }`}>
-                    {step > s.number ? <CheckCircle2 className="size-5" /> : s.number}
+                    {step > s.number ? <CheckCircle2 className="size-4" /> : s.number}
                   </div>
-                  <p className={`text-sm font-bold uppercase ${step === s.number ? 'text-white' : 'text-white/50'}`}>
+                  <p className={`text-xs font-bold uppercase ${step === s.number ? 'text-white' : 'text-white/50'}`}>
                     {s.title}
                   </p>
                 </div>
@@ -205,24 +210,24 @@ const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack })
         </div>
 
         {/* Right Form */}
-        <div className="flex-1 p-8 bg-white overflow-y-auto max-h-[90vh] custom-scrollbar">
+        <div className="flex-1 p-7 bg-white overflow-y-auto max-h-[90vh] custom-scrollbar">
           <div className="max-w-[480px] mx-auto">
             {/* Progress */}
-            <div className="mb-6">
-              <div className="flex gap-2 mb-3">
+            <div className="mb-5">
+              <div className="flex gap-2 mb-2.5">
                 {steps.map((s) => (
-                  <div key={s.number} className={`flex-1 h-2 rounded-full transition-all ${step >= s.number ? 'bg-primary' : 'bg-gray-100'}`} />
+                  <div key={s.number} className={`flex-1 h-1.5 rounded-full transition-all ${step >= s.number ? 'bg-primary' : 'bg-gray-100'}`} />
                 ))}
               </div>
-              <p className="text-sm font-bold text-gray-400">Bước {step} / {steps.length}</p>
+              <p className="text-[11px] font-bold text-gray-400">Bước {step} / {steps.length}</p>
             </div>
 
             {/* Step 1 */}
             {step === 1 && (
-              <div className="space-y-3">
-                <div className="mb-4">
-                  <h3 className="text-xl font-black text-gray-900 mb-1 uppercase">Thông tin cá nhân</h3>
-                  <p className="text-sm text-gray-500">Điền đầy đủ thông tin chính xác</p>
+              <div className="space-y-2.5">
+                <div className="mb-3">
+                  <h3 className="text-lg font-black text-gray-900 mb-0.5 uppercase">Thông tin cá nhân</h3>
+                  <p className="text-[13px] text-gray-500">Điền đầy đủ thông tin chính xác</p>
                 </div>
 
                 {error && (
@@ -232,52 +237,54 @@ const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onComplete, onBack })
                 )}
 
                 <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-gray-300" />
                   <input type="text" value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                    placeholder="Họ và tên" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base"
+                    placeholder="Họ và tên" className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[15px]"
                     required disabled={isLoading} />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2.5">
                   <div className="relative">
-                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-gray-300" />
                     <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="Số điện thoại" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base"
+                      placeholder="Số điện thoại" className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[15px]"
                       required disabled={isLoading} />
                   </div>
                   <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-gray-300" />
                     <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="Email" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base"
+                      placeholder="Email" className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[15px]"
                       required disabled={isLoading} />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2.5">
                   <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-gray-300" />
                     <input type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      placeholder="Mật khẩu" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base"
+                      placeholder="Mật khẩu" className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[15px]"
                       required disabled={isLoading} />
                   </div>
                   <div className="relative">
-                    <Shield className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
+                    <Shield className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-gray-300" />
                     <input type="password" value={formData.confirmPassword} onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                      placeholder="Xác nhận mật khẩu" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base"
+                      placeholder="Xác nhận MK" className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[15px]"
                       required disabled={isLoading} />
                   </div>
                 </div>
-                <select value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base cursor-pointer"
-                  required disabled={isLoading}>
-                  <option value="">Chọn Tỉnh/Thành phố</option>
-                  <option value="hcm">TP. Hồ Chí Minh</option>
-                  <option value="hn">Hà Nội</option>
-                  <option value="dn">Đà Nẵng</option>
-                </select>
-                <div className="relative">
-                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
-                  <input type="text" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    placeholder="Địa chỉ chi tiết" className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-base"
-                    required disabled={isLoading} />
+                <div className="grid grid-cols-[1fr_2fr] gap-2.5">
+                  <select value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    className="w-full px-3 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm cursor-pointer"
+                    required disabled={isLoading}>
+                    <option value="">Tỉnh/TP</option>
+                    <option value="hcm">HCM</option>
+                    <option value="hn">Hà Nội</option>
+                    <option value="dn">Đà Nẵng</option>
+                  </select>
+                  <div className="relative">
+                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-gray-300" />
+                    <input type="text" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      placeholder="Địa chỉ chi tiết" className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[15px]"
+                      required disabled={isLoading} />
+                  </div>
                 </div>
               </div>
             )}

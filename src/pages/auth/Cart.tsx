@@ -17,17 +17,25 @@ interface EnrichedCartItem extends CartItemResponse {
 
 type GroupedCart = Record<string, EnrichedCartItem[]>;
 
+interface CartState {
+  cart: CartResponse | null;
+  groupedItems: GroupedCart;
+}
+
 const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) => {
-  const [cart, setCart] = useState<CartResponse | null>(null);
-  const [groupedItems, setGroupedItems] = useState<GroupedCart>({});
+  const [cartState, setCartState] = useState<CartState>({ cart: null, groupedItems: {} });
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
 
-  const fetchCart = async () => {
+  const fetchCart = async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     try {
       const resp = await cartService.getCart();
       const cartData = resp.result;
-      if (!cartData) return;
+      if (!cartData) {
+        setCartState({ cart: null, groupedItems: {} });
+        return;
+      }
 
       // Fetch product details for each item to get imageUrl and shopName
       const cartItems = cartData.items || [];
@@ -59,8 +67,10 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
         return acc;
       }, {});
 
-      setGroupedItems(grouped);
-      setCart(cartData);
+      setCartState({
+        cart: cartData,
+        groupedItems: grouped
+      });
     } catch (error) {
       console.error('Failed to load cart', error);
     } finally {
@@ -70,6 +80,10 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
 
   useEffect(() => {
     fetchCart();
+
+    const handleCartUpdate = () => fetchCart(true);
+    window.addEventListener('cart-updated', handleCartUpdate);
+    return () => window.removeEventListener('cart-updated', handleCartUpdate);
   }, []);
 
   const handleUpdateQuantity = async (productId: number, currentQty: number, change: number) => {
@@ -78,7 +92,7 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
     setUpdatingId(productId);
     try {
       await cartService.updateQuantity(productId, newQty);
-      await fetchCart();
+      await fetchCart(true);
     } catch (error) {
       console.error('Update quantity failed', error);
     } finally {
@@ -90,7 +104,7 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
     setUpdatingId(productId);
     try {
       await cartService.removeItem(productId);
-      await fetchCart();
+      await fetchCart(true);
     } catch (error) {
       console.error('Remove item failed', error);
     } finally {
@@ -111,7 +125,7 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
     }
   };
 
-  if (loading) {
+  if (loading && !cartState.cart) {
     return (
       <div className="flex-1 bg-background flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-4 text-primary">
@@ -122,13 +136,14 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
     );
   }
 
+  const { cart, groupedItems } = cartState;
   const totalItems = cart?.items.reduce((sum, item) => sum + item.quantity, 0) || 0;
   const shopsCount = Object.keys(groupedItems).length;
 
   return (
-    <div className="min-h-screen bg-background pb-20 animate-in fade-in duration-500">
+    <div className="bg-background pb-20 animate-in fade-in duration-500">
       <div className="max-w-[1280px] mx-auto px-4 md:px-10 lg:px-40 py-12">
-        
+
         {/* Back Button */}
         <button
           onClick={onBackToShopping}
@@ -284,3 +299,4 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
 };
 
 export default Cart;
+
