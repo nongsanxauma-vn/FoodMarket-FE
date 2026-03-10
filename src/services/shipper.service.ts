@@ -69,6 +69,9 @@ export interface ShipperLocationResponse {
   latitude: number;
   longitude: number;
   updatedAt: string;
+  // ✅ Tọa độ điểm đến để vẽ đường trên map
+  destLatitude?: number | null;
+  destLongitude?: number | null;
 }
 
 // ===================== SERVICE =====================
