@@ -14,6 +14,19 @@ const AddProduct: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Thêm state xử lý ảnh
+  const [images, setImages] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const selectedFiles = Array.from(e.target.files);
+      const newImages = [...images, ...selectedFiles].slice(0, 4); // Max 4 ảnh (1 chính, 3 phụ)
+      setImages(newImages);
+      setPreviews(newImages.map(file => URL.createObjectURL(file)));
+    }
+  };
+
   const handleSubmit = async () => {
     if (!productName || price <= 0 || stock <= 0) {
       setError('Vui lòng điền đầy đủ thông tin sản phẩm và giá hợp lệ.');
@@ -30,9 +43,7 @@ const AddProduct: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         description,
         unit,
         categoryId,
-        // Tạm thời chưa xử lý upload ảnh riêng biệt ở đây
-        imageUrl: 'https://picsum.photos/seed/newproduct/400/400'
-      });
+      }, images.length > 0 ? images[0] : undefined);
 
       if (response.result) {
         setIsSubmitted(true);
@@ -220,22 +231,34 @@ const AddProduct: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             </div>
 
             <div className="space-y-6">
-              <label className="aspect-square w-full border-2 border-dashed border-gray-200 rounded-[32px] flex flex-col items-center justify-center text-center gap-4 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition-all group p-10">
-                <input type="file" accept="image/*" className="hidden" />
-                <div className="size-16 bg-gray-50 rounded-2xl flex items-center justify-center group-hover:bg-primary/20 transition-all transform group-hover:-translate-y-1">
-                  <span className="material-symbols-outlined text-gray-400 text-3xl group-hover:text-primary">upload</span>
-                </div>
-                <div>
-                  <p className="text-sm font-black text-gray-800">Kéo thả hoặc Click để tải ảnh</p>
-                  <p className="text-[10px] text-gray-400 font-medium mt-1 px-4 leading-relaxed">Khuyến khích ảnh thật, không qua chỉnh sửa để tăng độ tin cậy.</p>
-                </div>
+              <label className="aspect-square w-full border-2 border-dashed border-gray-200 rounded-[32px] flex flex-col items-center justify-center text-center gap-4 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition-all group relative overflow-hidden">
+                <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
+                
+                {previews.length > 0 ? (
+                  <img src={previews[0]} alt="Sản phẩm chính" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="p-10 flex flex-col items-center">
+                    <div className="size-16 bg-gray-50 rounded-2xl flex items-center justify-center group-hover:bg-primary/20 transition-all transform group-hover:-translate-y-1">
+                      <span className="material-symbols-outlined text-gray-400 text-3xl group-hover:text-primary">upload</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-gray-800">Kéo thả hoặc Click để tải ảnh</p>
+                      <p className="text-[10px] text-gray-400 font-medium mt-1 px-4 leading-relaxed">Khuyến khích ảnh thật, không qua chỉnh sửa để tăng độ tin cậy.</p>
+                    </div>
+                  </div>
+                )}
               </label>
 
               <div className="grid grid-cols-3 gap-3">
                 {[1, 2, 3].map(i => (
-                  <div key={i} className="aspect-square bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 hover:border-primary/20 cursor-pointer transition-colors">
-                    <Plus className="size-6" />
-                  </div>
+                  <label key={i} className="aspect-square bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 hover:border-primary/20 cursor-pointer transition-colors relative overflow-hidden">
+                    <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                    {previews.length > i ? (
+                        <img src={previews[i]} alt={`Sản phẩm phụ ${i}`} className="w-full h-full object-cover" />
+                    ) : (
+                        <Plus className="size-6" />
+                    )}
+                  </label>
                 ))}
               </div>
 

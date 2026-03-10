@@ -9,6 +9,7 @@ export interface ReviewResponse {
     comment: string;
     evidence?: string;
     replyFromShop?: string;
+    buyerFullName?: string;
 }
 
 export interface ReviewCreateRequest {

@@ -20,7 +20,8 @@ import {
   Newspaper,
   Send,
   ChevronRight,
-  ChefHat
+  ChefHat,
+  MessageSquare
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -37,7 +38,9 @@ const Sidebar: React.FC<SidebarProps> = ({ role, user, currentPath, onNavigate, 
     { name: 'Sản phẩm', icon: Package, id: 'products' },
     { name: 'Tạo Combo', icon: ChefHat, id: 'combo-builder' },
     { name: 'Đơn hàng', icon: ShoppingCart, id: 'orders' },
+    { name: 'Đánh giá', icon: MessageSquare, id: 'reviews' },
     { name: 'Thông báo', icon: Bell, id: 'notifications' },
+    { name: 'Tin nhắn', icon: Send, id: 'chat' },
     { name: 'Blind Box Tool', icon: Gift, id: 'blind-box' },
     { name: 'Hồ sơ cá nhân', icon: UserCircle, id: 'profile' },
     { name: 'Ví tiền', icon: Wallet, id: 'wallet' },

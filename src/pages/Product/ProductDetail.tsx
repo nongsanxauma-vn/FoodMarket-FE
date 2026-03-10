@@ -10,7 +10,8 @@ import {
   Heart,
   Share2,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  MessageSquare
 } from 'lucide-react';
 import { productService, ProductResponse, cartService, reviewService, ReviewResponse } from '../../services';
 import ShopProducts from './ShopProducts';
@@ -227,6 +228,19 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
                 <h4 className="font-black text-gray-900 text-lg mb-1">{farmName}</h4>
                 <div className="flex gap-3 mt-4">
                   <button onClick={() => { if (product.shopId) { setViewShopMode(true); setSelectedShopId(product.shopId); } }} className="px-5 py-2.5 bg-white text-primary font-black text-[10px] uppercase tracking-widest rounded-xl border border-primary/20 hover:bg-primary hover:text-white transition-all shadow-sm">Xem Cửa Hàng</button>
+                  <button
+                    onClick={() => {
+                      if (!isAuthenticated) { navigate('/login'); return; }
+                      if (product.shopId) {
+                        navigate(`/chat?userId=${product.shopId}&userName=${encodeURIComponent(product.shopName || 'Chủ shop')}`);
+                      } else {
+                          console.error("Missing shopId");
+                      }
+                    }}
+                    className="flex items-center gap-1.5 px-5 py-2.5 bg-blue-50 text-blue-600 font-black text-[10px] uppercase tracking-widest rounded-xl border border-blue-100 hover:bg-blue-500 hover:text-white transition-all shadow-sm"
+                  >
+                    <MessageSquare className="size-3.5" /> Chat Shop
+                  </button>
                 </div>
               </div>
             </div>
@@ -243,7 +257,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
 
       <div className="max-w-7xl mx-auto px-4 border-t border-gray-100 pt-16 mb-20">
         <div className="flex justify-center gap-12 -mt-px mb-12">
-          {['Mô tả chi tiết', 'Chứng nhận', 'Đánh giá (128)'].map((tab) => (
+          {['Mô tả chi tiết', 'Chứng nhận', 'Đánh giá '].map((tab) => (
             <button key={tab} onClick={() => setActiveTab(tab)} className={`pb-4 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === tab ? 'border-primary text-primary' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>{tab}</button>
           ))}
         </div>
@@ -260,10 +274,10 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex items-center gap-3">
                         <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
-                          {review.buyerId}
+                          {review.buyerFullName ? review.buyerFullName.charAt(0).toUpperCase() : review.buyerId}
                         </div>
                         <div>
-                          <p className="font-black text-gray-900 text-sm">Người dùng #{review.buyerId}</p>
+                          <p className="font-black text-gray-900 text-sm">{review.buyerFullName || `Người dùng #${review.buyerId}`}</p>
                           <div className="flex text-yellow-400 mt-1">
                             {[...Array(5)].map((_, i) => (
                               <Star key={i} className={`size-3 ${i < review.ratingStar ? 'fill-yellow-400' : ''}`} />

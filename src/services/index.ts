@@ -17,6 +17,7 @@ export { paymentService } from './payment.service';
 export { comboService } from './combo.service';
 export { cartService } from './cart.service';
 export { reviewService } from './review.service';
+export { chatService } from './chat.service';
 export { httpClient } from './http.client';
 
 // Export types

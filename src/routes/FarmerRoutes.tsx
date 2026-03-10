@@ -13,6 +13,7 @@ import OrderPreparation from '../pages/farmer/OrderPreparation';
 import Profile from '../pages/farmer/Profile';
 import BlindBoxTool from '../pages/farmer/BlindBoxTool';
 import FarmerNotifications from '../pages/farmer/Notifications';
+import Reviews from '../pages/farmer/Reviews';
 import { AppRole, KYCStatus } from '../types';
 
 const FarmerRoutes = () => {
@@ -36,6 +37,7 @@ const FarmerRoutes = () => {
             <Route path="notifications" element={<FarmerNotifications />} />
             <Route path="profile" element={<Profile />} />
             <Route path="blind-box" element={<BlindBoxTool />} />
+            <Route path="reviews" element={<Reviews />} />
         </Route>
     );
 };
