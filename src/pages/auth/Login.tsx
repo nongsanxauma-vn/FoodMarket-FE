@@ -71,9 +71,9 @@ const Login: React.FC<LoginProps> = ({ onGoToRegister, onForgotPassword }) => {
         <div className="w-full max-w-md flex flex-col justify-center">
 
           {/* Header - Compact */}
-          <div className="mb-6 text-center lg:text-left shrink-0">
-            <h1 className="display-font text-4xl font-extrabold text-primary mb-1 tracking-tight">Đăng nhập</h1>
-            <p className="text-[#64748b] text-lg font-medium leading-tight">Chào mừng bạn quay trở lại với cộng đồng Xấu Mã.</p>
+          <div className="mb-4 text-center lg:text-left shrink-0">
+            <h1 className="display-font text-3xl font-extrabold text-primary mb-0.5 tracking-tight">Đăng nhập</h1>
+            <p className="text-[#64748b] text-base font-medium leading-tight">Chào mừng bạn quay trở lại với cộng đồng Xấu Mã.</p>
           </div>
 
           <form className="space-y-4 shrink-0" onSubmit={async (e) => {
@@ -120,9 +120,9 @@ const Login: React.FC<LoginProps> = ({ onGoToRegister, onForgotPassword }) => {
           }}>
 
             {/* Role Selection */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Vai trò:</label>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-4 gap-2">
                 {[
                   { role: AppRole.BUYER, icon: 'person' },
                   { role: AppRole.SHIPPER, icon: 'agriculture' },
@@ -134,28 +134,28 @@ const Login: React.FC<LoginProps> = ({ onGoToRegister, onForgotPassword }) => {
                     type="button"
                     title={item.role}
                     onClick={() => setSelectedRole(item.role)}
-                    className={`h-12 rounded-2xl border-2 flex items-center justify-center transition-all ${selectedRole === item.role
+                    className={`h-10 rounded-xl border-2 flex items-center justify-center transition-all ${selectedRole === item.role
                       ? 'border-primary bg-primary/10 text-primary shadow-sm'
                       : 'border-cream bg-white text-slate-300 hover:border-primary/30'
                       }`}
                   >
-                    <span className="material-symbols-outlined text-2xl">{item.icon}</span>
+                    <span className="material-symbols-outlined text-xl">{item.icon}</span>
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-2xl">
-                  <p className="text-sm text-red-600 font-semibold">{error}</p>
+                <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl">
+                  <p className="text-xs text-red-600 font-semibold">{error}</p>
                 </div>
               )}
 
               <div className="relative group">
-                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-xl z-10">person</span>
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-lg z-10">person</span>
                 <input
-                  className="w-full pl-14 pr-5 py-3.5 rounded-2xl border-2 border-cream bg-white focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none font-bold text-slate-700 placeholder:text-slate-300 text-base"
+                  className="w-full pl-12 pr-5 py-3 rounded-xl border-2 border-cream bg-white focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none font-bold text-slate-700 placeholder:text-slate-300 text-sm"
                   placeholder="Email"
                   type="email"
                   value={email}
@@ -166,9 +166,9 @@ const Login: React.FC<LoginProps> = ({ onGoToRegister, onForgotPassword }) => {
               </div>
 
               <div className="relative group">
-                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-xl z-10">lock</span>
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-lg z-10">lock</span>
                 <input
-                  className="w-full pl-14 pr-12 py-3.5 rounded-2xl border-2 border-cream bg-white focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none font-bold text-slate-700 placeholder:text-slate-300 text-base"
+                  className="w-full pl-12 pr-10 py-3 rounded-xl border-2 border-cream bg-white focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none font-bold text-slate-700 placeholder:text-slate-300 text-sm"
                   placeholder="Mật khẩu"
                   type={showPassword ? "text" : "password"}
                   value={password}
@@ -179,10 +179,10 @@ const Login: React.FC<LoginProps> = ({ onGoToRegister, onForgotPassword }) => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10"
                   disabled={isLoading}
                 >
-                  <span className="material-symbols-outlined text-xl">{showPassword ? "visibility_off" : "visibility"}</span>
+                  <span className="material-symbols-outlined text-lg">{showPassword ? "visibility_off" : "visibility"}</span>
                 </button>
               </div>
             </div>
@@ -202,7 +202,7 @@ const Login: React.FC<LoginProps> = ({ onGoToRegister, onForgotPassword }) => {
             </div>
 
             <button
-              className="w-full py-4 bg-primary text-white font-extrabold rounded-2xl hover:bg-primary/90 hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl shadow-primary/20 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3.5 bg-primary text-white font-extrabold rounded-xl hover:bg-primary/90 hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl shadow-primary/20 text-base disabled:opacity-50 disabled:cursor-not-allowed"
               type="submit"
               disabled={isLoading || !email || !password}
             >
@@ -210,11 +210,11 @@ const Login: React.FC<LoginProps> = ({ onGoToRegister, onForgotPassword }) => {
             </button>
           </form>
 
-          <div className="relative my-6 text-center shrink-0">
+          <div className="relative my-4 text-center shrink-0">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-cream"></div>
             </div>
-            <span className="relative px-4 bg-background-light text-slate-400 text-[10px] font-black italic uppercase tracking-widest">Hoặc đăng nhập với</span>
+            <span className="relative px-4 bg-background-light text-slate-400 text-[9px] font-black italic uppercase tracking-widest">Hoặc</span>
           </div>
 
           <div className="grid grid-cols-2 gap-4 shrink-0">

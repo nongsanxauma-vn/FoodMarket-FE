@@ -29,7 +29,7 @@ const InputField = ({
       onChange={e => onChange(e.target.value)}
       required={required}
       disabled={disabled}
-      className="w-full pl-12 pr-4 py-3.5 rounded-2xl border-2 border-cream bg-white focus:ring-0 focus:border-primary transition-all outline-none font-semibold text-slate-700 placeholder:text-slate-300 text-[15px]"
+      className="w-full pl-11 pr-4 py-3 rounded-xl border-2 border-cream bg-white focus:ring-0 focus:border-primary transition-all outline-none font-semibold text-slate-700 placeholder:text-slate-300 text-sm"
     />
   </div>
 );
@@ -221,15 +221,15 @@ const Register: React.FC<RegisterProps> = ({ onGoToLogin, onGoToShipperRegister 
         <div className="w-full max-w-[460px] m-auto px-8 py-10 flex-shrink-0">
 
           {/* Header */}
-          <div className="mb-6">
-            <h1 className="display-font text-5xl font-extrabold text-primary tracking-tight">Đăng ký</h1>
-            <p className="text-slate-500 text-base font-medium mt-1">Bắt đầu hành trình của bạn trên Xấu Mã.</p>
+          <div className="mb-4">
+            <h1 className="display-font text-4xl font-extrabold text-primary tracking-tight">Đăng ký</h1>
+            <p className="text-slate-500 text-sm font-medium mt-0.5">Bắt đầu hành trình của bạn trên Xấu Mã.</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
 
             {/* ── Role selector ── */}
-            <div className="grid grid-cols-2 gap-3 relative z-10 transition-transform duration-500" style={{ transform: isFarmer && farmerStep === 2 ? 'translateY(-20px) opacity(0)' : 'none', opacity: isFarmer && farmerStep === 2 ? 0 : 1, pointerEvents: isFarmer && farmerStep === 2 ? 'none' : 'auto', height: isFarmer && farmerStep === 2 ? 0 : 'auto', marginBottom: isFarmer && farmerStep === 2 ? 0 : '1rem' }}>
+            <div className="grid grid-cols-2 gap-2.5 relative z-10 transition-transform duration-500" style={{ transform: isFarmer && farmerStep === 2 ? 'translateY(-15px) opacity(0)' : 'none', opacity: isFarmer && farmerStep === 2 ? 0 : 1, pointerEvents: isFarmer && farmerStep === 2 ? 'none' : 'auto', height: isFarmer && farmerStep === 2 ? 0 : 'auto', marginBottom: isFarmer && farmerStep === 2 ? 0 : '0.75rem' }}>
               {[
                 { role: AppRole.BUYER, icon: 'person', label: 'Người mua' },
                 { role: AppRole.FARMER, icon: 'storefront', label: 'Người bán' },
@@ -238,12 +238,12 @@ const Register: React.FC<RegisterProps> = ({ onGoToLogin, onGoToShipperRegister 
                   key={item.role}
                   type="button"
                   onClick={() => { setSelectedRole(item.role); setFarmerStep(1); }}
-                  className={`h-13 py-3 rounded-2xl border-2 flex items-center justify-center gap-2.5 transition-all font-bold text-base ${selectedRole === item.role
+                  className={`h-11 py-2 rounded-xl border-2 flex items-center justify-center gap-2 transition-all font-bold text-sm ${selectedRole === item.role
                     ? 'border-primary bg-primary/10 text-primary shadow-sm'
                     : 'border-cream bg-white text-slate-400 hover:border-primary/30'
                     }`}
                 >
-                  <span className="material-symbols-outlined text-xl">{item.icon}</span>
+                  <span className="material-symbols-outlined text-lg">{item.icon}</span>
                   {item.label}
                 </button>
               ))}
@@ -273,7 +273,7 @@ const Register: React.FC<RegisterProps> = ({ onGoToLogin, onGoToShipperRegister 
 
                 {/* ── PART 1: Basic Info ── */}
                 <div className="w-full shrink-0 px-1" style={{ width: isFarmer ? '50%' : '100%' }}>
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     <InputField icon="badge" placeholder="Họ và tên" value={fullName} onChange={setFullName} required disabled={isLoading} />
                     <div className="grid grid-cols-2 gap-3">
                       <InputField icon="mail" type="email" placeholder="Email" value={email} onChange={setEmail} required disabled={isLoading} />
@@ -287,10 +287,10 @@ const Register: React.FC<RegisterProps> = ({ onGoToLogin, onGoToShipperRegister 
 
                   {/* ── Social login (Buyer only) ── */}
                   {!isFarmer && onGoToShipperRegister && (
-                    <div className="space-y-2.5 mt-5">
+                    <div className="space-y-2 mt-4">
                       <div className="relative flex items-center gap-3">
                         <div className="h-px bg-cream flex-1" />
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hoặc đăng ký với</span>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Hoặc đăng ký với</span>
                         <div className="h-px bg-cream flex-1" />
                       </div>
                       <div className="grid grid-cols-2 gap-2.5">
@@ -305,21 +305,21 @@ const Register: React.FC<RegisterProps> = ({ onGoToLogin, onGoToShipperRegister 
                   )}
 
                   {/* ── Buttons Step 1 ── */}
-                  <div className="space-y-3 pt-5 w-full">
+                  <div className="space-y-3 pt-4 w-full">
                     {!isFarmer && (
-                      <label className="flex items-center gap-3 cursor-pointer mb-3">
+                      <label className="flex items-center gap-3 cursor-pointer mb-2.5">
                         <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} className="w-5 h-5 rounded border-cream text-primary focus:ring-primary/20 cursor-pointer" />
-                        <span className="text-[15px] font-bold text-slate-500">Tôi đồng ý với <a href="#" className="text-primary hover:underline">Điều khoản</a> &amp; <a href="#" className="text-primary hover:underline">Bảo mật</a></span>
+                        <span className="text-sm font-bold text-slate-500">Tôi đồng ý với <a href="#" className="text-primary hover:underline">Điều khoản</a> &amp; <a href="#" className="text-primary hover:underline">Bảo mật</a></span>
                       </label>
                     )}
 
                     <button
                       type="submit"
                       disabled={isLoading || (!isFarmer && !agreed)}
-                      className="w-full py-4 bg-primary text-white font-extrabold rounded-2xl hover:bg-primary/90 hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl shadow-primary/20 text-base tracking-wide flex items-center justify-center gap-2"
+                      className="w-full py-3.5 bg-primary text-white font-extrabold rounded-xl hover:bg-primary/90 hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl shadow-primary/20 text-base tracking-wide flex items-center justify-center gap-2"
                     >
                       {isFarmer ? (
-                        <>THÔNG TIN CỬA HÀNG <span className="material-symbols-outlined text-[22px]">arrow_forward</span></>
+                        <>THÔNG TIN CỬA HÀNG <span className="material-symbols-outlined text-[20px]">arrow_forward</span></>
                       ) : isLoading ? 'ĐANG TẠO...' : 'TẠO TÀI KHOẢN'}
                     </button>
 
@@ -328,24 +328,24 @@ const Register: React.FC<RegisterProps> = ({ onGoToLogin, onGoToShipperRegister 
                       <button
                         type="button"
                         onClick={onGoToShipperRegister}
-                        className="mt-2 w-full group flex items-center gap-4 rounded-2xl border-2 border-cream bg-white px-4 py-3 hover:border-primary/30 hover:bg-primary/5 transition-all hover:scale-[1.005] active:scale-[0.99] shadow-sm text-left"
+                        className="mt-1.5 w-full group flex items-center gap-3.5 rounded-xl border-2 border-cream bg-white px-3.5 py-2.5 hover:border-primary/30 hover:bg-primary/5 transition-all hover:scale-[1.005] active:scale-[0.99] shadow-sm text-left"
                       >
                         {/* Icon */}
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 group-hover:bg-primary/10 transition-colors">
-                          <span className="material-symbols-outlined text-slate-500 group-hover:text-primary transition-colors text-xl">two_wheeler</span>
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 group-hover:bg-primary/10 transition-colors">
+                          <span className="material-symbols-outlined text-slate-500 group-hover:text-primary transition-colors text-lg">two_wheeler</span>
                         </div>
                         {/* Text */}
                         <div className="flex-1">
-                          <p className="text-sm font-extrabold text-slate-700 leading-tight">Trở thành Shipper của Xấu Mã</p>
-                          <p className="text-xs font-semibold text-slate-400 mt-0.5">Thu nhập 8 – 15 triệu/tháng · Chủ động giờ làm</p>
+                          <p className="text-[13px] font-extrabold text-slate-700 leading-tight">Trở thành Shipper của Xấu Mã</p>
+                          <p className="text-[11px] font-semibold text-slate-400 mt-0.5">Thu nhập 8 – 15 triệu/tháng · Chủ động</p>
                         </div>
                         {/* Arrow */}
-                        <span className="material-symbols-outlined text-slate-300 group-hover:text-primary text-xl group-hover:translate-x-1 transition-all shrink-0">arrow_forward</span>
+                        <span className="material-symbols-outlined text-slate-300 group-hover:text-primary text-lg group-hover:translate-x-1 transition-all shrink-0">arrow_forward</span>
                       </button>
                     )}
 
                     {/* Footer link in Step 1 */}
-                    <p className="mt-4 text-center text-[15px] font-bold text-slate-500">
+                    <p className="mt-3 text-center text-sm font-bold text-slate-500">
                       Đã có tài khoản?{' '}
                       <button type="button" onClick={onGoToLogin} className="text-primary font-black hover:underline">
                         Đăng nhập
@@ -357,34 +357,34 @@ const Register: React.FC<RegisterProps> = ({ onGoToLogin, onGoToShipperRegister 
                 {/* ── PART 2: Shop Info (FARMER only) ── */}
                 {isFarmer && (
                   <div className="w-1/2 shrink-0 px-1 opacity-100 transition-opacity">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                          <span className="material-symbols-outlined text-sm">storefront</span>
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-xs">storefront</span>
                           Thông tin cửa hàng
                         </p>
-                        <button type="button" onClick={() => setFarmerStep(1)} className="text-xs font-bold text-primary hover:underline flex items-center gap-1">
-                          <span className="material-symbols-outlined text-sm">edit</span> Sửa hồ sơ
+                        <button type="button" onClick={() => setFarmerStep(1)} className="text-[10px] font-bold text-primary hover:underline flex items-center gap-1">
+                          <span className="material-symbols-outlined text-xs">edit</span> Sửa hồ sơ
                         </button>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
-                        <InputField icon="storefront" placeholder="Tên nông trại / cửa hàng *" value={shopName} onChange={setShopName} required={isFarmer && farmerStep === 2} disabled={isLoading} />
-                        <InputField icon="account_balance_wallet" placeholder="Số tài khoản NH *" value={bankAccount} onChange={setBankAccount} required={isFarmer && farmerStep === 2} disabled={isLoading} />
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <InputField icon="storefront" placeholder="Tên shop *" value={shopName} onChange={setShopName} required={isFarmer && farmerStep === 2} disabled={isLoading} />
+                        <InputField icon="account_balance_wallet" placeholder="Số TK NH *" value={bankAccount} onChange={setBankAccount} required={isFarmer && farmerStep === 2} disabled={isLoading} />
                       </div>
 
                       <div className="relative group">
-                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-350 group-focus-within:text-primary transition-colors text-xl z-10 pointer-events-none">location_on</span>
-                        <input type="text" placeholder="Địa chỉ chi tiết (điểm lấy hàng) *" value={address} onChange={e => setAddress(e.target.value)} required={isFarmer && farmerStep === 2} disabled={isLoading} className="w-full pl-12 pr-4 py-3.5 rounded-2xl border-2 border-cream bg-white focus:ring-0 focus:border-primary transition-all outline-none font-semibold text-slate-700 placeholder:text-slate-300 text-[15px]" />
+                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-350 group-focus-within:text-primary transition-colors text-lg z-10 pointer-events-none">location_on</span>
+                        <input type="text" placeholder="Địa chỉ chi tiết (điểm lấy hàng) *" value={address} onChange={e => setAddress(e.target.value)} required={isFarmer && farmerStep === 2} disabled={isLoading} className="w-full pl-11 pr-4 py-3 rounded-xl border-2 border-cream bg-white focus:ring-0 focus:border-primary transition-all outline-none font-semibold text-slate-700 placeholder:text-slate-300 text-sm" />
                       </div>
 
                       <div className="relative group">
-                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-350 group-focus-within:text-primary transition-colors text-xl z-10 pointer-events-none">description</span>
-                        <input type="text" placeholder="Mô tả ngắn về nông trại (không bắt buộc)" value={description} onChange={e => setDescription(e.target.value)} disabled={isLoading} className="w-full pl-12 pr-4 py-3.5 rounded-2xl border-2 border-cream bg-white focus:ring-0 focus:border-primary transition-all outline-none font-semibold text-slate-700 placeholder:text-slate-300 text-[15px]" />
+                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-350 group-focus-within:text-primary transition-colors text-lg z-10 pointer-events-none">description</span>
+                        <input type="text" placeholder="Mô tả về nông trại (tùy chọn)" value={description} onChange={e => setDescription(e.target.value)} disabled={isLoading} className="w-full pl-11 pr-4 py-3 rounded-xl border-2 border-cream bg-white focus:ring-0 focus:border-primary transition-all outline-none font-semibold text-slate-700 placeholder:text-slate-300 text-sm" />
                       </div>
 
                       {/* File Uploads */}
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-2.5">
                         <div>
                           <input type="file" id="logoUpload" accept="image/*" onChange={e => {
                             const file = e.target.files?.[0];
@@ -395,13 +395,13 @@ const Register: React.FC<RegisterProps> = ({ onGoToLogin, onGoToShipperRegister 
                                 setLogoFile(null);
                                 return;
                               }
-                              setError(null); // Clear previous errors if the file is valid
+                              setError(null);
                               setLogoFile(file);
                             }
                           }} className="hidden" disabled={isLoading} />
-                          <label htmlFor="logoUpload" className={`block p-2 rounded-2xl border-2 border-dashed cursor-pointer flex flex-col items-center justify-center gap-1 transition-all h-full min-h-[72px] ${logoFile ? 'border-primary bg-primary/5' : 'border-cream hover:border-primary/50 hover:bg-slate-50'} ${isLoading ? 'opacity-50' : ''}`}>
-                            <span className={`material-symbols-outlined text-xl ${logoFile ? 'text-primary' : 'text-slate-400'}`}>{logoFile ? 'check_circle' : 'add_photo_alternate'}</span>
-                            <span className="text-[11px] font-bold text-slate-500 text-center leading-tight">{logoFile ? 'Đã tải ảnh Logo' : 'Ảnh đại diện (Tùy chọn)'}</span>
+                          <label htmlFor="logoUpload" className={`block p-2 rounded-xl border-2 border-dashed cursor-pointer flex flex-col items-center justify-center gap-1 transition-all h-full min-h-[64px] ${logoFile ? 'border-primary bg-primary/5' : 'border-cream hover:border-primary/50 hover:bg-slate-50'} ${isLoading ? 'opacity-50' : ''}`}>
+                            <span className={`material-symbols-outlined text-lg ${logoFile ? 'text-primary' : 'text-slate-400'}`}>{logoFile ? 'check_circle' : 'add_photo_alternate'}</span>
+                            <span className="text-[9px] font-bold text-slate-500 text-center leading-tight">{logoFile ? 'Đã tải Logo' : 'Ảnh đại diện'}</span>
                           </label>
                         </div>
                         <div>
@@ -414,34 +414,34 @@ const Register: React.FC<RegisterProps> = ({ onGoToLogin, onGoToShipperRegister 
                                 setAchievementFile(null);
                                 return;
                               }
-                              setError(null); // Clear previous errors if the file is valid
+                              setError(null);
                               setAchievementFile(file);
                             }
                           }} className="hidden" disabled={isLoading} />
-                          <label htmlFor="achievementUpload" className={`block p-2 rounded-2xl border-2 border-dashed cursor-pointer flex flex-col items-center justify-center gap-1 transition-all h-full min-h-[72px] ${achievementFile ? 'border-primary bg-primary/5' : 'border-cream hover:border-primary/50 hover:bg-slate-50'} ${isLoading ? 'opacity-50' : ''}`}>
-                            <span className={`material-symbols-outlined text-xl ${achievementFile ? 'text-primary' : 'text-slate-400'}`}>{achievementFile ? 'check_circle' : 'workspace_premium'}</span>
-                            <span className="text-[11px] font-bold text-slate-500 text-center leading-tight px-1">{achievementFile ? 'Đã tải chứng chỉ' : 'Chứng chỉ VietGAP / Hữu cơ'}</span>
+                          <label htmlFor="achievementUpload" className={`block p-2 rounded-xl border-2 border-dashed cursor-pointer flex flex-col items-center justify-center gap-1 transition-all h-full min-h-[64px] ${achievementFile ? 'border-primary bg-primary/5' : 'border-cream hover:border-primary/50 hover:bg-slate-50'} ${isLoading ? 'opacity-50' : ''}`}>
+                            <span className={`material-symbols-outlined text-lg ${achievementFile ? 'text-primary' : 'text-slate-400'}`}>{achievementFile ? 'check_circle' : 'workspace_premium'}</span>
+                            <span className="text-[9px] font-bold text-slate-500 text-center leading-tight px-1">{achievementFile ? 'Đã tải chứng chỉ' : 'Chứng chỉ VietGAP'}</span>
                           </label>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3 p-3 bg-orange-50 border-2 border-orange-100 rounded-2xl">
-                        <span className="material-symbols-outlined text-orange-500 text-xl shrink-0">info</span>
-                        <p className="text-sm text-orange-800 font-bold">Hồ sơ có chứng chỉ sẽ được duyệt nhanh hơn</p>
+                      <div className="flex items-center gap-2 p-2.5 bg-orange-50 border-2 border-orange-100 rounded-xl">
+                        <span className="material-symbols-outlined text-orange-500 text-lg shrink-0">info</span>
+                        <p className="text-[11px] text-orange-800 font-bold">Duyệt nhanh hơn với chứng chỉ</p>
                       </div>
 
                       {/* ── Buttons Step 2 ── */}
-                      <div className="space-y-3 pt-3 flex flex-col">
+                      <div className="space-y-2.5 pt-2.5 flex flex-col">
                         <label className="flex items-center gap-3 cursor-pointer">
                           <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} className="w-5 h-5 rounded border-cream text-primary focus:ring-primary/20 cursor-pointer" />
-                          <span className="text-[15px] font-bold text-slate-500">Tôi đồng ý với <a href="#" className="text-primary hover:underline">Điều khoản</a> &amp; <a href="#" className="text-primary hover:underline">Bảo mật</a></span>
+                          <span className="text-sm font-bold text-slate-500">Tôi đồng ý với <a href="#" className="text-primary hover:underline">Điều khoản</a> &amp; <a href="#" className="text-primary hover:underline">Bảo mật</a></span>
                         </label>
-                        <div className="flex gap-3 w-full">
-                          <button type="button" onClick={() => setFarmerStep(1)} className="px-5 py-4 bg-white border-2 border-cream text-slate-500 font-extrabold rounded-2xl hover:bg-slate-50 transition-all flex items-center justify-center">
-                            <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+                        <div className="flex gap-2.5 w-full">
+                          <button type="button" onClick={() => setFarmerStep(1)} className="px-4 py-3.5 bg-white border-2 border-cream text-slate-500 font-extrabold rounded-xl hover:bg-slate-50 transition-all flex items-center justify-center">
+                            <span className="material-symbols-outlined text-[18px]">arrow_back</span>
                           </button>
-                          <button type="submit" disabled={!agreed || isLoading} className="flex-1 py-4 bg-primary text-white font-extrabold rounded-2xl hover:bg-primary/90 hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl shadow-primary/20 text-base tracking-wide flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                            {isLoading ? 'ĐANG TẠO...' : <>TẠO TÀI KHOẢN <span className="material-symbols-outlined text-[22px]">check_circle</span></>}
+                          <button type="submit" disabled={!agreed || isLoading} className="flex-1 py-3.5 bg-primary text-white font-extrabold rounded-xl hover:bg-primary/90 hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl shadow-primary/20 text-base tracking-wide flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                            {isLoading ? 'ĐANG TẠO...' : <>TẠO TÀI KHOẢN <span className="material-symbols-outlined text-[20px]">check_circle</span></>}
                           </button>
                         </div>
                       </div>
