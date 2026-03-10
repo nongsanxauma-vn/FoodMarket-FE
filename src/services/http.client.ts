@@ -36,35 +36,47 @@ class HttpClient {
   /**
    * Kiểm tra xem endpoint có phải là public không
    */
-  private isPublicEndpoint(url: string): boolean {
-    const publicEndpoints = [
+  private isPublicEndpoint(method: string, url: string): boolean {
+    // Các trường hợp ngoại lệ (vẫn cần auth)
+    if (url === '/mystery-boxes/me') return false;
+    if (url.includes('/blogs/admin')) return false;
+
+    // Các endpoint chỉ cho phép GET là public
+    if (method === 'GET') {
+      const publicGetEndpoints = [
+        '/products',
+        '/mystery-boxes',
+        '/reviews',
+        '/blogs',
+      ];
+      if (publicGetEndpoints.some(endpoint => url.includes(endpoint))) {
+        return true;
+      }
+    }
+
+    // Các endpoint hoàn toàn public (bất kể GET/POST)
+    const fullyPublicEndpoints = [
       '/auth/login',
       '/users/register',
       '/otp-verification',
       '/forgot-password',
-      '/blogs',
-      '/products',
-      '/mystery-boxes',
       '/payment', // Cho phép callback thanh toán
       '/withdraw', // Cho phép callback rút tiền
     ];
 
-    // Các trường hợp ngoại lệ (vẫn cần auth)
-    if (url === '/mystery-boxes/me') return false;
-
-    return publicEndpoints.some(endpoint => url.includes(endpoint));
+    return fullyPublicEndpoints.some(endpoint => url.includes(endpoint));
   }
 
   /**
    * Tạo headers mặc định
    */
-  private getDefaultHeaders(url: string): Record<string, string> {
+  private getDefaultHeaders(method: string, url: string): Record<string, string> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 
     // Chỉ thêm token nếu không phải public endpoint
-    if (!this.isPublicEndpoint(url)) {
+    if (!this.isPublicEndpoint(method, url)) {
       const token = this.getToken();
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -103,7 +115,7 @@ class HttpClient {
 
     // Tạo headers hoàn chỉnh
     const headers: Record<string, string> = {
-      ...this.getDefaultHeaders(url),
+      ...this.getDefaultHeaders(method, url),
       ...config?.headers,
     };
 
@@ -142,7 +154,7 @@ class HttpClient {
         // Nếu 401, chỉ redirect về home nếu đó KHÔNG phải là public endpoint
         if (response.status === 401) {
           console.error('[HTTP] Unauthorized - Endpoint:', url);
-          if (!this.isPublicEndpoint(url)) {
+          if (!this.isPublicEndpoint(method, url)) {
             console.error('[HTTP] Redirecting to login/home...');
             localStorage.removeItem(TOKEN_KEY);
             // Sử dụng path tương đối hoặc bao gồm basename để tránh nhảy ra khỏi app

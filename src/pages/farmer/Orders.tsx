@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Bell, MapPin, Truck, CheckCircle2, XCircle, ChevronRight, Navigation, FileText, User, AlertTriangle, X, Loader2, AlertCircle } from 'lucide-react';
+import { Search, Bell, MapPin, Truck, CheckCircle2, XCircle, ChevronRight, Navigation, FileText, User, AlertTriangle, X, Loader2, AlertCircle, Trash2 } from 'lucide-react';
 import { orderService, OrderResponse } from '../../services';
 
 interface OrdersProps {
@@ -56,6 +56,21 @@ const Orders: React.FC<OrdersProps> = ({ onPrepareOrder }) => {
     } catch (err: any) {
       console.error('[Orders] Cancel error:', err);
       alert(err?.data?.message || 'Có lỗi khi hủy đơn hàng');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDeleteOrder = async (orderId: number) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn XÓA VĨNH VIỄN đơn hàng #${orderId} không? Dữ liệu không thể phục hồi.`)) return;
+    try {
+      setIsProcessing(true);
+      await orderService.deleteOrder(orderId);
+      alert(`Đã xóa vĩnh viễn đơn hàng #${orderId}`);
+      fetchOrders();
+    } catch (err: any) {
+      console.error('[Orders] Delete error:', err);
+      alert(err?.data?.message || 'Có lỗi khi xóa đơn hàng');
     } finally {
       setIsProcessing(false);
     }
@@ -249,12 +264,19 @@ const Orders: React.FC<OrdersProps> = ({ onPrepareOrder }) => {
                       </>
                     )}
                     {isCancelled && (
-                      <>
-                        <div className="p-6 bg-red-50/50 rounded-[32px] border border-red-100 text-center w-full">
-                          <XCircle className="size-8 text-red-500 mx-auto mb-3" />
-                          <p className="text-sm font-black text-red-600">Đơn hàng đã hủy</p>
+                      <div className="flex flex-col gap-3 h-full justify-center">
+                        <div className="p-4 bg-red-50/50 rounded-2xl border border-red-100 text-center w-full">
+                          <XCircle className="size-6 text-red-500 mx-auto mb-2" />
+                          <p className="text-xs font-black text-red-600">Đơn hàng đã hủy</p>
                         </div>
-                      </>
+                        <button
+                          disabled={isProcessing}
+                          onClick={() => handleDeleteOrder(order.id)}
+                          className="w-full py-3 border border-red-200 text-red-500 font-bold text-xs rounded-2xl flex items-center justify-center gap-2 hover:bg-red-50 transition-all disabled:opacity-50"
+                        >
+                          <Trash2 className="size-4" /> Xóa vĩnh viễn
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>

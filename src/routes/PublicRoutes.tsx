@@ -13,7 +13,6 @@ const PublicRoutes = () => {
     const { user, isAuthenticated } = useAuth();
     const navigate = useNavigate();
 
-    // Redirection logic for authenticated users hitting the root "/"
     const renderRoot = () => {
         if (isAuthenticated && user) {
             if (user.role === AppRole.ADMIN) return <Navigate to="/admin" replace />;
@@ -30,7 +29,6 @@ const PublicRoutes = () => {
             <Route path="/news" element={<News />} />
             <Route path="/news/:id" element={<NewsDetail />} />
 
-            {/* Payment Callbacks (can stay in MainLayout or move) */}
             <Route path="/payment/success" element={<PaymentSuccess />} />
             <Route path="/payment/cancel" element={<PaymentCancel />} />
             <Route path="/withdraw/success" element={<PaymentSuccess />} />

@@ -16,6 +16,11 @@ const FarmerLayout: React.FC = () => {
     const currentPath = lastSegment === 'farmer' ? 'overview' : lastSegment;
 
     const handleNavigate = (path: string) => {
+        // Chat có trang riêng ngoài farmer layout
+        if (path === 'chat') {
+            navigate('/chat');
+            return;
+        }
         navigate(`/farmer/${path}`);
     };
 
