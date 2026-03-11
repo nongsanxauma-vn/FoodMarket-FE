@@ -60,8 +60,6 @@ class HttpClient {
       '/users/register',
       '/otp-verification',
       '/forgot-password',
-      '/payment', // Cho phép callback thanh toán
-      '/withdraw', // Cho phép callback rút tiền
     ];
 
     return fullyPublicEndpoints.some(endpoint => url.includes(endpoint));

@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, useParams, Navigate } from 'react-router-dom';
 import FarmerLayout from './FarmerLayout';
 import ProtectedRoute from './ProtectedRoute';
 import FarmerDashboard from '../pages/farmer/Dashboard';
@@ -15,6 +14,16 @@ import BlindBoxTool from '../pages/farmer/BlindBoxTool';
 import FarmerNotifications from '../pages/farmer/Notifications';
 import Reviews from '../pages/farmer/Reviews';
 import { AppRole, KYCStatus } from '../types';
+
+const OrderPreparationWrapper = ({ onBack, onComplete }: { onBack: () => void, onComplete: () => void }) => {
+  const { orderId } = useParams();
+  
+  if (!orderId) {
+    return <Navigate to="/farmer/orders" replace />;
+  }
+
+  return <OrderPreparation orderId={orderId} onBack={onBack} onComplete={onComplete} />;
+};
 
 const FarmerRoutes = () => {
     const navigate = useNavigate();
@@ -33,7 +42,8 @@ const FarmerRoutes = () => {
             <Route path="combo-builder/:comboId" element={<ComboBuilder onBack={() => navigate('/farmer/products')} />} />
             <Route path="wallet" element={<Wallet />} />
             <Route path="orders" element={<Orders onPrepareOrder={(id) => navigate(`/farmer/order-prep/${id}`)} />} />
-            <Route path="order-prep/:orderId" element={<OrderPreparation orderId="" onBack={() => navigate('/farmer/orders')} onComplete={() => navigate('/farmer/orders')} />} />
+            <Route path="order-prep/:orderId" element={<OrderPreparationWrapper onBack={() => navigate('/farmer/orders')} onComplete={() => navigate('/farmer/orders')} />} />
+
             <Route path="notifications" element={<FarmerNotifications />} />
             <Route path="profile" element={<Profile />} />
             <Route path="blind-box" element={<BlindBoxTool />} />

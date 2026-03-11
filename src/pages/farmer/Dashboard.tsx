@@ -311,13 +311,26 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
                   </div>
                   <div className="text-right">
                     <p className="text-[13px] font-black text-primary">{(order.totalAmount || 0).toLocaleString('vi-VN')}đ</p>
-                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md ${order.status === 'PENDING' ? 'bg-orange-50 text-orange-600' :
-                        order.status === 'SHIPPING' ? 'bg-blue-50 text-blue-600' :
-                          order.status === 'DELIVERED' ? 'bg-green-50 text-green-600' :
-                            'bg-gray-50 text-gray-600'
+                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md ${
+                        order.status === 'PENDING'   ? 'bg-orange-50 text-orange-600' :
+                        order.status === 'PAID'      ? 'bg-blue-50 text-blue-600' :
+                        order.status === 'CONFIRMED' ? 'bg-purple-50 text-purple-700' :
+                        order.status === 'SHIPPING'  ? 'bg-blue-50 text-blue-600' :
+                        order.status === 'DELIVERED' ? 'bg-green-50 text-green-600' :
+                        order.status === 'FAILED'    ? 'bg-red-50 text-red-600' :
+                        order.status === 'CANCELLED' ? 'bg-gray-100 text-gray-500' :
+                        'bg-gray-50 text-gray-600'
                       }`}>
-                      {order.status || 'NEW'}
+                      {order.status === 'PENDING' ? 'Chờ xác nhận' :
+                       order.status === 'PAID' ? 'Đã TT QR' :
+                       order.status === 'CONFIRMED' ? 'Đang chuẩn bị' :
+                       order.status === 'SHIPPING' ? 'Đang giao' :
+                       order.status === 'DELIVERED' ? 'Đã giao' :
+                       order.status === 'FAILED' ? 'Thất bại' :
+                       order.status === 'CANCELLED' ? 'Đã hủy' :
+                       order.status || 'Mới'}
                     </span>
+
                   </div>
                 </div>
               ))}
