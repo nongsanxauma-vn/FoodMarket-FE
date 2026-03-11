@@ -66,10 +66,13 @@ export interface OrderItem {
 
 export enum OrderStatus {
   PENDING = 'PENDING',
-  PREPARING = 'PREPARING',
+  CONFIRMED = 'CONFIRMED',   // Farmer xác nhận → đang chuẩn bị hàng (BE enum)
+  PREPARING = 'PREPARING',  // Alias UI-only (FE dùng để hiển thị thân thiện hơn)
+  PAID = 'PAID',             // Đơn QR đã thanh toán thành công, chờ Farmer xác nhận
   SHIPPING = 'SHIPPING',
   DELIVERED = 'DELIVERED',
-  CANCELLED = 'CANCELLED'
+  CANCELLED = 'CANCELLED',
+  FAILED = 'FAILED',         // Giao thất bại / boom hàng
 }
 
 export interface ComboDish {

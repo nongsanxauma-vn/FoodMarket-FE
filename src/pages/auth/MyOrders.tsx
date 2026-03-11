@@ -95,6 +95,24 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
     }
   };
 
+  const handleCancelOrder = async (orderId: number) => {
+    if (!window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) return;
+    
+    try {
+      setLoading(true);
+      const res = await orderService.updateOrder(orderId, { status: 'CANCELLED' });
+      if (res.result) {
+        alert('Đã hủy đơn hàng thành công!');
+        fetchOrders(); // Refresh table
+      }
+    } catch (error: any) {
+      console.error('Failed to cancel order:', error);
+      alert(error.message || 'Không thể hủy đơn hàng. Vui lòng thử lại sau.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchOrders();
   }, []);
@@ -163,29 +181,29 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-8 mb-8">
-          <div className="flex flex-col md:flex-row gap-6">
+        <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-6 md:p-8 mb-8">
+          <div className="flex flex-col gap-6">
             {/* Search */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
+            <div className="relative w-full">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tìm theo mã đơn hoặc tên người nhận..."
-                className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-medium outline-none focus:border-primary transition-all"
+                placeholder="Tìm theo mã đơn hoặc tên nhận hàng..."
+                className="w-full pl-14 pr-6 py-4 bg-gray-50 border border-gray-100 rounded-[20px] text-sm font-bold outline-none focus:border-primary focus:bg-white focus:shadow-xl focus:shadow-primary/5 transition-all text-gray-800 placeholder:font-medium"
               />
             </div>
 
             {/* Status Filter */}
-            <div className="flex items-center gap-2 overflow-x-auto">
-              {(['ALL', 'PENDING', 'PAID', 'CONFIRMED', 'SHIPPING', 'DELIVERED'] as OrderStatusFilter[]).map((status) => (
+            <div className="flex flex-wrap items-center gap-3">
+              {(['ALL', 'PENDING', 'PAID', 'CONFIRMED', 'SHIPPING', 'DELIVERED', 'CANCELLED', 'FAILED'] as OrderStatusFilter[]).map((status) => (
                 <button
                   key={status}
                   onClick={() => setFilter(status)}
-                  className={`px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all ${filter === status
-                      ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                      : 'bg-gray-50 text-gray-400 hover:bg-gray-100'
+                  className={`px-6 py-3 rounded-[18px] text-[11px] font-black uppercase tracking-wider transition-all transform hover:scale-105 active:scale-95 ${filter === status
+                      ? 'bg-primary text-white shadow-xl shadow-primary/20 scale-105'
+                      : 'bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600'
                     }`}
                 >
                   {status === 'ALL' ? 'Tất cả' : getStatusConfig(status).label}
@@ -317,7 +335,12 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
                         </span>
                       </div>
 
-                      {trackable ? (
+                      {order.status === 'DELIVERED' ? (
+                        <div className="flex items-center gap-2 px-6 py-3 bg-green-50 text-green-700 rounded-2xl border border-green-100">
+                          <CheckCircle2 className="size-4" />
+                          <span className="text-sm font-black uppercase tracking-wider">Đã nhận được hàng</span>
+                        </div>
+                      ) : trackable ? (
                         <button
                           onClick={() => onViewTracking(order.id)}
                           className="px-6 py-3 bg-primary text-white font-black rounded-2xl flex items-center gap-2 shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all"
@@ -326,9 +349,18 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
                           Theo dõi đơn hàng
                         </button>
                       ) : order.status === 'PENDING' || order.status === 'PAID' ? (
-                        <div className="flex items-center gap-2 px-6 py-3 bg-yellow-50 text-yellow-700 rounded-2xl border border-yellow-100">
-                          <AlertCircle className="size-4" />
-                          <span className="text-sm font-bold">Đang chờ shop duyệt</span>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => handleCancelOrder(order.id)}
+                            className="px-6 py-3 bg-red-50 text-red-600 font-bold rounded-2xl border border-red-100 hover:bg-red-100 hover:text-red-700 transition-all flex items-center gap-2"
+                          >
+                            <XCircle className="size-4" />
+                            Hủy đơn hàng
+                          </button>
+                          <div className="flex items-center gap-2 px-6 py-3 bg-yellow-50 text-yellow-700 rounded-2xl border border-yellow-100">
+                            <AlertCircle className="size-4" />
+                            <span className="text-sm font-bold">Đang chờ shop duyệt</span>
+                          </div>
                         </div>
                       ) : (
                         <div className="px-6 py-3 bg-gray-50 text-gray-400 rounded-2xl">
