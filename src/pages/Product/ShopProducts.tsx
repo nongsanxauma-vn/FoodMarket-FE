@@ -413,6 +413,82 @@ const ShopProducts: React.FC<ShopProductsProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Reviews Section */}
+        {reviews.length > 0 && (
+          <div className="max-w-7xl mx-auto px-4 py-6">
+            <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
+                <div>
+                  <h3 className="text-xl font-black text-gray-900">Đánh giá từ khách hàng</h3>
+                  <p className="text-sm text-gray-500 font-medium mt-1">
+                    {reviews.length} đánh giá • Trung bình {averageRating}/5.0
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex text-yellow-400">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className={`size-5 ${i < Math.round(Number(averageRating)) ? 'fill-yellow-400' : 'text-gray-200'}`} />
+                    ))}
+                  </div>
+                  <span className="text-2xl font-black text-gray-900">{averageRating}</span>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                {reviews.slice(0, 5).map((review) => (
+                  <div key={review.id} className="flex gap-4 pb-6 border-b border-gray-50 last:border-0 last:pb-0">
+                    {/* Avatar */}
+                    <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center font-black text-primary text-sm border border-primary/20 shrink-0">
+                      {review.fullName ? review.fullName.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                    
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h4 className="font-bold text-gray-900 text-sm">
+                            {review.fullName || `Khách hàng #${review.buyerId}`}
+                          </h4>
+                          <div className="flex text-yellow-400 mt-1">
+                            {[...Array(5)].map((_, i) => (
+                              <Star key={i} className={`size-3 ${i < review.ratingStar ? 'fill-yellow-400' : 'text-gray-200'}`} />
+                            ))}
+                          </div>
+                        </div>
+                        <span className="text-xs text-gray-400 font-medium">
+                          Đơn #{review.orderDetailId}
+                        </span>
+                      </div>
+                      
+                      <p className="text-gray-700 text-sm leading-relaxed mb-3">{review.comment}</p>
+                      
+                      {/* Shop Reply */}
+                      {review.replyFromShop && (
+                        <div className="mt-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="size-5 bg-primary rounded-full flex items-center justify-center text-white">
+                              <MessageCircle className="size-3" />
+                            </div>
+                            <span className="text-xs font-black text-gray-900">Phản hồi từ Shop</span>
+                          </div>
+                          <p className="text-gray-600 text-sm pl-7 italic">{review.replyFromShop}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {reviews.length > 5 && (
+                <div className="mt-6 pt-4 border-t border-gray-100 text-center">
+                  <p className="text-sm text-gray-500 font-medium">
+                    Hiển thị 5/{reviews.length} đánh giá
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
