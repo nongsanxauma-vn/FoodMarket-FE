@@ -16,7 +16,7 @@ import {
   ShieldCheck,
   Award
 } from 'lucide-react';
-import { productService, ProductResponse, userService, UserResponse, cartService } from '../../services';
+import { productService, ProductResponse, userService, UserResponse, cartService, reviewService, ReviewResponse } from '../../services';
 
 interface ShopProductsProps {
   shopId: number;
@@ -33,6 +33,7 @@ const ShopProducts: React.FC<ShopProductsProps> = ({
 }) => {
   const [products, setProducts] = useState<ProductResponse[]>([]);
   const [shopInfo, setShopInfo] = useState<UserResponse | null>(null);
+  const [reviews, setReviews] = useState<ReviewResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState('default');
@@ -44,9 +45,10 @@ const ShopProducts: React.FC<ShopProductsProps> = ({
       setLoading(true);
       console.log('[ShopProducts] Fetching data for shopId:', shopId);
       try {
-        const [productsRes, shopRes] = await Promise.all([
+        const [productsRes, shopRes, reviewsRes] = await Promise.all([
           productService.getByShopId(shopId),
-          userService.getUserById(shopId).catch(() => ({ result: null }))
+          userService.getUserById(shopId).catch(() => ({ result: null })),
+          reviewService.getByShopId(shopId).catch(() => ({ result: [] }))
         ]);
 
         if (productsRes.result) {
@@ -55,6 +57,11 @@ const ShopProducts: React.FC<ShopProductsProps> = ({
           if (productsRes.result.length > 0) {
             console.log('[ShopProducts] First product shopName:', productsRes.result[0].shopName);
           }
+        }
+        
+        if (reviewsRes.result) {
+          setReviews(reviewsRes.result);
+          console.log('[ShopProducts] Reviews loaded:', reviewsRes.result.length);
         }
         
         if (shopRes.result) {
@@ -115,7 +122,16 @@ const ShopProducts: React.FC<ShopProductsProps> = ({
     filteredProducts = [...filteredProducts].sort((a, b) => a.productName.localeCompare(b.productName));
   }
 
-  const activeProducts = products.filter(p => p.status === 'AVAILABLE').length;
+  const activeProducts = products.filter(p => p.stockQuantity > 0).length;
+  
+  // Calculate average rating
+  const calculateAverageRating = () => {
+    if (reviews.length === 0) return 0;
+    const sum = reviews.reduce((acc, rev) => acc + rev.ratingStar, 0);
+    return (sum / reviews.length).toFixed(1);
+  };
+  
+  const averageRating = calculateAverageRating();
   
   // Get shop name from shopInfo first, then from first product, then fallback
   const shopName = shopInfo?.shopName 
@@ -233,9 +249,13 @@ const ShopProducts: React.FC<ShopProductsProps> = ({
                 <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
                   <div className="flex items-center gap-2 mb-1">
                     <Star className="size-4 text-yellow-600" />
-                    <span className="text-lg font-black text-gray-900">N/A</span>
+                    <span className="text-lg font-black text-gray-900">
+                      {reviews.length > 0 ? averageRating : 'N/A'}
+                    </span>
                   </div>
-                  <p className="text-[10px] text-gray-500 font-bold uppercase">Đánh giá</p>
+                  <p className="text-[10px] text-gray-500 font-bold uppercase">
+                    Đánh giá {reviews.length > 0 && `(${reviews.length})`}
+                  </p>
                 </div>
 
                 <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
@@ -357,14 +377,14 @@ const ShopProducts: React.FC<ShopProductsProps> = ({
                           alt={product.productName}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
-                        {product.status !== 'AVAILABLE' && (
+                        {product.stockQuantity <= 0 && (
                           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                             <span className="text-white text-xs font-black">Hết hàng</span>
                           </div>
                         )}
                         <button 
                           onClick={() => handleAddToCart(product.id)}
-                          disabled={product.status !== 'AVAILABLE' || addingToCart === product.id}
+                          disabled={product.stockQuantity <= 0 || addingToCart === product.id}
                           className={`absolute ${
                             viewMode === 'list' ? 'bottom-2 right-2 size-8' : 'bottom-3 right-3 size-10'
                           } bg-primary text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -394,7 +414,7 @@ const ShopProducts: React.FC<ShopProductsProps> = ({
                           <span className="text-[10px] text-gray-500 font-medium">
                             Còn: {product.stockQuantity} {product.unit}
                           </span>
-                          {product.status === 'AVAILABLE' ? (
+                          {product.stockQuantity > 0 ? (
                             <span className="text-[10px] text-green-600 font-bold">Còn hàng</span>
                           ) : (
                             <span className="text-[10px] text-red-600 font-bold">Hết hàng</span>
