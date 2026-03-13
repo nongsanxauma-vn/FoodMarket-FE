@@ -33,23 +33,21 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMapRef = useRef<any>(null);
   const shipperMarkerRef = useRef<any>(null);
-  // ✅ LayerGroup chứa polyline — clearLayers() xóa sạch 100% bất kể race condition
-  const routeGroupRef = useRef<any>(null);
-  const destMarkerRef = useRef<any>(null);
+  const routeLayerRef = useRef<any>(null);
   const stompClientRef = useRef<Client | null>(null);
+  // ✅ Flag: buyer đang tự xem map → không auto-pan
   const userInteractingRef = useRef(false);
   const interactTimeoutRef = useRef<any>(null);
-  // ✅ Flag hủy OSRM fetch đang pending
-  const routeCancelledRef = useRef(false);
 
   const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
   const [location, setLocation] = useState<LocationState | null>(null);
   const [loadingInitial, setLoadingInitial] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [followShipper, setFollowShipper] = useState(true);
+  // ✅ Track xem shipper có đang active không (GPS cập nhật trong 30 giây gần nhất)
   const [shipperActive, setShipperActive] = useState(false);
   const lastUpdateRef = useRef<number | null>(null);
-  const shipperActiveRef = useRef(false);
+  const shipperActiveRef = useRef(false); // mirror để dùng trong callbacks
 
   const steps = [
     { label: 'Đã đặt hàng', time: '14:20, 24/10', done: true, icon: Box },
@@ -58,31 +56,6 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
     { label: 'Đang trên đường giao', time: 'Dự kiến: 16:00', icon: MapPin },
     { label: 'Giao hàng thành công', time: '--:--', icon: CheckCircle2 },
   ];
-
-  // ✅ Xóa toàn bộ overlay trên map — dùng chung ở mọi nơi
-  const clearMapOverlays = useCallback(() => {
-    // Hủy bất kỳ OSRM fetch đang pending
-    routeCancelledRef.current = true;
-
-    const map = leafletMapRef.current;
-    if (!map) return;
-
-    // ✅ clearLayers() xóa TẤT CẢ polyline trong group — không phụ thuộc vào ref riêng lẻ
-    if (routeGroupRef.current) {
-      routeGroupRef.current.clearLayers();
-    }
-
-    // Xóa marker điểm đến
-    if (destMarkerRef.current) {
-      try { map.removeLayer(destMarkerRef.current); } catch {}
-      destMarkerRef.current = null;
-    }
-
-    // Ẩn marker shipper
-    if (shipperMarkerRef.current) {
-      try { shipperMarkerRef.current.setOpacity(0); } catch {}
-    }
-  }, []);
 
   // ---- INIT MAP ----
   const initMap = useCallback((lat: number, lng: number) => {
@@ -102,10 +75,6 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
         maxZoom: 19,
         attribution: '© OpenStreetMap contributors',
       }).addTo(map);
-
-      // ✅ Tạo LayerGroup để chứa polyline — add vào map ngay
-      const group = L.layerGroup().addTo(map);
-      routeGroupRef.current = group;
 
       const shipperIcon = L.divIcon({
         html: `
@@ -131,16 +100,30 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
       shipperMarkerRef.current = marker;
       leafletMapRef.current = map;
 
+      // ✅ Fix: Leaflet controls (zoom buttons) dùng z-index cao
+      // Giới hạn lại để không leo lên header của app
+      if (mapRef.current) {
+        const controls = mapRef.current.querySelectorAll<HTMLElement>(
+          '.leaflet-control-container, .leaflet-top, .leaflet-bottom'
+        );
+        controls.forEach(el => { el.style.zIndex = '10'; });
+      }
+
+      // ✅ Detect khi buyer kéo/zoom map → dừng auto-follow 5 giây
       const onUserInteract = () => {
         userInteractingRef.current = true;
         clearTimeout(interactTimeoutRef.current);
+        // Sau 5 giây không tương tác → resume auto-follow
         interactTimeoutRef.current = setTimeout(() => {
           userInteractingRef.current = false;
         }, 5000);
       };
 
+      // ✅ Khi buyer kéo map → tắt auto-follow
+      // Dùng custom event để tránh stale closure với React state
       map.on('dragstart', () => {
         userInteractingRef.current = true;
+        // Dispatch custom event để React component biết
         mapRef.current?.dispatchEvent(new CustomEvent('user-drag'));
       });
       map.on('zoomstart', onUserInteract);
@@ -150,20 +133,22 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
   // ---- UPDATE MARKER ----
   const updateMarker = useCallback((lat: number, lng: number) => {
     if (shipperMarkerRef.current) {
+      // Chỉ cập nhật vị trí marker — KHÔNG pan map
+      // Việc pan do nút "Theo dõi" kiểm soát qua followShipper state
       shipperMarkerRef.current.setLatLng([lat, lng]);
     } else {
       initMap(lat, lng);
     }
   }, [initMap]);
 
-  // Pan map theo shipper khi followShipper = true
+  // ✅ Pan map theo shipper chỉ khi followShipper = true
   useEffect(() => {
     if (followShipper && location && leafletMapRef.current) {
       leafletMapRef.current.panTo([location.lat, location.lng], { animate: true, duration: 0.8 });
     }
   }, [location, followShipper]);
 
-  // Tắt follow khi buyer kéo map
+  // ✅ Tắt follow khi buyer kéo map
   useEffect(() => {
     const el = mapRef.current;
     if (!el) return;
@@ -172,38 +157,57 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
     return () => el.removeEventListener('user-drag', handler);
   }, [loadingInitial]);
 
-  // Check mỗi 5 giây xem shipper còn active không
+  // ✅ Check mỗi 5 giây xem shipper còn active không
   useEffect(() => {
     const interval = setInterval(() => {
       if (lastUpdateRef.current === null) return;
+
       const secondsSinceUpdate = (Date.now() - lastUpdateRef.current) / 1000;
       const isActive = secondsSinceUpdate < 30;
+
+      // Sync ref
       shipperActiveRef.current = isActive;
+
       setShipperActive(prev => {
-        if (prev && !isActive) clearMapOverlays();
+        if (prev && !isActive) {
+          // Chuyển active → inactive: xoá đường và marker
+          const map = leafletMapRef.current;
+          if (map) {
+            if (routeLayerRef.current) {
+              try { map.removeLayer(routeLayerRef.current); } catch {}
+              routeLayerRef.current = null;
+            }
+            if (map._destMarker) {
+              try { map.removeLayer(map._destMarker); } catch {}
+              map._destMarker = null;
+            }
+            if (shipperMarkerRef.current) {
+              try { shipperMarkerRef.current.setOpacity(0); } catch {}
+            }
+          }
+        }
         return isActive;
       });
     }, 5000);
+
     return () => clearInterval(interval);
-  }, [clearMapOverlays]);
+  }, []); // re-attach sau khi map load xong
 
-  // ---- VẼ ĐƯỜNG OSRM ----
+  // ---- VẼ ĐƯỜNG OSRM (free routing) ----
   const drawRoute = useCallback(async (fromLat: number, fromLng: number, toLat: number, toLng: number) => {
+    // ✅ Không vẽ nếu shipper đã tắt GPS
     if (!shipperActiveRef.current) return;
-
-    // Reset cancelled flag khi bắt đầu vẽ đường mới
-    routeCancelledRef.current = false;
-
     try {
-      const L = await import('leaflet');
-      const map = leafletMapRef.current;
-      if (!map || !routeGroupRef.current) return;
+      import('leaflet').then(async (L) => {
+        if (!leafletMapRef.current) return;
 
-      // ✅ Xóa polyline cũ trong group trước khi vẽ mới
-      routeGroupRef.current.clearLayers();
+        // Xoá đường cũ
+        if (routeLayerRef.current) {
+          leafletMapRef.current.removeLayer(routeLayerRef.current);
+          routeLayerRef.current = null;
+        }
 
-      // Thêm marker điểm đến chỉ 1 lần
-      if (!destMarkerRef.current) {
+        // Thêm marker điểm đến (nhà buyer)
         const destIcon = L.divIcon({
           html: `
             <div style="width:40px;height:40px;background:#F97316;border:3px solid white;border-radius:50%;
@@ -223,33 +227,37 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
           iconSize: [40, 40],
           iconAnchor: [20, 20],
         });
-        destMarkerRef.current = L.marker([toLat, toLng], { icon: destIcon }).addTo(map);
-      }
 
-      // Gọi OSRM — có thể mất 1-3 giây
-      const url = `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if (!data.routes?.length) return;
+        // Chỉ thêm marker đích 1 lần
+        if (!leafletMapRef.current._destMarker) {
+          const destMarker = L.marker([toLat, toLng], { icon: destIcon }).addTo(leafletMapRef.current);
+          leafletMapRef.current._destMarker = destMarker;
+        }
 
-      // ✅ Kiểm tra sau khi fetch xong — nếu GPS tắt trong lúc fetch thì bỏ qua hoàn toàn
-      if (routeCancelledRef.current) {
-        console.log('[Route] Cancelled, skipping polyline');
-        return;
-      }
+        // Gọi OSRM để lấy đường đi thực tế
+        const url = `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`;
+        const res = await fetch(url);
+        const data = await res.json();
 
-      const coords = data.routes[0].geometry.coordinates.map(([lng, lat]: number[]) => [lat, lng]);
+        if (!data.routes?.length) return;
 
-      // ✅ Add polyline vào GROUP thay vì thẳng vào map
-      L.polyline(coords, { color: '#3B82F6', weight: 5, opacity: 0.8 })
-        .addTo(routeGroupRef.current);
+        const coords = data.routes[0].geometry.coordinates.map(([lng, lat]: number[]) => [lat, lng]);
+        const line = L.polyline(coords, {
+          color: '#3B82F6',
+          weight: 5,
+          opacity: 0.8,
+        }).addTo(leafletMapRef.current);
 
-      if (!userInteractingRef.current) {
-        map.fitBounds(
-          L.latLngBounds([[fromLat, fromLng], [toLat, toLng]]),
-          { padding: [60, 60], animate: true }
-        );
-      }
+        routeLayerRef.current = line;
+
+        // Fit map để thấy cả shipper lẫn điểm đến — chỉ lần đầu hoặc khi user không tương tác
+        if (!userInteractingRef.current) {
+          leafletMapRef.current.fitBounds(
+            L.latLngBounds([[fromLat, fromLng], [toLat, toLng]]),
+            { padding: [60, 60], animate: true }
+          );
+        }
+      });
     } catch (e) {
       console.warn('[Route] Error:', e);
     }
@@ -273,16 +281,17 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
         const res = await shipperService.getShipperLocation(orderId);
         if (res.result) {
           const loc = res.result;
-          setLocation({
+          const locState = {
             lat: loc.latitude,
             lng: loc.longitude,
             updatedAt: loc.updatedAt,
             shipperName: loc.shipperName,
             destLat: loc.destLatitude,
             destLng: loc.destLongitude,
-          });
+          };
+          setLocation(locState);
           setShipperActive(true);
-          shipperActiveRef.current = true;
+          // ✅ Set lastUpdate từ updatedAt của BE (không dùng Date.now() vì đây là dữ liệu cũ)
           lastUpdateRef.current = new Date(loc.updatedAt).getTime();
           initMap(loc.latitude, loc.longitude);
           if (loc.destLatitude && loc.destLongitude) {
@@ -299,43 +308,41 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
     fetchLocation();
   }, [orderId, initMap]);
 
-  // ---- WEBSOCKET ----
+  // ---- WEBSOCKET với JWT token ----
   useEffect(() => {
     if (!orderId) return;
 
+    // ✅ Lấy JWT token từ localStorage
     const token = localStorage.getItem(TOKEN_KEY);
-    const baseUrl = API_BASE_URL.endsWith('/api/v1') ? API_BASE_URL.slice(0, -7) : API_BASE_URL;
+
+    const baseUrl = API_BASE_URL.endsWith('/api/v1')
+      ? API_BASE_URL.slice(0, -7)
+      : API_BASE_URL;
+    const wsUrl = `${baseUrl}/api/v1/ws`;
 
     const client = new Client({
-      webSocketFactory: () => new (SockJS as any)(`${baseUrl}/api/v1/ws`),
+      webSocketFactory: () => new (SockJS as any)(wsUrl),
       reconnectDelay: 5000,
+
+      // ✅ Gửi JWT token trong STOMP CONNECT headers
+      // WebSocketAuthChannelInterceptor ở BE sẽ đọc header này
       connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
 
       onConnect: () => {
         setWsStatus('connected');
         setError(null);
+        console.log(`[WS] Connected, subscribing to /topic/order/${orderId}/location`);
 
         client.subscribe(`/topic/order/${orderId}/location`, (msg) => {
           try {
-            const data = JSON.parse(msg.body);
-            console.log('[WS] Received:', data);
-
-            // ✅ Shipper tắt GPS → xóa hết map ngay lập tức
-            if (data.gpsOff === true) {
-              shipperActiveRef.current = false;
-              lastUpdateRef.current = null;
-              setShipperActive(false);
-              clearMapOverlays();
-              return;
-            }
-
-            // Xử lý location bình thường
+            const data: ShipperLocationResponse = JSON.parse(msg.body);
+            console.log('[WS] Received location:', data);
+            // ✅ Ghi nhận thời điểm nhận GPS gần nhất
             lastUpdateRef.current = Date.now();
             shipperActiveRef.current = true;
-            routeCancelledRef.current = false; // Reset khi GPS bật lại
             setShipperActive(true);
             if (shipperMarkerRef.current) shipperMarkerRef.current.setOpacity(1);
-
+            if (routeLayerRef.current) routeLayerRef.current.setStyle({ opacity: 0.8 });
             setLocation({
               lat: data.latitude,
               lng: data.longitude,
@@ -345,6 +352,7 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
               destLng: data.destLongitude,
             });
             updateMarker(data.latitude, data.longitude);
+            // ✅ Vẽ lại đường khi shipper di chuyển
             if (data.destLatitude && data.destLongitude) {
               drawRoute(data.latitude, data.longitude, data.destLatitude, data.destLongitude);
             }
@@ -370,8 +378,9 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
 
     client.activate();
     stompClientRef.current = client;
+
     return () => { client.deactivate(); };
-  }, [orderId, updateMarker, clearMapOverlays]);
+  }, [orderId, updateMarker]);
 
   // ---- CLEANUP MAP ----
   useEffect(() => {
@@ -381,8 +390,7 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
         leafletMapRef.current.remove();
         leafletMapRef.current = null;
         shipperMarkerRef.current = null;
-        routeGroupRef.current = null;
-        destMarkerRef.current = null;
+        routeLayerRef.current = null;
       }
     };
   }, []);
@@ -396,6 +404,7 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
     <div className="flex-1 bg-background animate-in fade-in duration-500 pb-20">
       <div className="max-w-[1280px] mx-auto px-4 md:px-10 lg:px-40 py-12">
 
+        {/* Header */}
         <div className="flex items-center gap-4 mb-10">
           <button onClick={onBack} className="size-12 bg-white border border-gray-100 rounded-2xl flex items-center justify-center text-gray-400 hover:text-gray-900 transition-all shadow-sm">
             <ArrowLeft className="size-5" />
@@ -410,6 +419,7 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
 
+          {/* LEFT: Timeline + Shipper Info */}
           <div className="lg:col-span-4 flex flex-col gap-8">
             <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-10">
               <div className="space-y-8 relative">
@@ -432,6 +442,7 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
               </div>
             </div>
 
+            {/* Shipper Info */}
             <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-8 flex flex-col gap-6">
               <div className="flex items-center justify-between">
                 <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Thông tin Shipper</h4>
@@ -479,7 +490,8 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
                 </div>
               )}
 
-              {location && !shipperActive && (
+              {/* ✅ Banner khi shipper tắt GPS */}
+              {location && !shipperActive && lastUpdateRef.current && (
                 <div className="flex items-center gap-2 bg-gray-50 text-gray-500 rounded-2xl p-4 border border-gray-200">
                   <WifiOff className="size-4 shrink-0" />
                   <p className="text-xs font-bold">Shipper đã tắt GPS — vị trí hiển thị lần cuối</p>
@@ -488,8 +500,16 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
             </div>
           </div>
 
+          {/* RIGHT: Map */}
           <div className="lg:col-span-8 flex flex-col gap-8">
-            <div className="relative rounded-[40px] overflow-hidden shadow-lg border border-gray-100" style={{ height: '450px' }}>
+            <div
+              className="relative rounded-[40px] shadow-lg border border-gray-100 bg-gray-100"
+              style={{
+                height: '450px',
+                overflow: 'hidden',  // clip Leaflet controls bên trong
+                isolation: 'isolate', // tạo stacking context riêng, không leo lên header
+              }}
+            >
 
               {loadingInitial && (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/90 gap-4">
@@ -512,6 +532,7 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
                   onClick={() => {
                     setFollowShipper(prev => {
                       const next = !prev;
+                      // Khi bật lại follow → pan về shipper ngay
                       if (next && leafletMapRef.current) {
                         leafletMapRef.current.panTo([location.lat, location.lng], { animate: true });
                       }
@@ -530,6 +551,7 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
               )}
             </div>
 
+            {/* Order Summary */}
             <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-10">
               <div className="flex items-center justify-between mb-8">
                 <h4 className="text-xl font-black text-gray-900 uppercase tracking-tight">Tóm tắt đơn hàng</h4>
