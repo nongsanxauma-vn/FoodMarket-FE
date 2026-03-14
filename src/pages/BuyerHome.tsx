@@ -124,18 +124,32 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct }) => {
             <div className="col-span-full py-10 text-center text-gray-400 font-bold uppercase tracking-widest text-[10px]">Đang tải túi mù...</div>
           ) : mysteryBoxes.length > 0 ? (
             mysteryBoxes.slice(0, 3).map((box) => (
-              <div key={box.id} className="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all border border-gray-100 flex flex-col group p-4">
-                <div className="h-48 rounded-xl bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center mb-6 relative overflow-hidden">
+              <div
+                key={box.id}
+                onClick={() => onSelectProduct(`box-${box.id}`)}
+                className="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all border border-gray-100 flex flex-col group p-4 cursor-pointer"
+              >
+                {/* Image area — mirrors product card structure */}
+                <div className="relative h-48 rounded-xl bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center mb-6 overflow-hidden">
                   {box.imageUrl ? (
-                    <img src={box.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                    <img src={box.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={box.boxType} />
                   ) : (
-                    <ShoppingCart className="size-20 text-green-200 group-hover:scale-110 transition-transform duration-500" />
+                    <>
+                      <ShoppingCart className="size-20 text-green-200 group-hover:scale-110 transition-transform duration-500" />
+                      <span className="absolute text-3xl font-black text-primary/40">?</span>
+                    </>
                   )}
-                  {!box.imageUrl && <span className="absolute text-3xl font-black text-primary/40">?</span>}
                   <div className="absolute top-3 right-3 bg-white/90 backdrop-blur px-2 py-1 rounded-full shadow-sm flex items-center gap-1">
                     <Award className="size-3 text-green-600" />
                     <span className="text-[10px] font-bold uppercase">Cam kết sạch</span>
                   </div>
+                  {/* Cart icon — same pattern as product cards */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onSelectProduct(`box-${box.id}`); }}
+                    className="absolute bottom-3 right-3 size-10 bg-primary text-white rounded-full shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100"
+                  >
+                    <ShoppingCart className="size-5" />
+                  </button>
                 </div>
                 <div className="flex flex-col gap-3">
                   <div className="flex justify-between items-start">
@@ -146,7 +160,10 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct }) => {
                   <div className="flex items-center gap-1.5 text-gray-400 text-xs font-bold">
                     <MapPin className="size-3" /> Nông trại đối tác
                   </div>
-                  <button className="w-full bg-primary hover:bg-primary-dark text-white font-black py-3 rounded-xl transition-all mt-2 active:scale-95">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onSelectProduct(`box-${box.id}`); }}
+                    className="w-full bg-primary hover:bg-primary-dark text-white font-black py-3 rounded-xl transition-all mt-2 active:scale-95"
+                  >
                     CHỌN TÚI NÀY
                   </button>
                 </div>

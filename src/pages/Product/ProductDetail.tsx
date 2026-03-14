@@ -274,10 +274,10 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex items-center gap-3">
                         <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
-                          {review.buyerFullName ? review.buyerFullName.charAt(0).toUpperCase() : review.buyerId}
+                          {review.fullName ? review.fullName.charAt(0).toUpperCase() : review.buyerId}
                         </div>
                         <div>
-                          <p className="font-black text-gray-900 text-sm">{review.buyerFullName || `Người dùng #${review.buyerId}`}</p>
+                          <p className="font-black text-gray-900 text-sm">{review.fullName || `Người dùng #${review.buyerId}`}</p>
                           <div className="flex text-yellow-400 mt-1">
                             {[...Array(5)].map((_, i) => (
                               <Star key={i} className={`size-3 ${i < review.ratingStar ? 'fill-yellow-400' : ''}`} />
