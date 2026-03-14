@@ -369,6 +369,12 @@ const Header: React.FC<HeaderProps> = ({
               >
                 TIN TỨC
               </Link>
+              <Link
+                to="/meal-plan"
+                className={`text-xs font-bold uppercase tracking-tight transition-all ${location.pathname === '/meal-plan' ? 'text-gray-900 border-b-2 border-[#29a33d] pb-1' : 'text-gray-600 hover:text-primary'}`}
+              >
+                KẾ HOẠCH ĂN UỐNG
+              </Link>
             </nav>
 
             <div className="h-6 w-px bg-gray-100 mx-2" />

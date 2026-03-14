@@ -17,7 +17,7 @@ export { paymentService } from './payment.service';
 export { comboService } from './combo.service';
 export { cartService } from './cart.service';
 export { reviewService } from './review.service';
-export { chatService } from './chat.service';
+export { buildPlanService } from './buildPlan.service';
 export { httpClient } from './http.client';
 
 // Export types
@@ -43,6 +43,12 @@ export type { AddCartItemRequest, CartItemResponse, CartResponse } from './cart.
 export type { ReviewResponse, ReviewCreateRequest, ReviewReplyRequest } from './review.service';
 export type { ApiResponse, RequestConfig } from './http.client';
 export type { UserUpdateRequest } from './user.service';
+export type {
+    BuildPlanResponse,
+    BuildPlanItemResponse,
+    BuildPlanCreateRequest,
+    BuildPlanItemCreateRequest
+} from '../types';
 
 // Export constants
 export { API_BASE_URL, TOKEN_KEY, USER_INFO_KEY } from './api.config';

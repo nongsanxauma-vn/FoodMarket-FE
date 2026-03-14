@@ -9,6 +9,7 @@ import Tracking from '../pages/auth/Tracking';
 import MyOrders from '../pages/auth/MyOrders';
 import Profile from '../pages/farmer/Profile';
 import UserProfile from '../pages/auth/UserProfile';
+// import MealPlan from '../pages/auth/MealPlan';
 import KYC from '../pages/auth/KYC';
 import { AppRole } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -49,6 +50,11 @@ const ProtectedRoutes = () => {
                     <UserProfile />
                 </ProtectedRoute>
             } />
+            {/* <Route path="/meal-plan" element={
+                <ProtectedRoute>
+                    <MealPlan />
+                </ProtectedRoute>
+            } /> */}
             <Route path="/kyc" element={
                 <ProtectedRoute allowedRoles={[AppRole.FARMER, AppRole.SHIPPER]}>
                     <KYC
