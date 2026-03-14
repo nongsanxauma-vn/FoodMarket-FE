@@ -164,13 +164,13 @@ const Reviews: React.FC = () => {
                 <div className="flex gap-6">
                   {/* Avatar */}
                   <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center font-black text-primary border border-primary/20 shrink-0">
-                    {review.buyerFullName ? review.buyerFullName.charAt(0).toUpperCase() : 'U'}
+                    {review.fullName ? review.fullName.charAt(0).toUpperCase() : 'U'}
                   </div>
                   
                   <div className="flex-1">
                     <div className="flex justify-between items-start mb-2">
                       <div>
-                        <h4 className="font-black text-gray-900 text-sm">{review.buyerFullName || `Khách hàng #${review.buyerId}`}</h4>
+                        <h4 className="font-black text-gray-900 text-sm">{review.fullName || `Khách hàng #${review.buyerId}`}</h4>
                         <div className="flex text-yellow-400 mt-1">
                           {[...Array(5)].map((_, i) => (
                             <Star key={i} className={`size-3.5 ${i < review.ratingStar ? 'fill-yellow-400' : 'text-gray-200'}`} />
