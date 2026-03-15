@@ -7,6 +7,7 @@ import Checkout from '../pages/auth/Checkout';
 import Success from '../pages/auth/Success';
 import Tracking from '../pages/auth/Tracking';
 import MyOrders from '../pages/auth/MyOrders';
+import Messages from '../pages/Messages';
 import Profile from '../pages/farmer/Profile';
 import UserProfile from '../pages/auth/UserProfile';
 // import MealPlan from '../pages/auth/MealPlan';
