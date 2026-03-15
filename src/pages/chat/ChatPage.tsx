@@ -13,6 +13,8 @@ import ChatWindow from '../../components/chat/ChatWindow';
 import type { Conversation } from '../../types/chat';
 
 const HEADER_H = 60; // px
+const ADMIN_USER_ID = 6; // ID của Admin trong database - cần cập nhật theo thực tế
+const SUPPORT_CENTER_NAME = 'Trung tâm hỗ trợ';
 
 const ChatPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -47,7 +49,31 @@ const ChatPage: React.FC = () => {
     setLoadingConversations(true);
     try {
       const convs = await chatService.getConversations();
-      setConversations(convs);
+      
+      // Tìm conversation với Admin
+      const adminConv = convs.find(c => c.otherUserId === ADMIN_USER_ID);
+      
+      // Nếu chưa có conversation với Admin, tạo một conversation để hiển thị
+      if (!adminConv) {
+        const supportConv: Conversation = {
+          id: -1, // ID giả để phân biệt
+          roomKey: '',
+          otherUserId: ADMIN_USER_ID,
+          otherUserName: SUPPORT_CENTER_NAME,
+          otherUserRole: 'ADMIN',
+          lastMessage: 'Bắt đầu trò chuyện với trung tâm hỗ trợ',
+          lastMessageAt: new Date().toISOString(),
+          unreadCount: 0,
+        };
+        // Ghim Admin lên đầu
+        setConversations([supportConv, ...convs]);
+      } else {
+        // Cập nhật tên Admin thành "Trung tâm hỗ trợ"
+        const updatedAdminConv = { ...adminConv, otherUserName: SUPPORT_CENTER_NAME };
+        const otherConvs = convs.filter(c => c.otherUserId !== ADMIN_USER_ID);
+        // Ghim Admin lên đầu
+        setConversations([updatedAdminConv, ...otherConvs]);
+      }
 
       if (openWithUserIdParam) {
         const targetId = Number(openWithUserIdParam);

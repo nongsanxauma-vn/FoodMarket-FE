@@ -82,11 +82,6 @@ const ShopProducts: React.FC<ShopProductsProps> = ({
     };
 
     fetchShopData();
-    
-    // Scroll to top
-    setTimeout(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 0);
   }, [shopId]);
 
   const handleAddToCart = async (productId: number) => {

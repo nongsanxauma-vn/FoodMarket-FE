@@ -194,7 +194,7 @@ const OAuthRegister: React.FC<OAuthRegisterProps> = ({ onGoToLogin }) => {
                                         setSuccess('Đăng ký thành công! Đang chuyển hướng...');
                                         setTimeout(() => {
                                             // Clear URL params
-                                            window.history.replaceState({}, document.title, "/nong_san_xau_ma/");
+                                            window.history.replaceState({}, document.title, "/");
                                             login(selectedRole);
                                         }, 1000);
                                     } else {
