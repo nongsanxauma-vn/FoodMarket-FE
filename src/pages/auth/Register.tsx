@@ -196,7 +196,7 @@ const Register: React.FC<RegisterProps> = ({ onGoToLogin, onGoToShipperRegister 
         <img
           alt="Nông sản tươi sạch"
           className="absolute inset-0 w-full h-full object-cover"
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuBAw_xXxVDDIwzdg7n_0cCpoahHsxdorA_yeN2hG9i7SiheR_1AB2x3P0ItoJzgOrqPBsP-Std_CyB2X-6LJXRVUTh98oI3GSmmrCGPL1B1N0CnJEnDgMo4t9t-RPv7zIu9SfLOCwvs1jn7Ou2ADuIjsQ4s3G0L5rbQxCX1JG9rnxMBh0mcPDpiUJuK-i--i8PHCjyX6Zje9FnOyhRZSP2zCVs4TLiu_nFT8sYdux441OYF8SOlGU1HxNAFJgIoI2SbjnHNathWZnIl"
+          src="https://moitruong.net.vn/rau-cu-ptag.html"
         />
         <div className="absolute inset-0 z-20 p-10 flex flex-col justify-between">
           {/* Top bar */}
