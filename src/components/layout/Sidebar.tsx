@@ -48,6 +48,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role, user, currentPath, onNavigate, 
 
   const adminMenu = [
     { name: 'Bảng điều khiển', icon: LayoutDashboard, id: 'admin-overview' },
+    { name: 'Tin nhắn', icon: MessageSquare, id: 'admin-messages' },
     { name: 'Duyệt KYC', icon: ShieldCheck, id: 'admin-kyc' },
     { name: 'Quản lý tin tức', icon: Newspaper, id: 'admin-news' },
     { name: 'Quản lý thông báo', icon: Send, id: 'admin-notifications' },

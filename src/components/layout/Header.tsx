@@ -312,7 +312,7 @@ const Header: React.FC<HeaderProps> = ({
                       <button onClick={() => { setShowProfileMenu(false); navigate('/my-orders'); }} className="w-full px-5 py-3 text-left text-xs font-bold hover:bg-gray-50 flex items-center gap-3 transition-colors">
                         <Package className="size-4 text-gray-400" /> Đơn hàng của tôi
                       </button>
-                      {user?.role === AppRole.BUYER && (
+                      {(user?.role === AppRole.BUYER || user?.role === AppRole.FARMER) && (
                         <button onClick={() => { setShowProfileMenu(false); navigate('/chat'); }} className="w-full px-5 py-3 text-left text-xs font-bold hover:bg-gray-50 flex items-center gap-3 transition-colors">
                           <MessageSquare className="size-4 text-gray-400" /> Tin nhắn
                         </button>
