@@ -156,7 +156,7 @@ class HttpClient {
             console.error('[HTTP] Redirecting to login/home...');
             localStorage.removeItem(TOKEN_KEY);
             // Sử dụng path tương đối hoặc bao gồm basename để tránh nhảy ra khỏi app
-            const basename = '/nong_san_xau_ma/';
+            const basename = '/';
             window.location.href = basename;
           }
         }
