@@ -7,7 +7,7 @@ import './App.css';
 
 const App: React.FC = () => {
   return (
-    <BrowserRouter basename="/nong_san_xau_ma/">
+    <BrowserRouter basename="/">
       <AuthProvider>
         <AppRouter />
       </AuthProvider>
