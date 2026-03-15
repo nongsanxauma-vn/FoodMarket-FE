@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AppRole } from '../../types/index';
+import { AppRole, KYCStatus } from '../../types/index';
 import { useAuth } from '../../contexts/AuthContext';
 import { ArrowLeft } from 'lucide-react';
 import { authService, otpService } from '../../services';
@@ -42,8 +42,14 @@ const Register: React.FC<RegisterProps> = ({ onGoToLogin, onGoToShipperRegister 
   React.useEffect(() => {
     if (isAuthenticated && user) {
       if (user.role === AppRole.ADMIN) navigate('/admin');
-      else if (user.role === AppRole.FARMER) navigate('/farmer');
-      else if (user.role === AppRole.SHIPPER) navigate('/shipper');
+      else if (user.role === AppRole.FARMER) {
+        if (user.kycStatus === KYCStatus.PENDING) navigate('/kyc');
+        else navigate('/farmer');
+      }
+      else if (user.role === AppRole.SHIPPER) {
+        if (user.kycStatus === KYCStatus.PENDING) navigate('/kyc');
+        else navigate('/shipper');
+      }
       else navigate('/');
     }
   }, [isAuthenticated, user, navigate]);
@@ -85,21 +91,49 @@ const Register: React.FC<RegisterProps> = ({ onGoToLogin, onGoToShipperRegister 
               );
               if (response.result) {
                 // Sau khi đăng ký thành công, tự động đăng nhập để lấy token
-                const loginResponse = await authService.login({
-                  email: email,
-                  password: password
-                });
-                
-                if (loginResponse.result?.token) {
+                let loginResponse;
+                try {
+                  loginResponse = await authService.login({
+                    email: email,
+                    password: password
+                  });
+                } catch (loginErr) {
+                  console.error("Auto-login failed:", loginErr);
+                }
+
+                if (loginResponse?.result?.token) {
                   setSuccess('Đăng ký thành công! Đang chuyển hướng...');
                   login(selectedRole);
                   setTimeout(() => {
-                    if (selectedRole === AppRole.FARMER) navigate('/kyc');
+                    if (selectedRole === AppRole.FARMER || selectedRole === AppRole.SHIPPER) navigate('/kyc');
                     else navigate('/');
                   }, 1500);
                 } else {
-                  setError('Đăng ký thành công nhưng không thể đăng nhập tự động. Vui lòng đăng nhập thủ công.');
-                  setTimeout(() => onGoToLogin(), 2000);
+                  // If login fails (e.g. pending approval), but registration was successful
+                  if (selectedRole === AppRole.FARMER || selectedRole === AppRole.SHIPPER) {
+                    setSuccess('Đăng ký thành công! Hồ sơ của bạn đang được chờ duyệt.');
+                    setTimeout(() => {
+                      navigate('/kyc', { 
+                        state: { 
+                          pendingUser: {
+                            name: fullName,
+                            email: email,
+                            role: selectedRole,
+                            phone: phone,
+                            shopName: shopName,
+                            address: address,
+                            bankAccount: bankAccount,
+                            description: description,
+                            avatar: logoFile ? URL.createObjectURL(logoFile) : null,
+                            achievement: achievementFile ? achievementFile.name : null
+                          }
+                        } 
+                      });
+                    }, 1500);
+                  } else {
+                    setError('Đăng ký thành công nhưng không thể đăng nhập tự động. Vui lòng đăng nhập thủ công.');
+                    setTimeout(() => onGoToLogin(), 2000);
+                  }
                 }
               }
             } catch (err: any) {

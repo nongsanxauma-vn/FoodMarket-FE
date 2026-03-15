@@ -1,14 +1,12 @@
 
 import React from 'react';
-import { Route, useNavigate } from 'react-router-dom';
+import { Route, useNavigate, useLocation } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
 import Cart from '../pages/auth/Cart';
 import Checkout from '../pages/auth/Checkout';
 import Success from '../pages/auth/Success';
 import Tracking from '../pages/auth/Tracking';
 import MyOrders from '../pages/auth/MyOrders';
-import Messages from '../pages/Messages';
-import Profile from '../pages/farmer/Profile';
 import UserProfile from '../pages/auth/UserProfile';
 // import MealPlan from '../pages/auth/MealPlan';
 import KYC from '../pages/auth/KYC';
@@ -58,15 +56,31 @@ const ProtectedRoutes = () => {
             } /> */}
             <Route path="/kyc" element={
                 <ProtectedRoute allowedRoles={[AppRole.FARMER, AppRole.SHIPPER]}>
-                    <KYC
-                        onComplete={() => navigate('/')}
-                        onBack={() => navigate('/')}
-                        role={(user?.role === AppRole.SHIPPER ? 'SHIPPER' : 'FARMER')}
-                        user={user}
-                    />
+                    <KYCRouteWrapper />
                 </ProtectedRoute>
             } />
         </>
+    );
+};
+
+// Component con để xử lý logic lấy role/user cho KYC
+const KYCRouteWrapper = () => {
+    const { user } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
+    
+    // Ưu tiên role từ state nếu đang trong luồng redirect đăng ký/đăng nhập
+    const stateRole = location.state?.pendingUser?.role;
+    const effectiveRole = user?.role || stateRole || AppRole.FARMER;
+    const roleForKYC = effectiveRole === AppRole.SHIPPER ? 'SHIPPER' : 'FARMER';
+
+    return (
+        <KYC
+            onComplete={() => navigate('/')}
+            onBack={() => navigate('/')}
+            role={roleForKYC}
+            user={user}
+        />
     );
 };
 
