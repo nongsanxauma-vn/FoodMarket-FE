@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { notificationService, NotificationItem } from '../../services';
@@ -11,8 +12,11 @@ import { API_BASE_URL, TOKEN_KEY } from '../../services/api.config';
 import {
   Bell, MapPin, Wallet, Navigation, Zap, Clock, Bike, Package,
   ArrowRight, User, LogOut, Truck, CheckCircle2, X, Info,
-  RefreshCw, Loader2, Radio, StopCircle, WifiOff, Store
+  RefreshCw, Loader2, Radio, StopCircle, WifiOff, Store, MessageSquare
 } from 'lucide-react';
+import FakeGPS from './Fakegps';
+import { authService } from '../../services/auth.service';
+import type { UserResponse } from '../../services/auth.service';
 
 interface ShipperDashboardProps {
   onLogout: () => void;
@@ -22,8 +26,9 @@ type GpsStatus = 'idle' | 'loading' | 'granted' | 'denied' | 'error';
 type TrackingStatus = 'off' | 'starting' | 'active' | 'error';
 
 const ShipperDashboard: React.FC<ShipperDashboardProps> = ({ onLogout }) => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Đơn hàng mới');
-  const [radius, setRadius] = useState('2km');
+  const [radius, setRadius] = useState('5km');
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
@@ -39,6 +44,10 @@ const ShipperDashboard: React.FC<ShipperDashboardProps> = ({ onLogout }) => {
   const [acceptSuccess, setAcceptSuccess] = useState<number | null>(null);
   const [trackingStatus, setTrackingStatus] = useState<TrackingStatus>('off');
   const [trackingOrderId, setTrackingOrderId] = useState<number | null>(null);
+  // ✅ Fake GPS: orderId đang mở panel fake GPS
+  const [fakeGpsOrderId, setFakeGpsOrderId] = useState<number | null>(null);
+  // ✅ Thông tin shipper đang login
+  const [myProfile, setMyProfile] = useState<UserResponse | null>(() => authService.getUserInfo());
 
   const stompClientRef = useRef<Client | null>(null);
   const watchIdRef = useRef<number | null>(null);
@@ -46,6 +55,17 @@ const ShipperDashboard: React.FC<ShipperDashboardProps> = ({ onLogout }) => {
   const currentPosRef = useRef<{ lat: number; lng: number } | null>(null);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  // ✅ Fetch thông tin shipper đang login
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await authService.getMyInfo();
+        if (res.result) setMyProfile(res.result);
+      } catch { console.warn('Cannot fetch shipper profile'); }
+    };
+    fetchProfile();
+  }, []);
 
   useEffect(() => {
     const fetch = async () => {
@@ -243,6 +263,27 @@ const ShipperDashboard: React.FC<ShipperDashboardProps> = ({ onLogout }) => {
                   <X className="size-4" />
                 </button>
               </div>
+
+              {/* ✅ FAKE GPS PANEL - Toggle hiện/ẩn */}
+              <button
+                onClick={() => setFakeGpsOrderId(prev => prev === order.orderId ? null : order.orderId)}
+                className="w-full py-2.5 border border-dashed border-yellow-300 bg-yellow-50 text-yellow-700 rounded-2xl text-[10px] font-black uppercase tracking-wider hover:bg-yellow-100 transition-all flex items-center justify-center gap-2"
+              >
+                🎭 {fakeGpsOrderId === order.orderId ? 'Ẩn' : 'Mở'} Demo GPS (Fake GPS)
+              </button>
+
+              {fakeGpsOrderId === order.orderId && (
+                <FakeGPS
+                  orderId={order.orderId}
+                  // ✅ Tọa độ thật từ DB — đồng nhất với Tracking
+                  shopLat={order.shopLatitude ?? 10.845}
+                  shopLng={order.shopLongitude ?? 106.775}
+                  destLat={order.shippingLatitude ?? 10.830}
+                  destLng={order.shippingLongitude ?? 106.760}
+                  currentLat={shipperLat ?? undefined}
+                  currentLng={shipperLng ?? undefined}
+                />
+              )}
             </div>
           );
         })}
@@ -251,18 +292,27 @@ const ShipperDashboard: React.FC<ShipperDashboardProps> = ({ onLogout }) => {
   };
 
   // ===================== RENDER: ORDER CARDS (ĐƠN MỚI) =====================
+  // ✅ Dùng biến thay vì function để React re-render đúng khi radius thay đổi
+  const radiusKm = parseInt(radius); // '5km' → 5, '10km' → 10, '15km' → 15
+  const filteredOrders = availableOrders.filter(order =>
+    order.shipToShopKm == null || order.shipToShopKm <= radiusKm
+  );
+
   const renderOrderCards = () => (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-      {availableOrders.length === 0 ? (
+      {filteredOrders.length === 0 ? (
         <div className="col-span-3 flex flex-col items-center justify-center py-24 gap-6 text-center">
           <div className="size-24 bg-gray-50 rounded-[40px] flex items-center justify-center text-gray-200 border border-gray-100"><Package className="size-12" /></div>
-          <p className="text-lg font-black text-gray-400 uppercase">Không có đơn nào trong khu vực</p>
+          <p className="text-lg font-black text-gray-400 uppercase">
+            Không có đơn nào trong vòng {radius}
+          </p>
+          <p className="text-xs text-gray-400">Thử tăng bán kính tìm kiếm hoặc tải lại</p>
           <button onClick={() => shipperLat && shipperLng ? fetchNearbyOrders(shipperLat, shipperLng) : requestGpsAndFetchOrders()}
             className="px-8 py-3 bg-primary/10 text-primary rounded-2xl text-xs font-black uppercase flex items-center gap-2">
             <RefreshCw className="size-4" /> Tải lại
           </button>
         </div>
-      ) : availableOrders.map((order) => (
+      ) : filteredOrders.map((order) => (
         <div key={order.orderId} className="bg-white rounded-[40px] border border-gray-100 shadow-sm hover:shadow-xl transition-all p-8 flex flex-col group relative overflow-hidden">
           {/* Header */}
           <div className="flex justify-between items-start mb-6">
@@ -365,16 +415,27 @@ const ShipperDashboard: React.FC<ShipperDashboardProps> = ({ onLogout }) => {
               <span className="text-[10px] font-black text-green-300 uppercase">GPS Live</span>
             </div>
           )}
+          {/* ✅ Nút chat — mở trang /chat giống Buyer */}
+          <button
+            onClick={() => navigate('/chat')}
+            className="size-10 bg-white/10 rounded-xl flex items-center justify-center text-white hover:bg-white/20 transition-all"
+            title="Tin nhắn"
+          >
+            <MessageSquare className="size-5" />
+          </button>
           <button onClick={() => setIsNotificationsOpen(true)} className="size-10 bg-white/10 rounded-xl flex items-center justify-center text-white hover:bg-white/20 relative">
             <Bell className="size-5" />
             {unreadCount > 0 && <span className="absolute -top-1 -right-1 size-5 bg-red-500 rounded-full border-2 border-[#1a4d2e] text-[10px] font-bold flex items-center justify-center">{unreadCount}</span>}
           </button>
           <div className="h-8 w-px bg-white/10" />
           <div className="flex items-center gap-3">
-            <p className="text-[9px] font-bold text-green-400 uppercase tracking-widest hidden sm:block">
-              {trackingStatus === 'active' ? '📡 GPS Live' : gpsStatus === 'granted' ? '📍 GPS bật' : 'Trực tuyến'}
-            </p>
-            <img src="https://picsum.photos/seed/shipper_avatar/80/80" className="size-10 rounded-xl object-cover border-2 border-white/20" />
+            {myProfile?.logoUrl ? (
+              <img src={myProfile.logoUrl} className="size-10 rounded-xl object-cover border-2 border-white/20" />
+            ) : (
+              <div className="size-10 rounded-xl bg-white/20 border-2 border-white/20 flex items-center justify-center text-white font-black text-sm">
+                {(myProfile?.fullName ?? 'S')[0].toUpperCase()}
+              </div>
+            )}
           </div>
           <button onClick={onLogout} className="size-10 bg-red-500/20 text-red-200 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"><LogOut className="size-5" /></button>
         </div>
@@ -398,7 +459,8 @@ const ShipperDashboard: React.FC<ShipperDashboardProps> = ({ onLogout }) => {
           <div className="flex items-center gap-3 bg-gray-50 px-4 py-2 rounded-2xl border border-gray-100 hidden md:flex">
             <Wallet className="size-4 text-primary" />
             <span className="text-[10px] font-black text-gray-400 uppercase">VÍ:</span>
-            <span className="text-sm font-black text-gray-900">1.250.000đ</span>
+            {/* TODO: nối API ví khi BE có endpoint */}
+            <span className="text-sm font-black text-gray-900">--</span>
           </div>
         </div>
       </div>
@@ -409,7 +471,9 @@ const ShipperDashboard: React.FC<ShipperDashboardProps> = ({ onLogout }) => {
           <div>
             <h1 className="text-4xl font-black text-gray-900 uppercase tracking-tighter">{activeTab}</h1>
             <p className="text-gray-400 font-bold mt-1 uppercase text-xs tracking-widest">
-              {activeTab === 'Đơn hàng mới' && (gpsStatus === 'granted' ? '📍 Đang tìm đơn gần bạn' : 'Bật GPS để xem đơn')}
+              {activeTab === 'Đơn hàng mới' && (gpsStatus === 'granted'
+                ? `📍 ${filteredOrders.length} đơn trong vòng ${radius}`
+                : 'Bật GPS để xem đơn')}
               {activeTab === 'Đơn đang giao' && `${myOrders.length} đơn đang giao`}
             </p>
           </div>
@@ -421,7 +485,7 @@ const ShipperDashboard: React.FC<ShipperDashboardProps> = ({ onLogout }) => {
               </button>
               <div className="flex items-center gap-2 bg-white p-2 rounded-[28px] border border-gray-100 shadow-sm">
                 <span className="text-[10px] font-black text-gray-400 uppercase ml-3">BÁN KÍNH:</span>
-                {['2km', '5km', '10km'].map(r => (
+                {['5km', '10km', '15km'].map(r => (
                   <button key={r} onClick={() => setRadius(r)}
                     className={`px-4 py-2 rounded-2xl text-xs font-black transition-all ${radius === r ? 'bg-primary text-white' : 'text-gray-400 hover:bg-gray-50'}`}>{r}</button>
                 ))}
@@ -462,11 +526,31 @@ const ShipperDashboard: React.FC<ShipperDashboardProps> = ({ onLogout }) => {
         {activeTab === 'Hồ sơ cá nhân' && (
           <div className="bg-white rounded-[48px] border border-gray-100 shadow-sm p-10 flex items-center gap-10">
             <div className="size-32 rounded-[40px] overflow-hidden border-4 border-white shadow-xl bg-blue-100">
-              <img src="https://picsum.photos/seed/shipper_avatar/200/200" className="w-full h-full object-cover" />
+              {myProfile?.logoUrl ? (
+                <img src={myProfile.logoUrl} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-blue-500 font-black text-5xl">
+                  {(myProfile?.fullName ?? 'S')[0].toUpperCase()}
+                </div>
+              )}
             </div>
-            <div>
-              <h2 className="text-3xl font-black text-gray-900">Shipper</h2>
-              <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-2">Đang hoạt động</p>
+            <div className="flex flex-col gap-3">
+              <h2 className="text-3xl font-black text-gray-900">{myProfile?.fullName ?? 'Shipper'}</h2>
+              <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">
+                {myProfile?.status === 'ACTIVE' ? '🟢 Đang hoạt động' : myProfile?.status ?? 'Đang hoạt động'}
+              </p>
+              {myProfile?.phoneNumber && (
+                <p className="text-sm text-gray-600 font-bold">📞 {myProfile.phoneNumber}</p>
+              )}
+              {myProfile?.vehicleNumber && (
+                <p className="text-sm text-gray-600 font-bold">🏍️ {myProfile.vehicleNumber}</p>
+              )}
+              {myProfile?.ratingAverage != null && (
+                <p className="text-sm text-gray-600 font-bold">⭐ {myProfile.ratingAverage.toFixed(1)} / 5.0</p>
+              )}
+              {myProfile?.address && (
+                <p className="text-xs text-gray-400">{myProfile.address}</p>
+              )}
             </div>
           </div>
         )}

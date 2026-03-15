@@ -61,6 +61,11 @@ export interface ShipperOrderResponse {
   createdAt: string;
   estimatedDeliveryDate: string | null;
   note: string | null;
+  // ✅ Tọa độ thật để FakeGPS dùng đúng điểm
+  shopLatitude?: number | null;
+  shopLongitude?: number | null;
+  shippingLatitude?: number | null;
+  shippingLongitude?: number | null;
 }
 
 export type UpdateOrderStatus = 'DELIVERED' | 'FAILED';
