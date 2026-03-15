@@ -80,9 +80,14 @@ function chatBotReducer(state: ChatBotState, action: ChatBotAction): ChatBotStat
       return { ...state, error: action.payload, isLoading: false };
     
     case 'SET_MESSAGES':
+      console.log('🔄 [Reducer] SET_MESSAGES called with:', action.payload.length, 'messages');
+      console.log('🔄 [Reducer] First message:', action.payload[0]);
+      console.log('🔄 [Reducer] First message content:', action.payload[0]?.content);
       return { ...state, messages: action.payload };
     
     case 'ADD_MESSAGE':
+      console.log('➕ [Reducer] ADD_MESSAGE called for:', action.payload.sender, 'ID:', action.payload.id);
+      console.log('➕ [Reducer] Content:', action.payload.content?.substring(0, 50));
       return { 
         ...state, 
         messages: [...state.messages, action.payload],
@@ -184,34 +189,103 @@ export function ChatBotProvider({ children, userId, userRole = 'BUYER' }: ChatBo
     }
   }, [state.isOnline, syncOfflineMessages]);
 
-  // Load messages from localStorage on mount with error handling
-  useEffect(() => {
-    try {
-      const savedMessages = localStorage.getItem(CHAT_STORAGE_KEY);
-      if (savedMessages) {
-        const messages: ChatMessage[] = JSON.parse(savedMessages).map((msg: any) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp)
-        }));
-        dispatch({ type: 'SET_MESSAGES', payload: messages });
-      }
-    } catch (error) {
-      console.error('Failed to load chat messages from localStorage:', error);
-      const chatBotError = parseApiError(error, getUserPreferredLanguage());
-      logError(chatBotError, { context: 'localStorage_load' });
-    }
+  // Helper to map API message to ChatMessage format
+  const mapApiMessageToChatMessage = useCallback((msg: any): ChatMessage => {
+    // Get content with fallbacks
+    const rawContent = msg.content || msg.message || msg.text || msg.body || '';
+    const content = String(rawContent).trim();
+    
+    // Get role/sender
+    const role = msg.role || msg.sender || '';
+    const sender = (role === 'USER' || role === 'user' || role === 'customer') ? 'user' as const : 'ai' as const;
+    
+    // Get timestamp
+    const timestamp = msg.timestamp || msg.createdAt || msg.created_at || new Date();
+    
+    // Get type
+    const type = msg.type || 'text';
+    
+    return {
+      id: String(msg.id) || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      content: content,
+      sender: sender,
+      timestamp: new Date(timestamp),
+      type: type as any,
+      status: 'delivered' as const,
+      metadata: msg.metadata
+    };
   }, []);
 
-  // Save messages to localStorage whenever messages change with error handling
+  // Load messages from backend on mount with fallback to localStorage
   useEffect(() => {
-    try {
-      localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(state.messages));
-    } catch (error) {
-      console.error('Failed to save chat messages to localStorage:', error);
-      const chatBotError = parseApiError(error, getUserPreferredLanguage());
-      logError(chatBotError, { context: 'localStorage_save' });
-    }
+    const loadMessages = async () => {
+      try {
+        // Try to load from backend first
+        if (userId && userId > 0) {
+          console.log('[ChatBot] Loading chat history for user:', userId);
+          const history = await chatBotService.getChatHistory();
+          
+          if (history && history.length > 0) {
+            console.log('[ChatBot] Loaded', history.length, 'messages from backend');
+            const messages: ChatMessage[] = history
+              .filter((msg: any) => {
+                const content = msg.content || msg.message || msg.text || msg.body || '';
+                return content && typeof content === 'string' && content.trim().length > 0;
+              })
+              .map(mapApiMessageToChatMessage);
+            
+            console.log('[ChatBot] Final mapped messages:', messages.length);
+            dispatch({ type: 'SET_MESSAGES', payload: messages });
+            return;
+          }
+        }
+        
+        // Fallback to localStorage
+        console.log('[ChatBot] Falling back to localStorage');
+        const savedMessages = localStorage.getItem(CHAT_STORAGE_KEY);
+        if (savedMessages) {
+          const messages: ChatMessage[] = JSON.parse(savedMessages).map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+          }));
+          dispatch({ type: 'SET_MESSAGES', payload: messages });
+        }
+      } catch (error) {
+        console.error('[ChatBot] Failed to load chat messages:', error);
+        // Fallback to localStorage on error
+        try {
+          const savedMessages = localStorage.getItem(CHAT_STORAGE_KEY);
+          if (savedMessages) {
+            const messages: ChatMessage[] = JSON.parse(savedMessages).map((msg: any) => ({
+              ...msg,
+              timestamp: new Date(msg.timestamp)
+            }));
+            dispatch({ type: 'SET_MESSAGES', payload: messages });
+          }
+        } catch (e) {}
+      }
+    };
+
+    loadMessages();
+  }, [userId, mapApiMessageToChatMessage]);
+
+  // Save messages to localStorage whenever messages change with error handling (debounced)
+  // TEMPORARILY DISABLED FOR DEBUGGING
+  /*
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      try {
+        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(state.messages));
+      } catch (error) {
+        console.error('Failed to save chat messages to localStorage:', error);
+        const chatBotError = parseApiError(error, getUserPreferredLanguage());
+        logError(chatBotError, { context: 'localStorage_save' });
+      }
+    }, 500); // Debounce 500ms
+
+    return () => clearTimeout(timeoutId);
   }, [state.messages]);
+  */
 
   // Generate unique session ID
   const generateSessionId = useCallback(() => {
@@ -347,6 +421,7 @@ export function ChatBotProvider({ children, userId, userRole = 'BUYER' }: ChatBo
       }
 
       // Send to AI service with retry mechanism
+      console.log('[ChatBot] Sending message to AI:', sanitizedMessage);
       const response = await withRetry(
         () => chatBotService.sendMessageWithPersonalization(sanitizedMessage, context),
         {
@@ -357,6 +432,10 @@ export function ChatBotProvider({ children, userId, userRole = 'BUYER' }: ChatBo
           retryableStatuses: [408, 429, 500, 502, 503, 504]
         }
       );
+
+      console.log('[ChatBot] AI response received:', response);
+      console.log('[ChatBot] AI response.message:', response.message);
+      console.log('[ChatBot] AI response.message length:', response.message?.length);
 
       // Create AI response message
       const aiMessage: ChatMessage = {
@@ -371,7 +450,11 @@ export function ChatBotProvider({ children, userId, userRole = 'BUYER' }: ChatBo
         }
       };
 
+      console.log('[ChatBot] Created AI message:', aiMessage);
+      console.log('[ChatBot] AI message content:', aiMessage.content);
+
       // Add AI response
+      console.log('[ChatBot] Dispatching ADD_MESSAGE for AI response');
       dispatch({ type: 'ADD_MESSAGE', payload: aiMessage });
 
       // Update suggestions if provided
@@ -475,16 +558,14 @@ export function ChatBotProvider({ children, userId, userRole = 'BUYER' }: ChatBo
       );
       
       // Convert backend response to ChatMessage format
-      const messages: ChatMessage[] = historyResponse.map(item => ({
-        id: item.id,
-        content: item.content,
-        sender: item.sender,
-        timestamp: new Date(item.timestamp),
-        type: item.type,
-        status: 'delivered',
-        metadata: item.metadata
-      }));
+      const messages: ChatMessage[] = historyResponse
+        .filter((msg: any) => {
+          const content = msg.content || msg.message || msg.text || msg.body || '';
+          return content && typeof content === 'string' && content.trim().length > 0;
+        })
+        .map(mapApiMessageToChatMessage);
 
+      console.log('[ChatBot] Loaded history, messages:', messages.length);
       dispatch({ type: 'SET_MESSAGES', payload: messages });
 
     } catch (error: any) {
@@ -495,7 +576,7 @@ export function ChatBotProvider({ children, userId, userRole = 'BUYER' }: ChatBo
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  }, [userId]);
+  }, [userId, mapApiMessageToChatMessage]);
 
   // Clear chat history with error handling
   const clearHistory = useCallback(async () => {

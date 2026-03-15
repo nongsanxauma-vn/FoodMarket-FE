@@ -82,6 +82,9 @@ const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = memo(({
 
   // Auto-scroll to bottom for new messages
   const scrollToBottom = useAutoScroll(messages.length, autoScroll);
+  
+  // Track previous message count to prevent unnecessary scrolls
+  const prevMessageCountRef = useRef(messages.length);
 
   // Handle scroll events
   const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
@@ -94,10 +97,13 @@ const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = memo(({
     }
   }, [onScroll, onLoadMore]);
 
-  // Auto-scroll when new messages arrive
+  // Auto-scroll when new messages arrive (only when count increases)
   useEffect(() => {
-    if (autoScroll && scrollElementRef.current) {
+    if (autoScroll && scrollElementRef.current && messages.length > prevMessageCountRef.current) {
       scrollToBottom(scrollElementRef.current);
+      prevMessageCountRef.current = messages.length;
+    } else if (messages.length !== prevMessageCountRef.current) {
+      prevMessageCountRef.current = messages.length;
     }
   }, [messages.length, autoScroll, scrollToBottom]);
 
@@ -125,43 +131,22 @@ const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = memo(({
         onScroll={handleScroll}
         style={{
           height: '100%',
-          overflowY: 'auto'
+          overflowY: 'auto',
+          overflowX: 'hidden'
         }}
       >
-        {/* Virtual scrolling container */}
-        <div style={{ height: totalHeight, position: 'relative' }}>
-          {/* Visible items container */}
-          <div
-            style={{
-              transform: `translateY(${offsetY}px)`,
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0
-            }}
-          >
-            {visibleItems.map((index) => {
-              const message = messages[index];
-              if (!message) return null;
-
-              return (
-                <div
-                  key={message.id}
-                  style={{
-                    minHeight: itemHeight,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    padding: '12px 16px'
-                  }}
-                >
-                  <MessageBubble
-                    message={message}
-                  />
-                </div>
-              );
-            })}
-          </div>
+        {/* Render all messages without virtualization to prevent scroll issues */}
+        <div style={{ padding: '12px 16px' }}>
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              style={{
+                marginBottom: '12px'
+              }}
+            >
+              <MessageBubble message={message} />
+            </div>
+          ))}
         </div>
 
         {/* Loading indicator */}
