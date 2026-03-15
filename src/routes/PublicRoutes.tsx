@@ -6,6 +6,7 @@ import News from '../pages/News/News';
 import NewsDetail from '../pages/News/NewsDetail';
 import PaymentSuccess from '../pages/auth/PaymentSuccess';
 import PaymentCancel from '../pages/auth/PaymentCancel';
+import MealPlan from '../pages/auth/MealPlan';
 import { useAuth } from '../contexts/AuthContext';
 import { AppRole } from '../types';
 
@@ -35,6 +36,7 @@ const PublicRoutes = () => {
     return (
         <>
             <Route path="/" element={renderRoot()} />
+            <Route path="/meal-plan" element={<MealPlan />} />
             <Route path="/product/:productId" element={<ProductDetail />} />
             {/* Route mới cho túi mù */}
             <Route path="/mystery-box/:boxId" element={<MysteryBoxDetail />} />
