@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import {
-  MapPin, Truck, Box, CheckCircle2, Clock,
+  MapPin, Truck, Box, CheckCircle2, Clock, Store,
   Phone, MessageSquare, ArrowLeft, Navigation, Wifi, WifiOff,
   AlertCircle, RefreshCw
 } from 'lucide-react';
@@ -21,6 +21,8 @@ interface LocationState {
   lng: number;
   updatedAt: string;
   shipperName: string;
+  shopLat?: number | null;
+  shopLng?: number | null;
   destLat?: number | null;
   destLng?: number | null;
 }
@@ -33,9 +35,9 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMapRef = useRef<any>(null);
   const shipperMarkerRef = useRef<any>(null);
-  const routeLayerRef = useRef<any>(null);
+  const routeLayer1Ref = useRef<any>(null); // shipper → shop (cam)
+  const routeLayer2Ref = useRef<any>(null); // shop → buyer (xanh)
   const stompClientRef = useRef<Client | null>(null);
-  // ✅ Flag: buyer đang tự xem map → không auto-pan
   const userInteractingRef = useRef(false);
   const interactTimeoutRef = useRef<any>(null);
 
@@ -44,10 +46,9 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
   const [loadingInitial, setLoadingInitial] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [followShipper, setFollowShipper] = useState(true);
-  // ✅ Track xem shipper có đang active không (GPS cập nhật trong 30 giây gần nhất)
   const [shipperActive, setShipperActive] = useState(false);
   const lastUpdateRef = useRef<number | null>(null);
-  const shipperActiveRef = useRef(false); // mirror để dùng trong callbacks
+  const shipperActiveRef = useRef(false);
 
   const steps = [
     { label: 'Đã đặt hàng', time: '14:20, 24/10', done: true, icon: Box },
@@ -60,7 +61,6 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
   // ---- INIT MAP ----
   const initMap = useCallback((lat: number, lng: number) => {
     if (!mapRef.current || leafletMapRef.current) return;
-
     import('leaflet').then((L) => {
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
@@ -70,12 +70,11 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
       });
 
       const map = L.map(mapRef.current!, { center: [lat, lng], zoom: 15, attributionControl: true });
-
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19, attribution: '© OpenStreetMap contributors',
       }).addTo(map);
 
+      // Marker shipper (xe màu xanh)
       const shipperIcon = L.divIcon({
         html: `
           <div style="width:44px;height:44px;background:#3B82F6;border:3px solid white;border-radius:12px;
@@ -88,67 +87,52 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
           </div>
           <div style="position:absolute;bottom:-24px;left:50%;transform:translateX(-50%);
             background:#1D4ED8;color:white;padding:3px 10px;border-radius:20px;
-            font-size:10px;font-weight:900;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.2);">
-            Shipper
-          </div>`,
-        className: '',
-        iconSize: [44, 44],
-        iconAnchor: [22, 22],
+            font-size:10px;font-weight:900;white-space:nowrap;">Shipper</div>`,
+        className: '', iconSize: [44, 44], iconAnchor: [22, 22],
       });
 
       const marker = L.marker([lat, lng], { icon: shipperIcon }).addTo(map);
       shipperMarkerRef.current = marker;
       leafletMapRef.current = map;
 
-      // ✅ Fix: Leaflet controls (zoom buttons) dùng z-index cao
-      // Giới hạn lại để không leo lên header của app
+      // Fix z-index Leaflet controls
       if (mapRef.current) {
-        const controls = mapRef.current.querySelectorAll<HTMLElement>(
-          '.leaflet-control-container, .leaflet-top, .leaflet-bottom'
-        );
-        controls.forEach(el => { el.style.zIndex = '10'; });
+        mapRef.current.querySelectorAll<HTMLElement>('.leaflet-control-container,.leaflet-top,.leaflet-bottom')
+          .forEach(el => { el.style.zIndex = '10'; });
       }
 
-      // ✅ Detect khi buyer kéo/zoom map → dừng auto-follow 5 giây
-      const onUserInteract = () => {
+      // Detect buyer interaction
+      const onInteract = () => {
         userInteractingRef.current = true;
         clearTimeout(interactTimeoutRef.current);
-        // Sau 5 giây không tương tác → resume auto-follow
-        interactTimeoutRef.current = setTimeout(() => {
-          userInteractingRef.current = false;
-        }, 5000);
+        interactTimeoutRef.current = setTimeout(() => { userInteractingRef.current = false; }, 5000);
       };
-
-      // ✅ Khi buyer kéo map → tắt auto-follow
-      // Dùng custom event để tránh stale closure với React state
       map.on('dragstart', () => {
         userInteractingRef.current = true;
-        // Dispatch custom event để React component biết
+        clearTimeout(interactTimeoutRef.current);
         mapRef.current?.dispatchEvent(new CustomEvent('user-drag'));
       });
-      map.on('zoomstart', onUserInteract);
+      map.on('zoomstart', onInteract);
     });
   }, []);
 
   // ---- UPDATE MARKER ----
   const updateMarker = useCallback((lat: number, lng: number) => {
     if (shipperMarkerRef.current) {
-      // Chỉ cập nhật vị trí marker — KHÔNG pan map
-      // Việc pan do nút "Theo dõi" kiểm soát qua followShipper state
       shipperMarkerRef.current.setLatLng([lat, lng]);
     } else {
       initMap(lat, lng);
     }
   }, [initMap]);
 
-  // ✅ Pan map theo shipper chỉ khi followShipper = true
+  // ---- PAN THEO SHIPPER khi followShipper = true ----
   useEffect(() => {
     if (followShipper && location && leafletMapRef.current) {
       leafletMapRef.current.panTo([location.lat, location.lng], { animate: true, duration: 0.8 });
     }
   }, [location, followShipper]);
 
-  // ✅ Tắt follow khi buyer kéo map
+  // ---- TẮT FOLLOW KHI BUYER KÉO MAP ----
   useEffect(() => {
     const el = mapRef.current;
     if (!el) return;
@@ -157,60 +141,27 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
     return () => el.removeEventListener('user-drag', handler);
   }, [loadingInitial]);
 
-  // ✅ Check mỗi 5 giây xem shipper còn active không
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (lastUpdateRef.current === null) return;
-
-      const secondsSinceUpdate = (Date.now() - lastUpdateRef.current) / 1000;
-      const isActive = secondsSinceUpdate < 30;
-
-      // Sync ref
-      shipperActiveRef.current = isActive;
-
-      setShipperActive(prev => {
-        if (prev && !isActive) {
-          // Chuyển active → inactive: xoá đường và marker
-          const map = leafletMapRef.current;
-          if (map) {
-            if (routeLayerRef.current) {
-              try { map.removeLayer(routeLayerRef.current); } catch {}
-              routeLayerRef.current = null;
-            }
-            if (map._destMarker) {
-              try { map.removeLayer(map._destMarker); } catch {}
-              map._destMarker = null;
-            }
-            if (shipperMarkerRef.current) {
-              try { shipperMarkerRef.current.setOpacity(0); } catch {}
-            }
-          }
-        }
-        return isActive;
-      });
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, []); // re-attach sau khi map load xong
-
-  // ---- VẼ ĐƯỜNG OSRM (free routing) ----
-  const drawRoute = useCallback(async (fromLat: number, fromLng: number, toLat: number, toLng: number) => {
-    // ✅ Không vẽ nếu shipper đã tắt GPS
+  // ---- VẼ 2 ĐOẠN ĐƯỜNG ----
+  const drawRoutes = useCallback(async (
+    shipperLat: number, shipperLng: number,
+    shopLat: number, shopLng: number,
+    destLat: number, destLng: number
+  ) => {
     if (!shipperActiveRef.current) return;
-    try {
-      import('leaflet').then(async (L) => {
-        if (!leafletMapRef.current) return;
 
-        // Xoá đường cũ
-        if (routeLayerRef.current) {
-          leafletMapRef.current.removeLayer(routeLayerRef.current);
-          routeLayerRef.current = null;
-        }
+    import('leaflet').then(async (L) => {
+      const map = leafletMapRef.current;
+      if (!map) return;
 
-        // Thêm marker điểm đến (nhà buyer)
-        const destIcon = L.divIcon({
+      // Xoá đường cũ
+      if (routeLayer1Ref.current) { try { map.removeLayer(routeLayer1Ref.current); } catch {} routeLayer1Ref.current = null; }
+      if (routeLayer2Ref.current) { try { map.removeLayer(routeLayer2Ref.current); } catch {} routeLayer2Ref.current = null; }
+
+      // ✅ Marker shop (điểm lấy hàng - màu cam)
+      if (!map._shopMarker) {
+        const shopIcon = L.divIcon({
           html: `
-            <div style="width:40px;height:40px;background:#F97316;border:3px solid white;border-radius:50%;
+            <div style="width:40px;height:40px;background:#F97316;border:3px solid white;border-radius:10px;
               display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(249,115,22,0.5);">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                 stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -220,48 +171,89 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
             </div>
             <div style="position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);
               background:#EA580C;color:white;padding:2px 8px;border-radius:12px;
-              font-size:9px;font-weight:900;white-space:nowrap;">
-              Điểm giao
-            </div>`,
-          className: '',
-          iconSize: [40, 40],
-          iconAnchor: [20, 20],
+              font-size:9px;font-weight:900;white-space:nowrap;">Lấy hàng</div>`,
+          className: '', iconSize: [40, 40], iconAnchor: [20, 20],
         });
+        map._shopMarker = L.marker([shopLat, shopLng], { icon: shopIcon }).addTo(map);
+      }
 
-        // Chỉ thêm marker đích 1 lần
-        if (!leafletMapRef.current._destMarker) {
-          const destMarker = L.marker([toLat, toLng], { icon: destIcon }).addTo(leafletMapRef.current);
-          leafletMapRef.current._destMarker = destMarker;
+      // ✅ Marker nhà buyer (màu xanh lá)
+      if (!map._destMarker) {
+        const destIcon = L.divIcon({
+          html: `
+            <div style="width:40px;height:40px;background:#22C55E;border:3px solid white;border-radius:50%;
+              display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(34,197,94,0.5);">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+            </div>
+            <div style="position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);
+              background:#16A34A;color:white;padding:2px 8px;border-radius:12px;
+              font-size:9px;font-weight:900;white-space:nowrap;">Giao hàng</div>`,
+          className: '', iconSize: [40, 40], iconAnchor: [20, 20],
+        });
+        map._destMarker = L.marker([destLat, destLng], { icon: destIcon }).addTo(map);
+      }
+
+      try {
+        // ✅ Đường 1: Shipper → Shop (màu cam)
+        const url1 = `https://router.project-osrm.org/route/v1/driving/${shipperLng},${shipperLat};${shopLng},${shopLat}?overview=full&geometries=geojson`;
+        const res1 = await fetch(url1);
+        const data1 = await res1.json();
+        if (data1.routes?.length) {
+          const coords1 = data1.routes[0].geometry.coordinates.map(([lng, lat]: number[]) => [lat, lng]);
+          routeLayer1Ref.current = L.polyline(coords1, { color: '#F97316', weight: 5, opacity: 0.8 }).addTo(map);
         }
 
-        // Gọi OSRM để lấy đường đi thực tế
-        const url = `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`;
-        const res = await fetch(url);
-        const data = await res.json();
+        // ✅ Đường 2: Shop → Nhà buyer (màu xanh)
+        const url2 = `https://router.project-osrm.org/route/v1/driving/${shopLng},${shopLat};${destLng},${destLat}?overview=full&geometries=geojson`;
+        const res2 = await fetch(url2);
+        const data2 = await res2.json();
+        if (data2.routes?.length) {
+          const coords2 = data2.routes[0].geometry.coordinates.map(([lng, lat]: number[]) => [lat, lng]);
+          routeLayer2Ref.current = L.polyline(coords2, { color: '#3B82F6', weight: 5, opacity: 0.8 }).addTo(map);
+        }
 
-        if (!data.routes?.length) return;
-
-        const coords = data.routes[0].geometry.coordinates.map(([lng, lat]: number[]) => [lat, lng]);
-        const line = L.polyline(coords, {
-          color: '#3B82F6',
-          weight: 5,
-          opacity: 0.8,
-        }).addTo(leafletMapRef.current);
-
-        routeLayerRef.current = line;
-
-        // Fit map để thấy cả shipper lẫn điểm đến — chỉ lần đầu hoặc khi user không tương tác
+        // Fit map thấy cả 3 điểm, chỉ khi buyer không đang tương tác
         if (!userInteractingRef.current) {
-          leafletMapRef.current.fitBounds(
-            L.latLngBounds([[fromLat, fromLng], [toLat, toLng]]),
-            { padding: [60, 60], animate: true }
+          map.fitBounds(
+            L.latLngBounds([[shipperLat, shipperLng], [shopLat, shopLng], [destLat, destLng]]),
+            { padding: [50, 50], animate: true }
           );
         }
-      });
-    } catch (e) {
-      console.warn('[Route] Error:', e);
-    }
+      } catch (e) {
+        console.warn('[Route] OSRM error:', e);
+      }
+    });
   }, []);
+
+  // ---- CLEANUP KHI SHIPPER TẮT GPS ----
+  const clearMapLayers = useCallback(() => {
+    const map = leafletMapRef.current;
+    if (!map) return;
+    if (routeLayer1Ref.current) { try { map.removeLayer(routeLayer1Ref.current); } catch {} routeLayer1Ref.current = null; }
+    if (routeLayer2Ref.current) { try { map.removeLayer(routeLayer2Ref.current); } catch {} routeLayer2Ref.current = null; }
+    if (map._shopMarker) { try { map.removeLayer(map._shopMarker); } catch {} map._shopMarker = null; }
+    if (map._destMarker) { try { map.removeLayer(map._destMarker); } catch {} map._destMarker = null; }
+    if (shipperMarkerRef.current) { try { shipperMarkerRef.current.setOpacity(0); } catch {} }
+  }, []);
+
+  // ---- INTERVAL CHECK SHIPPER ACTIVE ----
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (lastUpdateRef.current === null) return;
+      const seconds = (Date.now() - lastUpdateRef.current) / 1000;
+      const isActive = seconds < 30;
+      shipperActiveRef.current = isActive;
+      setShipperActive(prev => {
+        if (prev && !isActive) clearMapLayers();
+        return isActive;
+      });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [clearMapLayers]);
 
   // ---- LEAFLET CSS ----
   useEffect(() => {
@@ -281,21 +273,28 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
         const res = await shipperService.getShipperLocation(orderId);
         if (res.result) {
           const loc = res.result;
-          const locState = {
+          const locState: LocationState = {
             lat: loc.latitude,
             lng: loc.longitude,
             updatedAt: loc.updatedAt,
             shipperName: loc.shipperName,
+            shopLat: loc.shopLatitude,
+            shopLng: loc.shopLongitude,
             destLat: loc.destLatitude,
             destLng: loc.destLongitude,
           };
           setLocation(locState);
           setShipperActive(true);
-          // ✅ Set lastUpdate từ updatedAt của BE (không dùng Date.now() vì đây là dữ liệu cũ)
+          shipperActiveRef.current = true;
           lastUpdateRef.current = new Date(loc.updatedAt).getTime();
           initMap(loc.latitude, loc.longitude);
-          if (loc.destLatitude && loc.destLongitude) {
-            setTimeout(() => drawRoute(loc.latitude, loc.longitude, loc.destLatitude!, loc.destLongitude!), 500);
+          // Vẽ 2 đường ngay khi load
+          if (loc.shopLatitude && loc.shopLongitude && loc.destLatitude && loc.destLongitude) {
+            setTimeout(() => drawRoutes(
+              loc.latitude, loc.longitude,
+              loc.shopLatitude!, loc.shopLongitude!,
+              loc.destLatitude!, loc.destLongitude!
+            ), 600);
           }
         }
       } catch {
@@ -306,81 +305,61 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
       }
     };
     fetchLocation();
-  }, [orderId, initMap]);
+  }, [orderId, initMap, drawRoutes]);
 
-  // ---- WEBSOCKET với JWT token ----
+  // ---- WEBSOCKET ----
   useEffect(() => {
     if (!orderId) return;
-
-    // ✅ Lấy JWT token từ localStorage
     const token = localStorage.getItem(TOKEN_KEY);
-
-    const baseUrl = API_BASE_URL.endsWith('/api/v1')
-      ? API_BASE_URL.slice(0, -7)
-      : API_BASE_URL;
-    const wsUrl = `${baseUrl}/api/v1/ws`;
+    const baseUrl = API_BASE_URL.endsWith('/api/v1') ? API_BASE_URL.slice(0, -7) : API_BASE_URL;
 
     const client = new Client({
-      webSocketFactory: () => new (SockJS as any)(wsUrl),
+      webSocketFactory: () => new (SockJS as any)(`${baseUrl}/api/v1/ws`),
       reconnectDelay: 5000,
-
-      // ✅ Gửi JWT token trong STOMP CONNECT headers
-      // WebSocketAuthChannelInterceptor ở BE sẽ đọc header này
       connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
-
       onConnect: () => {
         setWsStatus('connected');
         setError(null);
-        console.log(`[WS] Connected, subscribing to /topic/order/${orderId}/location`);
-
         client.subscribe(`/topic/order/${orderId}/location`, (msg) => {
           try {
             const data: ShipperLocationResponse = JSON.parse(msg.body);
-            console.log('[WS] Received location:', data);
-            // ✅ Ghi nhận thời điểm nhận GPS gần nhất
             lastUpdateRef.current = Date.now();
             shipperActiveRef.current = true;
             setShipperActive(true);
             if (shipperMarkerRef.current) shipperMarkerRef.current.setOpacity(1);
-            if (routeLayerRef.current) routeLayerRef.current.setStyle({ opacity: 0.8 });
-            setLocation({
+
+            const newLoc: LocationState = {
               lat: data.latitude,
               lng: data.longitude,
               updatedAt: data.updatedAt,
               shipperName: data.shipperName,
+              shopLat: data.shopLatitude,
+              shopLng: data.shopLongitude,
               destLat: data.destLatitude,
               destLng: data.destLongitude,
-            });
+            };
+            setLocation(newLoc);
             updateMarker(data.latitude, data.longitude);
-            // ✅ Vẽ lại đường khi shipper di chuyển
-            if (data.destLatitude && data.destLongitude) {
-              drawRoute(data.latitude, data.longitude, data.destLatitude, data.destLongitude);
+
+            // Vẽ lại 2 đường khi shipper di chuyển
+            if (data.shopLatitude && data.shopLongitude && data.destLatitude && data.destLongitude) {
+              drawRoutes(
+                data.latitude, data.longitude,
+                data.shopLatitude, data.shopLongitude,
+                data.destLatitude, data.destLongitude
+              );
             }
-          } catch (e) {
-            console.error('[WS] Parse error:', e);
-          }
+          } catch (e) { console.error('[WS] Parse error:', e); }
         });
       },
-
-      onDisconnect: () => {
-        console.log('[WS] Disconnected');
-        setWsStatus('disconnected');
-      },
-
-      onStompError: (frame) => {
-        console.error('[WS] STOMP error:', frame.headers['message']);
-        setWsStatus('disconnected');
-        if (frame.headers['message']?.includes('401') || frame.headers['message']?.includes('Unauthorized')) {
-          setError('Phiên đăng nhập hết hạn, vui lòng đăng nhập lại');
-        }
-      },
+      onDisconnect: () => setWsStatus('disconnected'),
+      onStompError: () => setWsStatus('disconnected'),
     });
 
     client.activate();
     stompClientRef.current = client;
-
     return () => { client.deactivate(); };
-  }, [orderId, updateMarker]);
+  }, [orderId, updateMarker, drawRoutes]);
 
   // ---- CLEANUP MAP ----
   useEffect(() => {
@@ -390,7 +369,8 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
         leafletMapRef.current.remove();
         leafletMapRef.current = null;
         shipperMarkerRef.current = null;
-        routeLayerRef.current = null;
+        routeLayer1Ref.current = null;
+        routeLayer2Ref.current = null;
       }
     };
   }, []);
@@ -400,6 +380,7 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
     catch { return '--:--'; }
   };
 
+  // ===================== RENDER =====================
   return (
     <div className="flex-1 bg-background animate-in fade-in duration-500 pb-20">
       <div className="max-w-[1280px] mx-auto px-4 md:px-10 lg:px-40 py-12">
@@ -421,6 +402,7 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
 
           {/* LEFT: Timeline + Shipper Info */}
           <div className="lg:col-span-4 flex flex-col gap-8">
+            {/* Timeline */}
             <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-10">
               <div className="space-y-8 relative">
                 <div className="absolute left-6 top-4 bottom-4 w-0.5 bg-gray-100" />
@@ -432,13 +414,32 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
                       'bg-gray-50 text-gray-300 border border-gray-100'
                     }`}><step.icon className="size-6" /></div>
                     <div className="flex-1 pt-1">
-                      <p className={`text-sm font-black uppercase tracking-tight ${
-                        step.done ? 'text-gray-900' : step.active ? 'text-blue-600' : 'text-gray-300'
-                      }`}>{step.label}</p>
+                      <p className={`text-sm font-black uppercase tracking-tight ${step.done ? 'text-gray-900' : step.active ? 'text-blue-600' : 'text-gray-300'}`}>{step.label}</p>
                       <p className="text-[11px] font-bold text-gray-400 mt-1">{step.time}</p>
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Legend bản đồ */}
+            <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
+              <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Chú thích bản đồ</h4>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-1 rounded-full bg-orange-500" />
+                <span className="text-xs font-bold text-gray-600">Shipper → Lấy hàng tại shop</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-1 rounded-full bg-blue-500" />
+                <span className="text-xs font-bold text-gray-600">Shop → Giao tới nhà bạn</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="size-4 bg-orange-500 rounded" />
+                <span className="text-xs font-bold text-gray-600">Điểm lấy hàng (shop)</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="size-4 bg-green-500 rounded-full" />
+                <span className="text-xs font-bold text-gray-600">Điểm giao hàng (nhà bạn)</span>
               </div>
             </div>
 
@@ -448,8 +449,7 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
                 <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Thông tin Shipper</h4>
                 <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
                   wsStatus === 'connected' ? 'bg-green-50 text-green-600' :
-                  wsStatus === 'connecting' ? 'bg-yellow-50 text-yellow-600' :
-                  'bg-red-50 text-red-500'
+                  wsStatus === 'connecting' ? 'bg-yellow-50 text-yellow-600' : 'bg-red-50 text-red-500'
                 }`}>
                   {wsStatus === 'connected' ? <><Wifi className="size-3" /> Live</> :
                    wsStatus === 'connecting' ? <><RefreshCw className="size-3 animate-spin" /> Kết nối...</> :
@@ -490,7 +490,6 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
                 </div>
               )}
 
-              {/* ✅ Banner khi shipper tắt GPS */}
               {location && !shipperActive && lastUpdateRef.current && (
                 <div className="flex items-center gap-2 bg-gray-50 text-gray-500 rounded-2xl p-4 border border-gray-200">
                   <WifiOff className="size-4 shrink-0" />
@@ -504,13 +503,8 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
           <div className="lg:col-span-8 flex flex-col gap-8">
             <div
               className="relative rounded-[40px] shadow-lg border border-gray-100 bg-gray-100"
-              style={{
-                height: '450px',
-                overflow: 'hidden',  // clip Leaflet controls bên trong
-                isolation: 'isolate', // tạo stacking context riêng, không leo lên header
-              }}
+              style={{ height: '480px', overflow: 'hidden', isolation: 'isolate' }}
             >
-
               {loadingInitial && (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/90 gap-4">
                   <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
@@ -521,7 +515,7 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
               <div ref={mapRef} className="w-full h-full" />
 
               {wsStatus === 'connected' && (
-                <div className="absolute top-5 left-5 z-[1000] flex items-center gap-2 bg-white/95 backdrop-blur px-4 py-2 rounded-2xl shadow-lg">
+                <div className="absolute top-5 left-5 z-[10] flex items-center gap-2 bg-white/95 backdrop-blur px-4 py-2 rounded-2xl shadow-lg">
                   <div className="size-2 bg-green-500 rounded-full animate-pulse" />
                   <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Đang theo dõi live</span>
                 </div>
@@ -532,18 +526,14 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
                   onClick={() => {
                     setFollowShipper(prev => {
                       const next = !prev;
-                      // Khi bật lại follow → pan về shipper ngay
                       if (next && leafletMapRef.current) {
                         leafletMapRef.current.panTo([location.lat, location.lng], { animate: true });
                       }
                       return next;
                     });
                   }}
-                  className={`absolute bottom-5 right-5 z-[1000] backdrop-blur px-5 py-3 rounded-2xl flex items-center gap-2 text-xs font-black shadow-xl transition-all uppercase tracking-widest border
-                    ${followShipper
-                      ? 'bg-primary text-white border-primary shadow-primary/30'
-                      : 'bg-white/95 text-primary border-white/20 hover:bg-white'
-                    }`}
+                  className={`absolute bottom-5 right-5 z-[10] backdrop-blur px-5 py-3 rounded-2xl flex items-center gap-2 text-xs font-black shadow-xl transition-all uppercase tracking-widest border
+                    ${followShipper ? 'bg-primary text-white border-primary shadow-primary/30' : 'bg-white/95 text-primary border-white/20 hover:bg-white'}`}
                 >
                   <Navigation className="size-4" />
                   {followShipper ? 'Đang theo dõi' : 'Theo dõi shipper'}
@@ -557,14 +547,10 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
                 <h4 className="text-xl font-black text-gray-900 uppercase tracking-tight">Tóm tắt đơn hàng</h4>
                 <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">3 món • Tổng: 169.100đ</span>
               </div>
-              <div className="grid grid-cols-3 gap-8">
-                {[
-                  { seed: 't1', name: 'Cải Bệ Xanh', desc: '1kg x 25k' },
-                  { seed: 't2', name: 'Cà Chua Bi', desc: '500g x 45k' },
-                  { seed: 't3', name: 'Khoai Lang Mật', desc: '2kg x 32k' },
-                ].map((item) => (
-                  <div key={item.seed} className="p-6 bg-gray-50 rounded-3xl border border-gray-100 flex items-center gap-4">
-                    <img src={`https://picsum.photos/seed/${item.seed}/60/60`} className="size-12 rounded-xl object-cover" />
+              <div className="grid grid-cols-3 gap-6">
+                {[{seed:'t1',name:'Cải Bệ Xanh',desc:'1kg x 25k'},{seed:'t2',name:'Cà Chua Bi',desc:'500g x 45k'},{seed:'t3',name:'Khoai Lang Mật',desc:'2kg x 32k'}].map((item) => (
+                  <div key={item.seed} className="p-5 bg-gray-50 rounded-3xl border border-gray-100 flex items-center gap-3">
+                    <img src={`https://picsum.photos/seed/${item.seed}/60/60`} className="size-11 rounded-xl object-cover" />
                     <div>
                       <p className="text-xs font-black text-gray-800">{item.name}</p>
                       <p className="text-[10px] text-gray-400 font-bold">{item.desc}</p>
