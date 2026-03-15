@@ -37,6 +37,9 @@ export interface ChatRequest {
 
 export interface ChatbotApiResponse {
   message: string;
+  content?: string;
+  text?: string;
+  body?: string;
   suggestions?: string[];
   actions?: ChatAction[];
   context?: ChatContext;
@@ -116,18 +119,74 @@ class ChatBotServiceImpl implements ChatBotService {
           }
         };
 
+        // Debug logs
+        console.log('=== ChatBot API Call ===');
+        console.log('URL:', '/chatbot/chat');
+        console.log('Message:', sanitizedMessage);
+        console.log('Has Token:', !!localStorage.getItem('auth_token'));
+        console.log('Request body:', JSON.stringify(request, null, 2));
+        console.log('Context:', context);
+
         const response = await httpClient.post<ChatbotApiResponse>('/chatbot/chat', request);
         
-        if (!response.result) {
-          throw new Error('No response from AI service');
+        console.log('=== ChatBot API Response ===');
+        console.log('Full response:', response);
+        console.log('response.result:', response.result);
+        console.log('response.result.message:', response.result?.message);
+        console.log('response.result keys:', response.result ? Object.keys(response.result) : 'no result');
+        
+        const result = response.result;
+        let aiMessageContent = '';
+
+        // Helper to check if a string is likely a system status message rather than AI content
+        const isStatusMessage = (text: string) => {
+          const statusPatterns = [/success/i, /generated/i, /ok/i, /completed/i, /verified/i, /received/i];
+          return text.length < 60 && statusPatterns.some(pattern => pattern.test(text));
+        };
+
+        if (result) {
+          if (typeof result === 'string') {
+            aiMessageContent = result;
+          } else if (typeof result === 'object' && result !== null) {
+            // 1. Try priority fields first
+            aiMessageContent = result.message || result.content || result.text || result.body || '';
+            
+            // 2. If priority fields are empty or just status messages, look for the longest string field
+            if (!aiMessageContent || isStatusMessage(aiMessageContent)) {
+              let longestField = '';
+              for (const key in result) {
+                const val = (result as any)[key];
+                if (typeof val === 'string' && val.length > longestField.length && !isStatusMessage(val)) {
+                  longestField = val;
+                }
+              }
+              if (longestField) aiMessageContent = longestField;
+            }
+          }
         }
 
-        return {
-          message: response.result.message,
-          suggestions: response.result.suggestions || [],
-          actions: response.result.actions || [],
-          context: response.result.context
+        // Fallback to top-level message ONLY if it's not a generic status message
+        if ((!aiMessageContent || isStatusMessage(aiMessageContent)) && response.message && !isStatusMessage(response.message)) {
+          aiMessageContent = response.message;
+        }
+
+        // Final fallback: if we still only have a status message or nothing, use what we have but prefer result.message
+        if (!aiMessageContent) {
+          aiMessageContent = (typeof result === 'object' ? result?.message : '') || response.message || '';
+        }
+
+        const chatResponse = {
+          message: aiMessageContent,
+          suggestions: (result as any)?.suggestions || (response as any).suggestions || [],
+          actions: (result as any)?.actions || (response as any).actions || [],
+          context: (result as any)?.context || (response as any).context
         };
+        
+        console.log('=== Returning ChatResponse ===');
+        console.log('Final content extracted:', aiMessageContent);
+        if (isStatusMessage(aiMessageContent)) console.warn('Warning: Extracted content looks like a status message');
+
+        return chatResponse;
       } catch (error: any) {
         console.error('ChatBot sendMessage error:', error);
         
@@ -173,8 +232,37 @@ class ChatBotServiceImpl implements ChatBotService {
   async getChatHistory(): Promise<ChatHistoryResponse[]> {
     return this.withRetry(async () => {
       try {
+        console.log('[ChatBotService] Calling /chatbot/history');
         const response = await httpClient.get<ChatHistoryResponse[]>('/chatbot/history');
-        return response.result || [];
+        console.log('[ChatBotService] Full response:', response);
+        console.log('[ChatBotService] response type:', typeof response);
+        console.log('[ChatBotService] response keys:', Object.keys(response));
+        console.log('[ChatBotService] response.result:', response.result);
+        console.log('[ChatBotService] response.result type:', typeof response.result);
+        console.log('[ChatBotService] response.result is Array:', Array.isArray(response.result));
+        
+        // Check if response.result exists and is an array
+        let historyData: any[] = [];
+        
+        if (Array.isArray(response.result)) {
+          historyData = response.result;
+        } else if (Array.isArray(response)) {
+          // Backend might return array directly
+          historyData = response as any;
+        } else {
+          console.error('[ChatBotService] Unexpected response structure:', response);
+        }
+        
+        console.log('[ChatBotService] historyData:', historyData);
+        console.log('[ChatBotService] historyData length:', historyData.length);
+        
+        if (historyData.length > 0) {
+          console.log('[ChatBotService] First item:', historyData[0]);
+          console.log('[ChatBotService] First item keys:', Object.keys(historyData[0]));
+          console.log('[ChatBotService] First item content:', historyData[0].content);
+        }
+        
+        return historyData;
       } catch (error: any) {
         console.error('ChatBot getChatHistory error:', error);
         
