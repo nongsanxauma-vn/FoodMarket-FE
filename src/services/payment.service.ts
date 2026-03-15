@@ -35,6 +35,14 @@ class PaymentService {
         return httpClient.put<PaymentResponse>(`/payments/${id}/status`, null, { params: { status } });
     }
 
+    async confirmPaymentById(id: number): Promise<ApiResponse<string>> {
+        return httpClient.post<string>(`/payments/${id}/confirm`, {});
+    }
+
+    async confirmPaymentByOrderCode(orderCode: string): Promise<ApiResponse<string>> {
+        return httpClient.post<string>(`/payments/${encodeURIComponent(orderCode)}/confirm`, {});
+    }
+
     async createPaymentPayOS(data: CreatePaymentRequest): Promise<ApiResponse<PaymentResponse>> {
         return httpClient.post<PaymentResponse>('/payments/payos', data);
     }
