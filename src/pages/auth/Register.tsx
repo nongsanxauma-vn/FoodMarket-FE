@@ -84,12 +84,23 @@ const Register: React.FC<RegisterProps> = ({ onGoToLogin, onGoToShipperRegister 
                 pendingRegistration.achievementFile
               );
               if (response.result) {
-                setSuccess('Đăng ký thành công! Đang chuyển hướng...');
-                setTimeout(() => {
+                // Sau khi đăng ký thành công, tự động đăng nhập để lấy token
+                const loginResponse = await authService.login({
+                  email: email,
+                  password: password
+                });
+                
+                if (loginResponse.result?.token) {
+                  setSuccess('Đăng ký thành công! Đang chuyển hướng...');
                   login(selectedRole);
-                  if (selectedRole === AppRole.FARMER) navigate('/kyc');
-                  else navigate('/');
-                }, 1500);
+                  setTimeout(() => {
+                    if (selectedRole === AppRole.FARMER) navigate('/kyc');
+                    else navigate('/');
+                  }, 1500);
+                } else {
+                  setError('Đăng ký thành công nhưng không thể đăng nhập tự động. Vui lòng đăng nhập thủ công.');
+                  setTimeout(() => onGoToLogin(), 2000);
+                }
               }
             } catch (err: any) {
               setError(err?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.');

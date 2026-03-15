@@ -20,6 +20,7 @@ export interface OrderItemResponse {
     productName: string;
     quantity: number;
     unitPrice: number;
+    category?: string; // Added for personalization
 }
 
 export interface OrderResponse {

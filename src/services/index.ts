@@ -18,6 +18,7 @@ export { comboService } from './combo.service';
 export { cartService } from './cart.service';
 export { reviewService } from './review.service';
 export { buildPlanService } from './buildPlan.service';
+export { chatBotService } from './chatbot.service';
 export { httpClient } from './http.client';
 
 // Export types
@@ -49,6 +50,7 @@ export type {
     BuildPlanCreateRequest,
     BuildPlanItemCreateRequest
 } from '../types';
+export type { ChatRequest, ChatbotApiResponse } from './chatbot.service';
 
 // Export constants
 export { API_BASE_URL, TOKEN_KEY, USER_INFO_KEY } from './api.config';
