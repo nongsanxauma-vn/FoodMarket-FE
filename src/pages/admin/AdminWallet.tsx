@@ -94,8 +94,8 @@ const AdminWallet: React.FC = () => {
   // Calculate platform statistics (these would ideally come from a dedicated admin API)
   // For now, we calculate from available data
   const totalBalance = totalWithdrawn + totalPending; // Simplified calculation
-  const platformCommission = Math.floor(totalWithdrawn * 0.03); // Assuming 3% commission
-  const shippingFees = Math.floor(totalWithdrawn * 0.01); // Assuming 1% shipping fee
+  const platformCommission = Math.floor(totalWithdrawn * 0.3); // Assuming 3% commission
+  const shippingFees = Math.floor(totalWithdrawn * 0.1); // Assuming 1% shipping fee
   const shopFunds = totalPending; // Money waiting to be withdrawn
 
   return (
