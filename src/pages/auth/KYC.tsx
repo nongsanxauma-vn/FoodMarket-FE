@@ -147,8 +147,8 @@ const KYC: React.FC<KYCProps> = ({ onComplete, onBack, role, user: propUser }) =
   );
 
   return (
-    <div className="min-h-screen bg-[#F0F2F5] pb-20">
-      <div className="max-w-3xl mx-auto pt-12 px-4">
+    <div className="bg-[#F0F2F5] py-12">
+      <div className="max-w-4xl mx-auto px-4">
         {isReviewing && (
           <div className="flex items-center justify-between mb-10">
             <div>
