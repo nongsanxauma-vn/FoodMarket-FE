@@ -157,7 +157,7 @@ const Header: React.FC<HeaderProps> = ({
         <div className={`flex items-center justify-between ${containerClass} gap-4 md:gap-10`}>
           {/* Logo Area */}
           <Link to="/" className="flex items-center gap-3 shrink-0 cursor-pointer">
-            <img src="/nong_san_xau_ma/logo.png" alt="Logo" className="size-10 object-contain rounded-full bg-white" />
+            <img src="/logo.png" alt="Logo" className="size-10 object-contain rounded-full bg-white" />
             <h2 className="text-white text-xl font-black leading-tight tracking-tighter uppercase font-display italic">NÔNG SẢN XẤU MÃ</h2>
           </Link>
 

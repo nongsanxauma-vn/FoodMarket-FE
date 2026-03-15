@@ -149,14 +149,18 @@ class HttpClient {
       if (!response.ok) {
         console.error(`[HTTP] Error ${response.status}:`, responseData);
 
-        // Nếu 401, chỉ redirect về home nếu đó KHÔNG phải là public endpoint
+        // Nếu 401:
+        // - cho endpoint confirm thanh toán (được gọi từ PaymentSuccess) thì chỉ throw, không logout.
+        // - các endpoint khác vẫn giữ redirect exit như cũ (cần login lại).
         if (response.status === 401) {
           console.error('[HTTP] Unauthorized - Endpoint:', url);
-          if (!this.isPublicEndpoint(method, url)) {
+
+          const isPaymentConfirmEndpoint = method === 'POST' && /\/payments\/\d+\/confirm(?:\?.*)?$/.test(url);
+
+          if (!isPaymentConfirmEndpoint && !this.isPublicEndpoint(method, url)) {
             console.error('[HTTP] Redirecting to login/home...');
             localStorage.removeItem(TOKEN_KEY);
-            // Sử dụng path tương đối hoặc bao gồm basename để tránh nhảy ra khỏi app
-            const basename = '/nong_san_xau_ma/';
+            const basename = '/';
             window.location.href = basename;
           }
         }
@@ -165,6 +169,7 @@ class HttpClient {
           status: response.status,
           data: responseData,
         };
+
       }
 
       return responseData;

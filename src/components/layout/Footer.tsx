@@ -18,15 +18,19 @@ const Footer: React.FC = () => {
               <p className="text-sm font-bold">Xấu Mã</p>
             </div>
           </div>
-          
+
           <div className="flex gap-3">
             <button className="w-11 h-11 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors flex items-center justify-center" title="Facebook">
               <Facebook className="size-5" />
             </button>
-            <button className="w-11 h-11 rounded-full hover:opacity-75 transition-opacity flex items-center justify-center" title="TikTok">
-              <img src="/tiktoklogo.png" alt="TikTok" className="size-12" />
+            <button className="w-11 h-11 bg-blue-600 text-white rounded-full hover:bg-blue-600 transition-colors flex items-center justify-center font-black text-sm" title="Zalo">
+              <img
+                src="https://cdn.simpleicons.org/tiktok/white"
+                alt="TikTok"
+                className="size-4"
+              />
             </button>
-            <button className="w-11 h-11 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors flex items-center justify-center font-black text-sm" title="Zalo">
+            <button className="w-11 h-11 bg-blue-600 text-white rounded-full hover:bg-blue-600 transition-colors flex items-center justify-center font-black text-sm" title="Zalo">
               Z
             </button>
           </div>

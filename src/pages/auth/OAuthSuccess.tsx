@@ -42,7 +42,7 @@ const OAuthSuccess: React.FC = () => {
                     const userRole = roleMap[backendRole] || AppRole.BUYER;
 
                     // Clear URL params and navigate
-                    window.history.replaceState({}, document.title, "/nong_san_xau_ma/");
+                    window.history.replaceState({}, document.title, "/");
 
                     // 4. Trigger login callback
                     setIsAuthenticated(true);
