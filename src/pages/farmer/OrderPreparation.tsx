@@ -27,9 +27,6 @@ const OrderPreparation: React.FC<OrderPreparationProps> = ({ orderId, onBack, on
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setTimeout(() => { window.scrollTo(0, 0); }, 0);
-  }, [orderId]);
 
   useEffect(() => {
     const fetchOrder = async () => {

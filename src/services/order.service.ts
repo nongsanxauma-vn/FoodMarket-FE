@@ -24,6 +24,7 @@ export interface OrderItemResponse {
     quantity: number;
     unitPrice: number;
     itemType: 'PRODUCT' | 'MYSTERY_BOX';
+    category?: string; // Added for personalization
 }
 
 export interface OrderResponse {

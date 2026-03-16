@@ -1,6 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { MapPin, CreditCard, ChevronRight, Lock, Loader2, ShieldCheck, Wallet, ChevronLeft, AlertCircle, Package, X, Gift } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { MapPin, CreditCard, ChevronRight, Lock, Loader2, ShieldCheck, Wallet, ChevronLeft, AlertCircle, Package, X, Gift, Truck } from 'lucide-react';
 import { orderService, paymentService, authService, cartService, CartResponse } from '../../services';
+import { httpClient } from '../../services/http.client';
+
+// ✅ Extend CartResponse để có shopOwnerId (BE đã thêm field này)
+type CartItemWithShop = {
+   productId?: number;
+   mysteryBoxId?: number;
+   productName: string;
+   quantity: number;
+   price: number;
+   imageUrl?: string;
+   shopName?: string;
+   itemType?: string;
+   shopOwnerId?: number; // ✅ field mới từ BE
+};
 
 interface CheckoutProps {
    onComplete: (orderId: number) => void;
@@ -17,20 +31,25 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
    const [note, setNote] = useState('');
    const [loading, setLoading] = useState(true);
    const [error, setError] = useState<string | null>(null);
-   
+
    const [showQRCode, setShowQRCode] = useState(false);
    const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
    const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
 
-   const SHIPPING_FEE = 15000;
-   const shopsCount = cartData?.items?.length ? Math.ceil(cartData.items.length / 3) : 1;
+   // ✅ Phí ship động
+   const [shippingFee, setShippingFee] = useState<number>(15000);
+   const [loadingFee, setLoadingFee] = useState(false);
+   const [shopId, setShopId] = useState<number | null>(null);
+
+   // Debounce timer cho address input
+   const [addressTimer, setAddressTimer] = useState<NodeJS.Timeout | null>(null);
 
    useEffect(() => {
       const fetchData = async () => {
          try {
             setLoading(true);
             setError(null);
-            
+
             const [userRes, cartRes] = await Promise.all([
                authService.getMyInfo(),
                cartService.getCart()
@@ -46,6 +65,12 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
                setCartData(cartRes.result);
                if (!cartRes.result.items || cartRes.result.items.length === 0) {
                   setError('Giỏ hàng trống!');
+               } else {
+                  // ✅ Lấy shopId từ item đầu tiên trong cart
+                  const firstItem = cartRes.result.items[0];
+                  if (firstItem.shopOwnerId) {
+                     setShopId(firstItem.shopOwnerId);
+                  }
                }
             } else {
                setError('Không thể tải giỏ hàng.');
@@ -57,9 +82,46 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
             setLoading(false);
          }
       };
-
       fetchData();
    }, []);
+
+   // ✅ Tính phí ship khi địa chỉ thay đổi (debounce 800ms)
+   const fetchShippingFee = useCallback(async (address: string, sId: number) => {
+      if (!address.trim() || address.trim().length < 10) return;
+      try {
+         setLoadingFee(true);
+         const res = await httpClient.get<number>(
+            `/orders/shipping-fee?shippingAddress=${encodeURIComponent(address)}&shopId=${sId}`
+         );
+         if (res.result != null) {
+            setShippingFee(res.result);
+         }
+      } catch (e) {
+         console.warn('[Checkout] Không tính được phí ship, dùng mặc định');
+      } finally {
+         setLoadingFee(false);
+      }
+   }, []);
+
+   // Trigger khi address hoặc shopId thay đổi
+   useEffect(() => {
+      if (!shopId || !recipientAddress) return;
+
+      if (addressTimer) clearTimeout(addressTimer);
+      const timer = setTimeout(() => {
+         fetchShippingFee(recipientAddress, shopId);
+      }, 800); // đợi 800ms sau khi ngừng gõ
+      setAddressTimer(timer);
+
+      return () => clearTimeout(timer);
+   }, [recipientAddress, shopId]);
+
+   // ✅ Tính fee khi load xong nếu đã có địa chỉ mặc định
+   useEffect(() => {
+      if (shopId && recipientAddress && recipientAddress.length >= 10) {
+         fetchShippingFee(recipientAddress, shopId);
+      }
+   }, [shopId]);
 
    const validateForm = (): boolean => {
       if (!recipientName.trim()) { alert('Vui lòng nhập tên người nhận'); return false; }
@@ -85,20 +147,11 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
             shippingAddress: recipientAddress,
             note,
             paymentMethod,
-            // ✅ FIX: phân biệt MYSTERY_BOX và PRODUCT khi map items
             items: cartData.items.map(item => {
                if (item.itemType === 'MYSTERY_BOX') {
-                  return {
-                     mysteryBoxId: item.mysteryBoxId,
-                     productId: undefined,
-                     quantity: item.quantity,
-                  };
+                  return { mysteryBoxId: item.mysteryBoxId, productId: undefined, quantity: item.quantity };
                }
-               return {
-                  productId: item.productId,
-                  mysteryBoxId: undefined,
-                  quantity: item.quantity,
-               };
+               return { productId: item.productId, mysteryBoxId: undefined, quantity: item.quantity };
             })
          };
 
@@ -112,12 +165,8 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
                const paymentRes = await paymentService.createPaymentPayOS({
                   orderId, amount, method: 'PAYOS', paymentGateway: 'PAYOS'
                });
-
                if (paymentRes.result) {
-                  if (paymentRes.result.checkoutUrl) {
-                     window.location.href = paymentRes.result.checkoutUrl;
-                     return;
-                  }
+                  if (paymentRes.result.checkoutUrl) { window.location.href = paymentRes.result.checkoutUrl; return; }
                   if (paymentRes.result.qrCodeUrl) {
                      setQrCodeUrl(paymentRes.result.qrCodeUrl);
                      setCheckoutUrl(paymentRes.result.checkoutUrl || null);
@@ -127,9 +176,7 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
                   }
                }
             } else if (paymentMethod === 'WALLET') {
-               await paymentService.createPayment({
-                  orderId, amount, method: 'WALLET', paymentGateway: 'WALLET'
-               });
+               await paymentService.createPayment({ orderId, amount, method: 'WALLET', paymentGateway: 'WALLET' });
             }
 
             onComplete(orderId);
@@ -165,26 +212,20 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
                <AlertCircle className="size-16 text-red-500 mx-auto mb-4" />
                <h3 className="text-xl font-black text-gray-900 mb-2">Không thể thanh toán</h3>
                <p className="text-gray-600 font-medium mb-6">{error}</p>
-               <button onClick={onBack} className="w-full py-3 bg-primary text-white font-black rounded-2xl">
-                  Quay lại giỏ hàng
-               </button>
+               <button onClick={onBack} className="w-full py-3 bg-primary text-white font-black rounded-2xl">Quay lại giỏ hàng</button>
             </div>
          </div>
       );
    }
 
-   const totalAmount = (cartData?.totalAmount || 0) + (SHIPPING_FEE * shopsCount);
+   const totalAmount = (cartData?.totalAmount || 0) + shippingFee;
 
    return (
       <div className="min-h-screen bg-gray-50 pb-20">
          <div className="bg-white border-b border-gray-200 shadow-sm">
             <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
                <div className="flex items-center gap-3">
-                  <button 
-                     onClick={onBack} 
-                     disabled={isProcessing}
-                     className="size-9 bg-gray-100 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-all disabled:opacity-50"
-                  >
+                  <button onClick={onBack} disabled={isProcessing} className="size-9 bg-gray-100 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-all disabled:opacity-50">
                      <ChevronLeft className="size-5" />
                   </button>
                   <div>
@@ -193,15 +234,15 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
                   </div>
                </div>
                <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-primary text-[10px] font-black rounded-full">
-                  <ShieldCheck className="size-3" />
-                  BẢO MẬT
+                  <ShieldCheck className="size-3" /> BẢO MẬT
                </div>
             </div>
          </div>
 
          <div className="max-w-6xl mx-auto px-4 py-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-               {/* Left Column - Form */}
+
+               {/* Left */}
                <div className="lg:col-span-2 space-y-4">
                   <div className="bg-white rounded-2xl border border-gray-200 p-6">
                      <div className="flex items-center gap-2 mb-4">
@@ -220,8 +261,31 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
                            </div>
                         </div>
                         <div>
-                           <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">Địa chỉ nhận hàng *</label>
-                           <textarea value={recipientAddress} onChange={(e) => setRecipientAddress(e.target.value)} placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-primary focus:bg-white transition-all resize-none" rows={2} disabled={isProcessing} />
+                           <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
+                              Địa chỉ nhận hàng *
+                              {/* ✅ Hiện trạng thái tính phí ship */}
+                              {loadingFee && (
+                                 <span className="ml-2 text-primary font-bold normal-case">
+                                    <Loader2 className="size-3 inline animate-spin mr-1" />
+                                    Đang tính phí ship...
+                                 </span>
+                              )}
+                           </label>
+                           <textarea
+                              value={recipientAddress}
+                              onChange={(e) => setRecipientAddress(e.target.value)}
+                              placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố"
+                              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-primary focus:bg-white transition-all resize-none"
+                              rows={2}
+                              disabled={isProcessing}
+                           />
+                           {/* ✅ Hiện phí ship ngay dưới ô địa chỉ */}
+                           {!loadingFee && recipientAddress.length >= 10 && (
+                              <div className="mt-2 flex items-center gap-2 text-xs text-primary font-bold">
+                                 <Truck className="size-3.5" />
+                                 Phí ship ước tính: {shippingFee.toLocaleString('vi-VN')}đ
+                              </div>
+                           )}
                         </div>
                         <div>
                            <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">Ghi chú (tùy chọn)</label>
@@ -269,20 +333,17 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
                   </div>
                </div>
 
-               {/* Right Column - Summary */}
+               {/* Right - Summary */}
                <div className="lg:col-span-1">
                   <div className="bg-white rounded-2xl border border-gray-200 p-6">
                      <h3 className="text-sm font-black text-gray-900 uppercase mb-4">Xác nhận đơn hàng</h3>
-                     
+
                      <div className="space-y-3 mb-4 max-h-[200px] overflow-y-auto">
                         {cartData?.items?.map((item, idx) => (
                            <div key={idx} className="flex justify-between items-start gap-2 text-xs">
                               <div className="flex-1 min-w-0">
                                  <div className="flex items-center gap-1 mb-0.5">
-                                    {/* ✅ Icon phân biệt túi mù vs sản phẩm thường */}
-                                    {item.itemType === 'MYSTERY_BOX' && (
-                                       <Gift className="size-3 text-primary shrink-0" />
-                                    )}
+                                    {item.itemType === 'MYSTERY_BOX' && <Gift className="size-3 text-primary shrink-0" />}
                                     <p className="font-bold text-gray-900 truncate">{item.productName}</p>
                                  </div>
                                  <p className="text-gray-500 font-medium">SL: {item.quantity}</p>
@@ -299,9 +360,15 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
                            <span className="text-gray-600 font-medium">Tiền hàng ({cartData?.items?.length || 0})</span>
                            <span className="font-bold text-gray-900">{(cartData?.totalAmount || 0).toLocaleString('vi-VN')}đ</span>
                         </div>
-                        <div className="flex justify-between text-xs">
-                           <span className="text-gray-600 font-medium">Phí vận chuyển</span>
-                           <span className="font-bold text-gray-900">{(SHIPPING_FEE * shopsCount).toLocaleString('vi-VN')}đ</span>
+                        {/* ✅ Phí ship động */}
+                        <div className="flex justify-between text-xs items-center">
+                           <span className="text-gray-600 font-medium flex items-center gap-1">
+                              Phí vận chuyển
+                              {loadingFee && <Loader2 className="size-3 animate-spin text-primary" />}
+                           </span>
+                           <span className={`font-bold ${loadingFee ? 'text-gray-400' : 'text-gray-900'}`}>
+                              {shippingFee.toLocaleString('vi-VN')}đ
+                           </span>
                         </div>
                      </div>
 
@@ -319,7 +386,7 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
                         )}
 
                         <button
-                           disabled={isProcessing}
+                           disabled={isProcessing || loadingFee}
                            onClick={handleConfirmPayment}
                            className="w-full py-3 bg-primary text-white font-black rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >

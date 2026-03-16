@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Hourglass, CheckCircle, ArrowLeft, Home, Store, Mail, Phone, MapPin, CreditCard, FileText, User as UserIcon } from 'lucide-react';
 import { User, KYCStatus } from '../../types';
+import { useLocation } from 'react-router-dom';
 
 interface KYCProps {
   onComplete: () => void;
@@ -9,7 +10,11 @@ interface KYCProps {
   user: User | null;
 }
 
-const KYC: React.FC<KYCProps> = ({ onComplete, onBack, role, user }) => {
+const KYC: React.FC<KYCProps> = ({ onComplete, onBack, role, user: propUser }) => {
+  const location = useLocation();
+  const stateUser = location.state?.pendingUser;
+  const user = propUser || stateUser;
+  
   const [isSubmitted, setIsSubmitted] = useState(true);
   const [isReviewing, setIsReviewing] = useState(false);
 
@@ -142,8 +147,8 @@ const KYC: React.FC<KYCProps> = ({ onComplete, onBack, role, user }) => {
   );
 
   return (
-    <div className="min-h-screen bg-[#F0F2F5] pb-20">
-      <div className="max-w-3xl mx-auto pt-12 px-4">
+    <div className="bg-[#F0F2F5] py-12">
+      <div className="max-w-4xl mx-auto px-4">
         {isReviewing && (
           <div className="flex items-center justify-between mb-10">
             <div>

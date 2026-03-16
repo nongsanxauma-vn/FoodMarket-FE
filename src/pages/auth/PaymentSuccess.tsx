@@ -20,6 +20,25 @@ const PaymentSuccess: React.FC = () => {
     let pollCount = 0;
     const MAX_POLLS = 15; // 15 * 2s = 30 seconds max
 
+    const confirmOrder = async () => {
+      if (!orderCode) return;
+      try {
+        // Vì BE endpoint mới dùng orderCode string
+        await paymentService.confirmPaymentByOrderCode(orderCode);
+        console.log('Payment confirmed successfully.');
+      } catch (confirmError: any) {
+        console.error('Error confirming payment status:', confirmError);
+
+        if (confirmError?.status === 401) {
+          setPaymentStatus('failed');
+          setErrorMsg('Phiên đã hết hạn, vui lòng đăng nhập lại để tiếp tục.');
+          return;
+        }
+
+        // Nếu lỗi không phải 401, để continue polling và hiển thị trạng thái phù hợp.
+      }
+    };
+
     const checkStatus = async () => {
       if (!orderCode) {
         setPaymentStatus('failed');
@@ -71,6 +90,9 @@ const PaymentSuccess: React.FC = () => {
       navigate('/payment/cancel' + window.location.search);
       return;
     }
+
+    // Confirm payment via API (backup when webhook chưa gọi kịp)
+    confirmOrder();
 
     // Start polling
     checkStatus();

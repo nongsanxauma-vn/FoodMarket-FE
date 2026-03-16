@@ -157,7 +157,7 @@ const Header: React.FC<HeaderProps> = ({
         <div className={`flex items-center justify-between ${containerClass} gap-4 md:gap-10`}>
           {/* Logo Area */}
           <Link to="/" className="flex items-center gap-3 shrink-0 cursor-pointer">
-            <img src="/nong_san_xau_ma/logo.png" alt="Logo" className="size-10 object-contain rounded-full bg-white" />
+            <img src="/logo.png" alt="Logo" className="size-10 object-contain rounded-full bg-white" />
             <h2 className="text-white text-xl font-black leading-tight tracking-tighter uppercase font-display italic">NÔNG SẢN XẤU MÃ</h2>
           </Link>
 
@@ -312,7 +312,7 @@ const Header: React.FC<HeaderProps> = ({
                       <button onClick={() => { setShowProfileMenu(false); navigate('/my-orders'); }} className="w-full px-5 py-3 text-left text-xs font-bold hover:bg-gray-50 flex items-center gap-3 transition-colors">
                         <Package className="size-4 text-gray-400" /> Đơn hàng của tôi
                       </button>
-                      {user?.role === AppRole.BUYER && (
+                      {(user?.role === AppRole.BUYER || user?.role === AppRole.FARMER) && (
                         <button onClick={() => { setShowProfileMenu(false); navigate('/chat'); }} className="w-full px-5 py-3 text-left text-xs font-bold hover:bg-gray-50 flex items-center gap-3 transition-colors">
                           <MessageSquare className="size-4 text-gray-400" /> Tin nhắn
                         </button>
@@ -368,6 +368,12 @@ const Header: React.FC<HeaderProps> = ({
                 className={`text-xs font-bold uppercase tracking-tight transition-all ${activeTab === 'news' ? 'text-gray-900 border-b-2 border-[#29a33d] pb-1' : 'text-gray-600 hover:text-primary'}`}
               >
                 TIN TỨC
+              </Link>
+              <Link
+                to="/meal-plan"
+                className={`text-xs font-bold uppercase tracking-tight transition-all ${location.pathname === '/meal-plan' ? 'text-gray-900 border-b-2 border-[#29a33d] pb-1' : 'text-gray-600 hover:text-primary'}`}
+              >
+                KẾ HOẠCH ĂN UỐNG
               </Link>
             </nav>
 

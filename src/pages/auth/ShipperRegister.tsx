@@ -1,17 +1,34 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bike, User, Phone, Mail, Lock, MapPin, CreditCard, FileText, Camera, ArrowRight, ArrowLeft, CheckCircle2, Shield, X } from 'lucide-react';
-import { shipperService, otpService } from '../../services';
+import { shipperService, otpService, authService } from '../../services';
 import { useAuth } from '../../contexts/AuthContext';
-import { AppRole } from '../../types';
+import { AppRole, KYCStatus } from '../../types';
 
 interface ShipperRegisterProps {
   onBack: () => void;
 }
 
 const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onBack }) => {
-  const { login } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  React.useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.role === AppRole.ADMIN) navigate('/admin');
+      else if (user.role === AppRole.FARMER) {
+        if (user.kycStatus === KYCStatus.PENDING) navigate('/kyc');
+        else navigate('/farmer');
+      }
+      else if (user.role === AppRole.SHIPPER) {
+        if (user.kycStatus === KYCStatus.PENDING) navigate('/kyc');
+        else navigate('/shipper');
+      }
+      else navigate('/');
+    }
+  }, [isAuthenticated, user, navigate]);
+
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     fullName: '', phone: '', email: '', password: '', confirmPassword: '',
@@ -133,8 +150,37 @@ const ShipperRegister: React.FC<ShipperRegisterProps> = ({ onBack }) => {
 
       if (response.result) {
         setShowOtpModal(false);
-        login(AppRole.SHIPPER);
-        navigate('/kyc');
+        // Sau khi đăng ký thành công, tự động đăng nhập để lấy token
+        let loginResponse;
+        try {
+          loginResponse = await authService.login({
+            email: formData.email,
+            password: formData.password
+          });
+        } catch (loginErr) {
+          console.error("Auto-login failed:", loginErr);
+        }
+
+        if (loginResponse?.result?.token) {
+          login(AppRole.SHIPPER);
+          navigate('/kyc');
+        } else {
+          // If login fails (e.g. pending approval), but registration was successful
+          navigate('/kyc', {
+            state: {
+              pendingUser: {
+                name: formData.fullName,
+                email: formData.email,
+                role: AppRole.SHIPPER,
+                phone: formData.phone,
+                address: formData.address,
+                bankAccount: formData.bankAccount,
+                avatar: uploadedFiles.portrait ? URL.createObjectURL(uploadedFiles.portrait) : null,
+                achievement: uploadedFiles.driverLicense ? uploadedFiles.driverLicense.name : null
+              }
+            }
+          });
+        }
       }
     } catch (err: any) {
       console.error('Shipper registration failed:', err);

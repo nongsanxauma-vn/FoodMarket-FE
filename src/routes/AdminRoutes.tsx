@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { Route } from 'react-router-dom';
 import AdminLayout from './AdminLayout';
 import ProtectedRoute from './ProtectedRoute';
 import AdminDashboard from '../pages/admin/Dashboard';
+import AdminMessages from '../pages/admin/Messages';
 import KYCApproval from '../pages/admin/KYCApproval';
 import NewsManagement from '../pages/admin/NewsManagement';
 import NotificationManagement from '../pages/admin/NotificationManagement';
@@ -23,6 +23,7 @@ const AdminRoutes = () => {
         }>
             <Route index element={<AdminDashboard />} />
             <Route path="overview" element={<AdminDashboard />} />
+            <Route path="messages" element={<AdminMessages />} />
             <Route path="kyc" element={<KYCApproval />} />
             <Route path="news" element={<NewsManagement />} />
             <Route path="notifications" element={<NotificationManagement />} />

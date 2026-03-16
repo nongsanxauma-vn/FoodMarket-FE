@@ -85,6 +85,7 @@ export interface ComboDish {
   cookingTime: string;
 }
 
+
 export interface CookingCombo {
   id: string;
   name: string;
@@ -98,4 +99,39 @@ export interface CookingCombo {
   rating: number;
   soldCount: number;
   createdDate: string;
+}
+
+// Build Plan Types
+export interface BuildPlanResponse {
+  id: number;
+  buyerId: number;
+  planName: string;
+  planType: string;
+  mealName: string;
+  targetBudget: number;
+  items: BuildPlanItemResponse[];
+}
+
+export interface BuildPlanItemResponse {
+  id: number;
+  mealName: string;
+  mealTime: string;
+  description?: string;
+  completed: boolean;
+  productId?: number;
+  productName?: string;
+}
+
+export interface BuildPlanCreateRequest {
+  planName: string;
+  mealName: string;
+  planType: 'DAILY' | 'WEEKLY';
+  targetBudget: number;
+}
+
+export interface BuildPlanItemCreateRequest {
+  mealName: string;
+  mealTime: string;
+  description?: string;
+  productIds: number[]; // BE expects List<Integer>
 }
