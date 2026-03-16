@@ -13,6 +13,15 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const isUser = message.sender === 'user';
   const isSystem = message.type === 'system';
 
+  // Debug log
+  console.log('[MessageBubble] Rendering message:', {
+    id: message.id,
+    content: message.content,
+    sender: message.sender,
+    contentLength: message.content?.length,
+    hasContent: !!message.content
+  });
+
   // Format timestamp
   const formatTime = (timestamp: Date) => {
     return new Intl.DateTimeFormat('en-US', {
@@ -156,7 +165,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           lineHeight: '1.5'
         }}
       >
-        {message.content}
+        {message.content || '[Empty content - Debug: ' + JSON.stringify(message).substring(0, 100) + ']'}
 
         {/* Actions for AI messages */}
         {!isUser && message.metadata?.actions && Array.isArray(message.metadata.actions) && (

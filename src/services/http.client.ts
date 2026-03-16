@@ -9,6 +9,9 @@ export interface ApiResponse<T = any> {
   code?: number;
   message?: string;
   result?: T;
+  suggestions?: string[];
+  actions?: any[];
+  context?: any;
 }
 
 export interface RequestConfig {

@@ -18,6 +18,9 @@ export interface ChatMessage {
     orderId?: number;
     actionType?: string;
     retryCount?: number;
+    maxRetries?: number;
+    retryable?: boolean;
+    queued?: boolean;
     actions?: ChatAction[];
   };
 }

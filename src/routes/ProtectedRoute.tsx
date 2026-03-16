@@ -24,6 +24,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles,
     }
 
     if (!isAuthenticated) {
+        // Special case: allow access to /kyc if user data is passed via navigation state
+        if (location.pathname === '/kyc' && location.state?.pendingUser) {
+            return <>{children}</>;
+        }
         // Redirect to login but save the current location to redirect back after login
         return <Navigate to="/" state={{ from: location, openLogin: true }} replace />;
     }

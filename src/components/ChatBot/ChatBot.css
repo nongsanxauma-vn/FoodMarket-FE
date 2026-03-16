@@ -497,6 +497,19 @@
   font-size: 14px;
 }
 
+/* Ensure text is visible in message bubbles */
+.message-bubble-wrapper.is-user .message-content-bubble {
+  color: #ffffff !important; /* White text for user messages */
+}
+
+.message-bubble-wrapper.is-ai .message-content-bubble {
+  color: #1f2937 !important; /* Dark text for AI messages */
+}
+
+[data-theme="dark"] .message-bubble-wrapper.is-ai .message-content-bubble {
+  color: #f0fdf4 !important; /* Light text for AI messages in dark mode */
+}
+
 .message-content-bubble:hover {
   transform: translateY(-1px);
 }

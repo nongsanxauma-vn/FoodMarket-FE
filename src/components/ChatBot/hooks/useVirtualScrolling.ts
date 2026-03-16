@@ -90,6 +90,10 @@ export function useAutoScroll(
   const scrollToBottom = useCallback((element: HTMLElement | null) => {
     if (!element || !enabled) return;
 
+    // Check if already at bottom to prevent unnecessary scrolls
+    const isAtBottom = Math.abs(element.scrollHeight - element.scrollTop - element.clientHeight) < 10;
+    if (isAtBottom) return;
+
     // Use requestAnimationFrame for smooth scrolling
     requestAnimationFrame(() => {
       element.scrollTop = element.scrollHeight;
