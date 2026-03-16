@@ -422,8 +422,7 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
             });
             updateMarker(lat, lng);
             if (data.shopLatitude && data.shopLongitude && data.destLatitude && data.destLongitude) {
-              drawRoutes(lat, lng, data.shopLatitude, data.shopLongitude, data.destLatitude, data.destLongitude, data.isFake === true);
-            }
+              drawRoutes(lat, lng, data.shopLatitude, data.shopLongitude, data.destLatitude, data.destLongitude, true);            }
           } catch (e) { console.error('[WS]', e); }
         });
       },
