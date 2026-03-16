@@ -39,7 +39,7 @@ export const cartService = {
 
     // Cập nhật số lượng túi mù
     updateMysteryBoxQuantity: async (mysteryBoxId: number, quantity: number): Promise<ApiResponse<CartResponse>> => {
-        return await api.put<CartResponse>(`/cart/quantity?mysteryBoxId=${mysteryBoxId}&quantity=${quantity}`);
+        return await api.put<CartResponse>(`/cart/mystery-box/quantity?mysteryBoxId=${mysteryBoxId}&quantity=${quantity}`);
     },
 
     // Xóa sản phẩm thường

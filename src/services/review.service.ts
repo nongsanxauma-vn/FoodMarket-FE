@@ -13,7 +13,8 @@ export interface ReviewResponse {
 }
 
 export interface ReviewCreateRequest {
-    orderDetailId: number;
+    orderDetailId?: number;  // cho sản phẩm thường
+    mysteryBoxId?: number;   // cho mystery box
     ratingStar: number;
     comment: string;
 }

@@ -26,7 +26,7 @@ export type { SendOtpRequest, SendOtpResponse, VerifyOtpRequest, VerifyOtpRespon
 export type { ResetPasswordRequest, ResetPasswordResponse } from './password.service';
 export type { ShipperRegisterRequest, ShipperRegisterResponse } from './shipper.service';
 export type { NotificationItem, AdminSendNotificationRequest } from './notification.service';
-export type { MysteryBox, MysteryBoxCreationRequest, MysteryBoxUpdateRequest } from './mysteryBox.service';
+export type { MysteryBox, MysteryBoxResponse, ProductMysteryResponse, MysteryBoxCreationRequest, MysteryBoxUpdateRequest, ProductMysteryRequest } from './mysteryBox.service';
 export type { ProductResponse, ProductCreationRequest } from './product.service';
 export type { OrderResponse, OrderCreationRequest } from './order.service';
 export type { WalletResponse, WithdrawRequestResponse } from './wallet.service';

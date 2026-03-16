@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Sparkles, Info, ArrowRight, Package, Box, Zap, Gift, Trash2, Sprout, AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
-import { mysteryBoxService, MysteryBox, MysteryBoxCreationRequest, authService, productService, ProductResponse } from '../../services';
+import { mysteryBoxService, MysteryBox, MysteryBoxCreationRequest, ProductMysteryRequest, authService, productService, ProductResponse } from '../../services';
 import { ImagePlus } from 'lucide-react';
 
 const BlindBoxTool: React.FC = () => {
@@ -16,8 +16,11 @@ const BlindBoxTool: React.FC = () => {
   const [boxImage, setBoxImage] = useState<File | null>(null);
   const [boxImagePreview, setBoxImagePreview] = useState<string | null>(null);
   const [realItems, setRealItems] = useState<ProductResponse[]>([]);
-  const [boxType, setBoxType] = useState('3 - 5 loại nông sản');
-  const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  const [boxType, setBoxType] = useState('');
+  const [description, setDescription] = useState('');
+  const [note, setNote] = useState('');
+  // productId -> quantity
+  const [selectedItems, setSelectedItems] = useState<Record<number, number>>({});
 
   const fetchMyBoxes = async () => {
     setLoadingBoxes(true);
@@ -56,25 +59,42 @@ const BlindBoxTool: React.FC = () => {
   }, []);
 
   const handleCreateBox = async () => {
+    if (Object.keys(selectedItems).length === 0) {
+      setError('Vui lòng chọn ít nhất một sản phẩm để tạo túi mù.');
+      return;
+    }
+    if (!boxType.trim()) {
+      setError('Vui lòng nhập tên túi mù.');
+      return;
+    }
     setCreating(true);
     setError(null);
     setSuccessMsg(null);
     try {
+      const products: ProductMysteryRequest[] = Object.entries(selectedItems).map(([id, qty]) => ({
+        productId: Number(id),
+        quantity: qty,
+      }));
       const data: MysteryBoxCreationRequest = {
         boxType: boxType,
         price: price,
-        description: `Túi mù gồm ${boxType} ngẫu nhiên từ nông trại`,
-        note: selectedItems.length > 0 ? `Các sản phẩm liên quan: ${selectedItems.map(id => realItems.find(i => i.id === id)?.productName).join(', ')}` : undefined,
+        description: description.trim() || undefined,
+        note: note.trim() || undefined,
+        products,
       };
       await mysteryBoxService.createMysteryBox(data, boxImage || undefined);
       setSuccessMsg('Đã tạo túi mù thành công!');
       setBoxImage(null);
       setBoxImagePreview(null);
+      setSelectedItems({});
+      setBoxType('');
+      setDescription('');
+      setNote('');
       await fetchMyBoxes();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
       console.error('Failed to create mystery box', err);
-      setError('Không thể tạo túi mù. Vui lòng thử lại.');
+      setError(err?.data?.message || 'Không thể tạo túi mù. Vui lòng thử lại.');
     } finally {
       setCreating(false);
     }
@@ -95,7 +115,19 @@ const BlindBoxTool: React.FC = () => {
   };
 
   const toggleItemSelection = (id: number) => {
-    setSelectedItems(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    setSelectedItems(prev => {
+      if (prev[id] !== undefined) {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      }
+      return { ...prev, [id]: 1 };
+    });
+  };
+
+  const setItemQuantity = (id: number, qty: number) => {
+    if (qty < 1) return;
+    setSelectedItems(prev => ({ ...prev, [id]: qty }));
   };
 
   return (
@@ -126,16 +158,23 @@ const BlindBoxTool: React.FC = () => {
                 <div className="col-span-full py-10 text-center text-gray-400 font-bold uppercase tracking-widest text-[10px]">Đang tải sản phẩm của bạn...</div>
               ) : realItems.map((item) => (
                 <div key={item.id} className="flex flex-col gap-3 group cursor-pointer" onClick={() => toggleItemSelection(item.id)}>
-                  <div className={`relative aspect-square rounded-[32px] overflow-hidden border-2 transition-all shadow-sm ${selectedItems.includes(item.id) ? 'border-primary' : 'border-transparent group-hover:border-primary'}`}>
+                  <div className={`relative aspect-square rounded-[32px] overflow-hidden border-2 transition-all shadow-sm ${selectedItems[item.id] !== undefined ? 'border-primary' : 'border-transparent group-hover:border-primary'}`}>
                     <img src={item.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                    <div className={`absolute inset-0 transition-all ${selectedItems.includes(item.id) ? 'bg-primary/10' : 'bg-black/10 group-hover:bg-transparent'}`} />
+                    <div className={`absolute inset-0 transition-all ${selectedItems[item.id] !== undefined ? 'bg-primary/10' : 'bg-black/10 group-hover:bg-transparent'}`} />
                     <div className="absolute top-3 right-3 bg-white/90 backdrop-blur size-6 rounded-full flex items-center justify-center border border-gray-100 shadow-sm">
-                      <input type="checkbox" className="size-3 accent-primary" checked={selectedItems.includes(item.id)} onChange={() => { }} />
+                      <input type="checkbox" className="size-3 accent-primary" checked={selectedItems[item.id] !== undefined} onChange={() => { }} />
                     </div>
                   </div>
                   <div className="text-center">
                     <p className="text-xs font-black text-gray-800 uppercase truncate px-2">{item.productName}</p>
                     <p className="text-[10px] text-primary font-bold">Tồn: {item.stockQuantity} {item.unit}</p>
+                    {selectedItems[item.id] !== undefined && (
+                      <div className="flex items-center justify-center gap-2 mt-2" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setItemQuantity(item.id, (selectedItems[item.id] || 1) - 1)} className="size-5 rounded-full bg-gray-100 hover:bg-primary/10 text-gray-600 flex items-center justify-center text-xs font-black">-</button>
+                        <span className="text-xs font-black text-gray-800 w-6 text-center">{selectedItems[item.id]}</span>
+                        <button onClick={() => setItemQuantity(item.id, (selectedItems[item.id] || 1) + 1)} className="size-5 rounded-full bg-gray-100 hover:bg-primary/10 text-gray-600 flex items-center justify-center text-xs font-black">+</button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -178,12 +217,14 @@ const BlindBoxTool: React.FC = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                 <div className="flex flex-col gap-3">
-                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Số lượng vật phẩm</label>
-                  <select value={boxType} onChange={(e) => setBoxType(e.target.value)} className="w-full p-4 bg-gray-50 border border-transparent rounded-[24px] text-sm font-black outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all appearance-none cursor-pointer">
-                    <option>3 - 5 loại nông sản</option>
-                    <option>5 - 8 loại nông sản</option>
-                    <option>Gói tiết kiệm (10kg+)</option>
-                  </select>
+                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Tên túi mù *</label>
+                  <input
+                    type="text"
+                    value={boxType}
+                    onChange={(e) => setBoxType(e.target.value)}
+                    placeholder="VD: Rau củ tươi mùa hè"
+                    className="w-full p-4 bg-gray-50 border border-transparent rounded-[24px] text-sm font-black outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all"
+                  />
                 </div>
                 <div className="flex flex-col gap-3">
                   <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Hình ảnh túi mù</label>
@@ -208,6 +249,26 @@ const BlindBoxTool: React.FC = () => {
                       <span className="text-xs font-bold text-gray-500 truncate">{boxImage ? boxImage.name : 'Tải lên ảnh bìa túi mù...'}</span>
                     </label>
                   </div>
+                </div>
+                <div className="flex flex-col gap-3 sm:col-span-2">
+                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Mô tả</label>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Mô tả về túi mù này..."
+                    rows={3}
+                    className="w-full p-4 bg-gray-50 border border-transparent rounded-[24px] text-sm font-medium outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all resize-none"
+                  />
+                </div>
+                <div className="flex flex-col gap-3 sm:col-span-2">
+                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Ghi chú</label>
+                  <input
+                    type="text"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="Ghi chú thêm (không bắt buộc)..."
+                    className="w-full p-4 bg-gray-50 border border-transparent rounded-[24px] text-sm font-medium outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all"
+                  />
                 </div>
               </div>
             </div>
@@ -239,12 +300,14 @@ const BlindBoxTool: React.FC = () => {
               </div>
               <div className="flex justify-between items-center text-[11px] font-bold text-gray-500 italic">
                 <span>Gồm:</span>
-                <span>{boxType}</span>
+                <span>{boxType || '—'}</span>
               </div>
-              {selectedItems.length > 0 && (
+              {Object.keys(selectedItems).length > 0 && (
                 <div className="flex justify-between items-center text-[11px] font-bold text-gray-500 italic">
                   <span>Đã chọn:</span>
-                  <span className="truncate ml-4 max-w-[120px]">{selectedItems.map(id => realItems.find(i => i.id === id)?.productName).join(', ')}</span>
+                  <span className="truncate ml-4 max-w-[120px]">
+                    {Object.entries(selectedItems).map(([id, qty]) => `${realItems.find(i => i.id === Number(id))?.productName} x${qty}`).join(', ')}
+                  </span>
                 </div>
               )}
             </div>
@@ -252,7 +315,7 @@ const BlindBoxTool: React.FC = () => {
             <div className="p-6 bg-primary/5 rounded-[32px] border border-primary/10 flex items-start gap-3">
               <Info className="size-4 text-primary shrink-0 mt-1" />
               <p className="text-[10px] text-gray-500 font-medium leading-relaxed">
-                Thuật toán sẽ tự động phân phối nông sản dựa trên số lượng tồn kho của bạn để đảm bảo không món nào bị hư hỏng.
+                Shop chọn thủ công các sản phẩm và số lượng cho từng túi mù. Khách hàng sẽ không biết nội dung bên trong cho đến khi nhận hàng.
               </p>
             </div>
 
@@ -264,7 +327,7 @@ const BlindBoxTool: React.FC = () => {
             )}
 
             <button onClick={handleCreateBox} disabled={creating} className="w-full py-5 bg-primary text-white font-black rounded-[32px] flex items-center justify-center gap-3 shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed">
-              <Sparkles className="size-5" /> {creating ? 'ĐANG TẠO...' : 'TẠO COMBO RANDOM'}
+              <Gift className="size-5" /> {creating ? 'ĐANG TẠO...' : 'TẠO TÚI MÙ'}
             </button>
           </div>
 

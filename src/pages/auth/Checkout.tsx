@@ -137,7 +137,11 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
 
       } catch (error: any) {
          console.error('Checkout failed', error);
-         setError(error?.data?.message || 'Có lỗi xảy ra. Vui lòng thử lại.');
+         if (error?.data?.message?.includes('MYSTERY_BOX_OUT_OF_STOCK')) {
+            setError('Một số túi mù trong giỏ hàng đã hết hàng và đã được xóa. Vui lòng kiểm tra lại giỏ hàng.');
+         } else {
+            setError(error?.data?.message || 'Có lỗi xảy ra. Vui lòng thử lại.');
+         }
       } finally {
          setIsProcessing(false);
       }
