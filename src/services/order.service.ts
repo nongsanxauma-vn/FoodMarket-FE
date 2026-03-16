@@ -1,7 +1,8 @@
 import { httpClient, ApiResponse } from './http.client';
 
 export interface OrderItemRequest {
-    productId: number;
+    productId?: number;
+    mysteryBoxId?: number;
     quantity: number;
 }
 
@@ -15,11 +16,14 @@ export interface OrderCreationRequest {
 }
 
 export interface OrderItemResponse {
-    orderDetailId: number;
-    productId: number;
-    productName: string;
+    orderDetailId?: number;
+    productId?: number;
+    mysteryBoxId?: number;
+    productName?: string;
+    mysteryBoxType?: string;
     quantity: number;
     unitPrice: number;
+    itemType: 'PRODUCT' | 'MYSTERY_BOX';
     category?: string; // Added for personalization
 }
 

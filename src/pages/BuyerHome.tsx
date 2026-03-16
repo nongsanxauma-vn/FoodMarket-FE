@@ -61,7 +61,8 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct }) => {
         setIsLoadingBoxes(true);
         const response = await mysteryBoxService.getAll();
         if (response.result) {
-          setMysteryBoxes(response.result);
+          // isActive undefined means backend doesn't return the field yet — treat as active
+          setMysteryBoxes(response.result.filter((b: MysteryBox) => b.isActive !== false && b.isActive !== 0));
         }
       } catch (err) {
         console.error('Failed to fetch boxes:', err);
