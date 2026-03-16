@@ -386,13 +386,43 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
         setWsStatus('connected'); setError(null);
         client.subscribe(`/topic/order/${orderId}/location`, (msg) => {
           try {
-            const data: ShipperLocationResponse & { isFake?: boolean } = JSON.parse(msg.body);
-            lastUpdateRef.current = Date.now(); shipperActiveRef.current = true; setShipperActive(true);
+            const data = JSON.parse(msg.body);
+
+            // ✅ Shipper tắt GPS (từ app mobile gửi gpsOff:true)
+            if (data.gpsOff === true) {
+              shipperActiveRef.current = false;
+              lastUpdateRef.current = null;
+              setShipperActive(false);
+              clearMapLayers();
+              return; // ← dừng tại đây, không xử lý tiếp
+            }
+
+            // ✅ Validate lat/lng hợp lệ trước khi dùng
+            const lat = Number(data.latitude);
+            const lng = Number(data.longitude);
+            if (!isFinite(lat) || !isFinite(lng) || lat === 0 || lng === 0) {
+              console.warn('[WS] Bỏ qua message không có tọa độ hợp lệ:', data);
+              return;
+            }
+
+            lastUpdateRef.current = Date.now();
+            shipperActiveRef.current = true;
+            setShipperActive(true);
             if (shipperMarkerRef.current) shipperMarkerRef.current.setOpacity(1);
-            setLocation({ lat: data.latitude, lng: data.longitude, updatedAt: data.updatedAt, shipperName: data.shipperName, shipperId: data.shipperId, shopLat: data.shopLatitude, shopLng: data.shopLongitude, destLat: data.destLatitude, destLng: data.destLongitude });
-            updateMarker(data.latitude, data.longitude);
+
+            setLocation({
+              lat, lng,
+              updatedAt: data.updatedAt ?? new Date().toISOString(),
+              shipperName: data.shipperName ?? 'Shipper',
+              shipperId: data.shipperId,
+              shopLat: data.shopLatitude,
+              shopLng: data.shopLongitude,
+              destLat: data.destLatitude,
+              destLng: data.destLongitude,
+            });
+            updateMarker(lat, lng);
             if (data.shopLatitude && data.shopLongitude && data.destLatitude && data.destLongitude) {
-              drawRoutes(data.latitude, data.longitude, data.shopLatitude, data.shopLongitude, data.destLatitude, data.destLongitude, data.isFake === true);
+              drawRoutes(lat, lng, data.shopLatitude, data.shopLongitude, data.destLatitude, data.destLongitude, data.isFake === true);
             }
           } catch (e) { console.error('[WS]', e); }
         });
@@ -402,7 +432,7 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
     });
     client.activate(); stompClientRef.current = client;
     return () => { client.deactivate(); };
-  }, [orderId, updateMarker, drawRoutes]);
+  }, [orderId, updateMarker, drawRoutes, clearMapLayers]);
 
   // ---- CLEANUP ----
   useEffect(() => {
