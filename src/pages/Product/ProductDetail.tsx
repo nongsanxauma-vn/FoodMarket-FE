@@ -52,6 +52,10 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
         setIsLoading(true);
         setError(null);
         const idNum = Number(productId);
+        if (!idNum || isNaN(idNum)) {
+          setError('ID sản phẩm không hợp lệ.');
+          return;
+        }
         const res = await productService.getById(idNum);
         if (res.result) {
           setProduct(res.result);
@@ -317,7 +321,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
           <h2 className="text-2xl font-black font-display text-gray-900 uppercase mb-12 flex items-center gap-4">Gợi ý mua kèm <span className="h-px bg-gray-200 flex-1"></span></h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {relatedProducts.map((p) => (
-              <div key={p.id} onClick={() => navigate(`/product/${p.id}`)} className="group cursor-pointer">
+              <div key={p.id} onClick={() => { if (p.id) navigate(`/product/${p.id}`); }} className="group cursor-pointer">
                 <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-gray-50 mb-4 border border-gray-100"><img src={p.imageUrl || 'https://picsum.photos/seed/product/400/300'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={p.productName} /></div>
                 <h4 className="font-extrabold text-gray-900 text-sm mb-1 line-clamp-1">{p.productName}</h4>
                 <div className="flex gap-2 text-sm mt-2 items-center"><span className="text-primary font-black text-lg">{(p.sellingPrice || 0).toLocaleString('vi-VN')}đ</span><span className="text-[10px] text-gray-400 font-bold uppercase">/{p.unit}</span></div>

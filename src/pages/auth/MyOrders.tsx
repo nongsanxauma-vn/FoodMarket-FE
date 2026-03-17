@@ -50,6 +50,15 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
         const myOrders = response.result.filter(
           order => order.items && order.items.length > 0
         );
+        
+        // Debug: Log order items to understand structure
+        myOrders.forEach(order => {
+          console.log(`Order #${order.id} items:`, order.items);
+          order.items?.forEach(item => {
+            console.log(`Item: ${item.productName}, Type: ${item.itemType}, MysteryBoxId: ${item.mysteryBoxId}, OrderDetailId: ${item.orderDetailId}`);
+          });
+        });
+        
         setOrders(myOrders.sort((a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         ));
@@ -70,16 +79,47 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
 
   const handleReviewSubmit = async () => {
     if (!selectedItem) return;
+    
     try {
       setSubmittingReview(true);
-      const res = await reviewService.createReview({
-        orderDetailId: selectedItem.orderDetailId,
+      
+      // Validate comment
+      if (!comment.trim()) {
+        alert('Vui lòng nhập nhận xét của bạn');
+        return;
+      }
+      
+      // Phân biệt product vs mystery box
+      const reviewData: any = {
         ratingStar: rating,
-        comment: comment
-      }, evidence || undefined);
+        comment: comment.trim()
+      };
+      
+      console.log('Selected item for review:', selectedItem);
+      
+      if (selectedItem.itemType === 'MYSTERY_BOX') {
+        if (!selectedItem.mysteryBoxId) {
+          console.error('Mystery box item missing mysteryBoxId:', selectedItem);
+          alert('Lỗi: Không tìm thấy ID hộp mù để đánh giá. Vui lòng liên hệ hỗ trợ.');
+          return;
+        }
+        reviewData.mysteryBoxId = selectedItem.mysteryBoxId;
+        console.log('Creating mystery box review with mysteryBoxId:', selectedItem.mysteryBoxId);
+      } else {
+        if (!selectedItem.orderDetailId) {
+          console.error('Product item missing orderDetailId:', selectedItem);
+          alert('Lỗi: Không tìm thấy ID chi tiết đơn hàng để đánh giá. Vui lòng liên hệ hỗ trợ.');
+          return;
+        }
+        reviewData.orderDetailId = selectedItem.orderDetailId;
+        console.log('Creating product review with orderDetailId:', selectedItem.orderDetailId);
+      }
+
+      console.log('Review data being sent:', reviewData);
+      const res = await reviewService.createReview(reviewData, evidence || undefined);
 
       if (res.result) {
-        alert('Cảm ơn bạn đã đánh giá sản phẩm!');
+        alert(`Cảm ơn bạn đã đánh giá ${selectedItem.itemType === 'MYSTERY_BOX' ? 'hộp mù' : 'sản phẩm'}!`);
         setShowReviewModal(false);
         setSelectedItem(null);
         setRating(5);
@@ -89,7 +129,22 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
       }
     } catch (err: any) {
       console.error('Failed to submit review:', err);
-      alert(err.message || 'Không thể gửi đánh giá. Vui lòng thử lại.');
+      
+      // Better error handling
+      let errorMessage = 'Không thể gửi đánh giá. Vui lòng thử lại.';
+      
+      if (err.data?.message) {
+        errorMessage = err.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      // Handle specific error cases
+      if (err.data?.code === 9999) {
+        errorMessage = 'Dữ liệu không hợp lệ. Vui lòng thử lại hoặc liên hệ hỗ trợ.';
+      }
+      
+      alert(errorMessage);
     } finally {
       setSubmittingReview(false);
     }
@@ -382,8 +437,15 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
           <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-300">
             <div className="px-10 py-8 border-b border-gray-50 flex items-center justify-between">
               <div>
-                <h3 className="text-2xl font-black text-gray-900">Đánh giá sản phẩm</h3>
-                <p className="text-gray-400 font-bold text-sm mt-1">{selectedItem.productName}</p>
+                <h3 className="text-2xl font-black text-gray-900">
+                  {selectedItem.itemType === 'MYSTERY_BOX' ? 'Đánh giá hộp mù' : 'Đánh giá sản phẩm'}
+                </h3>
+                <p className="text-gray-400 font-bold text-sm mt-1">
+                  {selectedItem.itemType === 'MYSTERY_BOX' 
+                    ? selectedItem.mysteryBoxType || selectedItem.productName 
+                    : selectedItem.productName
+                  }
+                </p>
               </div>
               <button
                 onClick={() => setShowReviewModal(false)}

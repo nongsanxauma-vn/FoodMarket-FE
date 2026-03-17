@@ -12,9 +12,12 @@ import {
   Zap,
   MapPin,
   Gift,
+  MessageSquare,
+  Star,
 } from 'lucide-react';
-import { mysteryBoxService, MysteryBox, cartService } from '../../services';
+import { mysteryBoxService, MysteryBox, cartService, reviewService, ReviewResponse } from '../../services';
 import { useAuth } from '../../contexts/AuthContext';
+import ShopProducts from '../Product/ShopProducts';
 
 interface MysteryBoxDetailProps {
   boxId?: string;
@@ -35,6 +38,8 @@ const MysteryBoxDetail: React.FC<MysteryBoxDetailProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
+  const [reviews, setReviews] = useState<ReviewResponse[]>([]);
+  const [viewShopMode, setViewShopMode] = useState(false);
 
   const handleBack = () => {
     if (propOnBack) propOnBack();
@@ -63,6 +68,19 @@ const MysteryBoxDetail: React.FC<MysteryBoxDetailProps> = ({
     if (boxId) fetchBox();
   }, [boxId]);
 
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!box?.shopOwnerId) return;
+      try {
+        const res = await reviewService.getByShopId(box.shopOwnerId);
+        if (res.result) setReviews(res.result);
+      } catch (err) {
+        console.error('Failed to fetch reviews:', err);
+      }
+    };
+    fetchReviews();
+  }, [box?.shopOwnerId]);
+
   const handleAddToCart = async () => {
     if (!isAuthenticated) {
       navigate('/login');
@@ -81,6 +99,10 @@ const MysteryBoxDetail: React.FC<MysteryBoxDetailProps> = ({
       setIsAdding(false);
     }
   };
+
+  if (viewShopMode && box?.shopOwnerId) {
+    return <ShopProducts shopId={box.shopOwnerId} onBack={() => setViewShopMode(false)} isAuthenticated={isAuthenticated} onOpenLogin={() => navigate('/login')} />;
+  }
 
   if (isLoading) {
     return (
@@ -208,9 +230,7 @@ const MysteryBoxDetail: React.FC<MysteryBoxDetailProps> = ({
           <div className="flex items-center gap-2 text-gray-400 text-sm font-bold">
             <MapPin className="size-4" />
             <span>Nông trại đối tác #{box.shopOwnerId}</span>
-          </div>
-
-          {/* Quantity + Add to cart */}
+          </div>          {/* Quantity + Add to cart */}
           <div className="space-y-3 pt-2">
             <p className="text-[10px] font-black uppercase text-gray-700 tracking-widest">
               Số lượng
@@ -271,6 +291,94 @@ const MysteryBoxDetail: React.FC<MysteryBoxDetailProps> = ({
           </div>
         </div>
       </div>
+      {/* Shop Info Section */}
+      <div className="max-w-7xl mx-auto px-4 mb-20">
+        <div className="bg-gradient-to-br from-green-50 to-white rounded-[32px] border border-green-100 shadow-sm p-10 relative overflow-hidden">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
+            <div className="flex items-start gap-5">
+              <div className="size-24 rounded-2xl overflow-hidden bg-white shadow-sm flex-shrink-0 border-4 border-white">
+                <img src={`https://picsum.photos/seed/shop${box.shopOwnerId}/100/100`} alt="Shop" className="w-full h-full object-cover" />
+              </div>
+              <div className="flex-1 pt-1">
+                <h4 className="font-black text-gray-900 text-lg mb-1">Nông trại đối tác #{box.shopOwnerId}</h4>
+                <div className="flex gap-3 mt-4">
+                  <button
+                    onClick={() => setViewShopMode(true)}
+                    className="px-5 py-2.5 bg-white text-primary font-black text-[10px] uppercase tracking-widest rounded-xl border border-primary/20 hover:bg-primary hover:text-white transition-all shadow-sm"
+                  >
+                    Xem Cửa Hàng
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!isAuthenticated) { navigate('/login'); return; }
+                      navigate(`/chat?userId=${box.shopOwnerId}&userName=${encodeURIComponent('Chủ shop')}`);
+                    }}
+                    className="flex items-center gap-1.5 px-5 py-2.5 bg-blue-50 text-blue-600 font-black text-[10px] uppercase tracking-widest rounded-xl border border-blue-100 hover:bg-blue-500 hover:text-white transition-all shadow-sm"
+                  >
+                    <MessageSquare className="size-3.5" /> Chat Shop
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="lg:col-span-2 flex items-center">
+              <div className="grid grid-cols-3 gap-8 w-full bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                <div className="text-center">
+                  <p className="text-2xl font-black text-primary mb-1">
+                    {reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.ratingStar, 0) / reviews.length).toFixed(1) : '—'}
+                  </p>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Đánh Giá ({reviews.length})</p>
+                </div>
+                <div className="text-center border-l border-r border-gray-100 px-4">
+                  <p className="text-2xl font-black text-gray-900 mb-1">98%</p>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Tỉ Lệ Phản Hồi</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-black text-gray-900 mb-1">3 Năm</p>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Tham Gia</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Reviews Section */}
+      {reviews.length > 0 && (
+        <div className="max-w-7xl mx-auto px-4 mb-20">
+          <h2 className="text-2xl font-black text-gray-900 uppercase mb-8 flex items-center gap-4">
+            Đánh giá cửa hàng <span className="h-px bg-gray-200 flex-1"></span>
+          </h2>
+          <div className="space-y-6">
+            {reviews.slice(0, 5).map((review) => (
+              <div key={review.id} className="bg-gray-50 p-8 rounded-[32px] border border-gray-100">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
+                      {review.fullName ? review.fullName.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                    <div>
+                      <p className="font-black text-gray-900 text-sm">{review.fullName || `Người dùng #${review.buyerId}`}</p>
+                      <div className="flex text-yellow-400 mt-1">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className={`size-3 ${i < review.ratingStar ? 'fill-yellow-400' : ''}`} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Gần đây</span>
+                </div>
+                <p className="text-gray-600 text-sm leading-relaxed">{review.comment}</p>
+                {review.replyFromShop && (
+                  <div className="mt-4 bg-white p-5 rounded-2xl border border-primary/10 relative">
+                    <div className="absolute -top-3 left-6 bg-primary text-white text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-widest">Phản hồi từ Nhà vườn</div>
+                    <p className="text-gray-600 text-sm italic">{review.replyFromShop}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

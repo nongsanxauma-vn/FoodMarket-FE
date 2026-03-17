@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { productService, ProductResponse, mysteryBoxService, MysteryBox } from '../services';
+import { productService, ProductResponse, mysteryBoxService, MysteryBox, comboService, BuildComboResponse, cartService } from '../services';
 import {
   Star,
   MapPin,
@@ -13,20 +13,26 @@ import {
   LayoutGrid,
   Grape,
   Loader2,
-  Package
+  Package,
+  ChefHat,
+  Tag,
 } from 'lucide-react';
 // import { generateProduceStory } from '../services/geminiService';
 
 interface BuyerHomeProps {
   onSelectProduct: (id: string) => void;
+  isAuthenticated?: boolean;
+  onOpenLogin?: () => void;
 }
 
-const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct }) => {
+const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated = false, onOpenLogin = () => {} }) => {
   const [featuredStory, setFeaturedStory] = useState<string>('Đang tải câu chuyện nông sản...');
   const [products, setProducts] = useState<ProductResponse[]>([]);
   const [mysteryBoxes, setMysteryBoxes] = useState<MysteryBox[]>([]);
+  const [combos, setCombos] = useState<BuildComboResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingBoxes, setIsLoadingBoxes] = useState(false);
+  const [isLoadingCombos, setIsLoadingCombos] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const categories = [
@@ -46,7 +52,7 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct }) => {
         setIsLoading(true);
         const response = await productService.getAll();
         if (response.result) {
-          setProducts(response.result.filter(p => p.status === 'AVAILABLE' || !p.status));
+          setProducts(response.result.filter(p => p.status === 'AVAILABLE' || !p.status).filter(p => p.id && !isNaN(p.id)));
         }
       } catch (err) {
         console.error('Failed to fetch products:', err);
@@ -61,7 +67,8 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct }) => {
         setIsLoadingBoxes(true);
         const response = await mysteryBoxService.getAll();
         if (response.result) {
-          setMysteryBoxes(response.result);
+          // isActive undefined means backend doesn't return the field yet — treat as active
+          setMysteryBoxes(response.result.filter((b: MysteryBox) => b.isActive !== false && b.isActive !== 0));
         }
       } catch (err) {
         console.error('Failed to fetch boxes:', err);
@@ -72,6 +79,21 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct }) => {
 
     fetchProducts();
     fetchBoxes();
+
+    const fetchCombos = async () => {
+      try {
+        setIsLoadingCombos(true);
+        const response = await comboService.getAll();
+        if (response.result) {
+          setCombos(response.result);
+        }
+      } catch (err) {
+        console.error('Failed to fetch combos:', err);
+      } finally {
+        setIsLoadingCombos(false);
+      }
+    };
+    fetchCombos();
   }, []);
 
   return (
@@ -177,6 +199,83 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct }) => {
           )}
         </div>
       </div>
+
+      {/* Combo Section */}
+      {(isLoadingCombos || combos.length > 0) && (
+        <div className="mb-16">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col gap-1">
+              <h2 className="text-3xl font-black tracking-tight text-gray-900 uppercase font-display">Combo nấu ăn</h2>
+              <p className="text-primary font-bold flex items-center gap-2">
+                <Tag className="size-4" /> Tiết kiệm hơn khi mua theo combo
+              </p>
+            </div>
+          </div>
+
+          {isLoadingCombos ? (
+            <div className="py-10 text-center text-gray-400 font-bold uppercase tracking-widest text-[10px]">Đang tải combo...</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {combos.slice(0, 6).map((combo) => {
+                const totalOriginal = combo.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+                const savings = totalOriginal - combo.discountPrice;
+                return (
+                  <div key={combo.id} onClick={() => onSelectProduct(`combo-${combo.id}`)} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden group cursor-pointer">
+                    {/* Header */}
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-100 p-5 flex items-center gap-3">
+                      <div className="size-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                        <ChefHat className="size-6 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-black text-gray-900 text-sm truncate">{combo.comboName}</h4>
+                        {combo.description && (
+                          <p className="text-xs text-gray-500 font-medium line-clamp-1 mt-0.5">{combo.description}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Items */}
+                    <div className="p-4 space-y-2">
+                      {combo.items.map((item) => (
+                        <div key={item.productId} className="flex items-center justify-between text-xs">
+                          <span className="text-gray-700 font-medium truncate flex-1 pr-2">• {item.productName}</span>
+                          <span className="text-gray-500 font-bold whitespace-nowrap">x{item.quantity}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="px-4 pb-4 pt-2 border-t border-gray-50">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <span className="text-xl font-black text-primary">{combo.discountPrice.toLocaleString('vi-VN')}đ</span>
+                          {savings > 0 && (
+                            <p className="text-[10px] text-green-600 font-bold">
+                              Tiết kiệm {savings.toLocaleString('vi-VN')}đ
+                            </p>
+                          )}
+                        </div>
+                        {savings > 0 && (
+                          <span className="bg-red-100 text-red-600 text-[10px] font-black px-2 py-1 rounded-full">
+                            -{Math.round((savings / totalOriginal) * 100)}%
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onSelectProduct(`combo-${combo.id}`); }}
+                        className="w-full bg-primary hover:bg-primary-dark text-white font-black py-2.5 rounded-xl text-xs transition-all flex items-center justify-center gap-2"
+                      >
+                        <ChefHat className="size-4" />
+                        Chọn combo này
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Featured Products */}
       <div className="mb-20">

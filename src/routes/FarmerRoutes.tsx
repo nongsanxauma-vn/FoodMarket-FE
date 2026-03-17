@@ -6,6 +6,7 @@ import FarmerDashboard from '../pages/farmer/Dashboard';
 import Products from '../pages/farmer/Products';
 import AddProduct from '../pages/farmer/AddProduct';
 import ComboBuilder from '../pages/farmer/ComboBuilder';
+import MysteryBoxEditor from '../pages/farmer/MysteryBoxEditor';
 import Wallet from '../pages/farmer/Wallet';
 import Orders from '../pages/farmer/Orders';
 import OrderPreparation from '../pages/farmer/OrderPreparation';
@@ -40,6 +41,8 @@ const FarmerRoutes = () => {
             <Route path="add-product" element={<AddProduct onBack={() => navigate('/farmer/products')} />} />
             <Route path="combo-builder" element={<ComboBuilder onBack={() => navigate('/farmer/products')} />} />
             <Route path="combo-builder/:comboId" element={<ComboBuilder onBack={() => navigate('/farmer/products')} />} />
+            <Route path="mystery-box-editor" element={<MysteryBoxEditor onBack={() => navigate('/farmer/products')} />} />
+            <Route path="mystery-box-editor/:boxId" element={<MysteryBoxEditor onBack={() => navigate('/farmer/products')} />} />
             <Route path="wallet" element={<Wallet />} />
             <Route path="orders" element={<Orders onPrepareOrder={(id) => navigate(`/farmer/order-prep/${id}`)} />} />
             <Route path="order-prep/:orderId" element={<OrderPreparationWrapper onBack={() => navigate('/farmer/orders')} onComplete={() => navigate('/farmer/orders')} />} />

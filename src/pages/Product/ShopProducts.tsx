@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
   Grid, 
@@ -14,9 +15,12 @@ import {
   Loader2,
   MapPin,
   ShieldCheck,
-  Award
+  Award,
+  Gift,
+  ChefHat,
+  Tag,
 } from 'lucide-react';
-import { productService, ProductResponse, userService, UserResponse, cartService, reviewService, ReviewResponse } from '../../services';
+import { productService, ProductResponse, userService, UserResponse, cartService, reviewService, ReviewResponse, mysteryBoxService, MysteryBox, comboService, BuildComboResponse } from '../../services';
 
 interface ShopProductsProps {
   shopId: number;
@@ -31,7 +35,10 @@ const ShopProducts: React.FC<ShopProductsProps> = ({
   isAuthenticated = false, 
   onOpenLogin = () => {} 
 }) => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState<ProductResponse[]>([]);
+  const [mysteryBoxes, setMysteryBoxes] = useState<MysteryBox[]>([]);
+  const [combos, setCombos] = useState<BuildComboResponse[]>([]);
   const [shopInfo, setShopInfo] = useState<UserResponse | null>(null);
   const [reviews, setReviews] = useState<ReviewResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,42 +46,38 @@ const ShopProducts: React.FC<ShopProductsProps> = ({
   const [sortBy, setSortBy] = useState('default');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [addingToCart, setAddingToCart] = useState<number | null>(null);
+  const [addingBoxToCart, setAddingBoxToCart] = useState<number | null>(null);
+  const [addingComboToCart, setAddingComboToCart] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchShopData = async () => {
       setLoading(true);
       console.log('[ShopProducts] Fetching data for shopId:', shopId);
       try {
-        const [productsRes, shopRes, reviewsRes] = await Promise.all([
+        const [productsRes, shopRes, reviewsRes, boxesRes, combosRes] = await Promise.all([
           productService.getByShopId(shopId),
           userService.getUserById(shopId).catch(() => ({ result: null })),
-          reviewService.getByShopId(shopId).catch(() => ({ result: [] }))
+          reviewService.getByShopId(shopId).catch(() => ({ result: [] })),
+          mysteryBoxService.getAll().catch(() => ({ result: [] })),
+          comboService.getByShop(shopId).catch(() => ({ result: [] }))
         ]);
 
         if (productsRes.result) {
           setProducts(productsRes.result);
-          console.log('[ShopProducts] Products loaded:', productsRes.result.length);
-          if (productsRes.result.length > 0) {
-            console.log('[ShopProducts] First product shopName:', productsRes.result[0].shopName);
-          }
         }
-        
         if (reviewsRes.result) {
           setReviews(reviewsRes.result);
-          console.log('[ShopProducts] Reviews loaded:', reviewsRes.result.length);
         }
-        
         if (shopRes.result) {
           setShopInfo(shopRes.result);
-          console.log('[ShopProducts] Shop info loaded:', {
-            shopName: shopRes.result.shopName,
-            fullName: shopRes.result.fullName,
-            id: shopRes.result.id
-          });
-        } else {
-          console.log('[ShopProducts] No shop info returned from API');
         }
-      } catch (error) {
+        // Filter mystery boxes belonging to this shop and only active ones
+        if (boxesRes.result) {
+          setMysteryBoxes(boxesRes.result.filter((b: MysteryBox) => b.shopOwnerId === shopId && b.isActive !== false && b.isActive !== 0));
+        }
+        if (combosRes.result) {
+          setCombos(combosRes.result);
+        }      } catch (error) {
         console.error('Failed to load shop data', error);
       } finally {
         setLoading(false);
@@ -85,20 +88,43 @@ const ShopProducts: React.FC<ShopProductsProps> = ({
   }, [shopId]);
 
   const handleAddToCart = async (productId: number) => {
-    if (!isAuthenticated) {
-      onOpenLogin();
-      return;
-    }
-
+    if (!isAuthenticated) { onOpenLogin(); return; }
     setAddingToCart(productId);
     try {
       await cartService.addToCart({ productId, quantity: 1 });
       alert('Đã thêm vào giỏ hàng!');
     } catch (error) {
-      console.error('Failed to add to cart', error);
       alert('Không thể thêm vào giỏ hàng. Vui lòng thử lại.');
     } finally {
       setAddingToCart(null);
+    }
+  };
+
+  const handleAddBoxToCart = async (boxId: number) => {
+    if (!isAuthenticated) { onOpenLogin(); return; }
+    setAddingBoxToCart(boxId);
+    try {
+      await cartService.addToCart({ mysteryBoxId: boxId, quantity: 1 });
+      window.dispatchEvent(new Event('cart-updated'));
+      alert('Đã thêm túi mù vào giỏ hàng!');
+    } catch (error) {
+      alert('Không thể thêm vào giỏ hàng. Vui lòng thử lại.');
+    } finally {
+      setAddingBoxToCart(null);
+    }
+  };
+
+  const handleAddComboToCart = async (combo: BuildComboResponse) => {
+    if (!isAuthenticated) { onOpenLogin(); return; }
+    setAddingComboToCart(combo.id);
+    try {
+      await cartService.addToCart({ buildComboId: combo.id, quantity: 1 });
+      window.dispatchEvent(new Event('cart-updated'));
+      alert(`Đã thêm combo "${combo.comboName}" vào giỏ hàng!`);
+    } catch {
+      alert('Không thể thêm combo vào giỏ hàng. Vui lòng thử lại.');
+    } finally {
+      setAddingComboToCart(null);
     }
   };
 
@@ -428,6 +454,151 @@ const ShopProducts: React.FC<ShopProductsProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Mystery Boxes Section */}
+        {mysteryBoxes.length > 0 && (
+          <div className="mt-6">
+            <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
+                <div className="size-9 bg-purple-100 rounded-xl flex items-center justify-center">
+                  <Gift className="size-5 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-gray-900">Túi Mù Của Shop</h3>
+                  <p className="text-xs text-gray-400 font-bold">{mysteryBoxes.length} túi mù đang bán</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {mysteryBoxes.map((box) => (
+                  <div key={box.id} className="group relative bg-gradient-to-br from-purple-50 to-white rounded-2xl border border-purple-100 overflow-hidden hover:shadow-lg hover:border-purple-200 transition-all">
+                    {/* Image */}
+                    <div className="relative aspect-square overflow-hidden bg-purple-100">
+                      {box.imageUrl ? (
+                        <img src={box.imageUrl} alt={box.boxType} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-purple-300">
+                          <Gift className="size-16" />
+                          <span className="text-4xl font-black text-purple-200">?</span>
+                        </div>
+                      )}
+                      <div className="absolute top-3 left-3 bg-black/60 backdrop-blur text-white px-2.5 py-1 rounded-full flex items-center gap-1.5">
+                        <Gift className="size-3 text-yellow-400" />
+                        <span className="text-[9px] font-black uppercase tracking-widest">Bí ẩn</span>
+                      </div>
+                      <button
+                        onClick={() => handleAddBoxToCart(box.id)}
+                        disabled={addingBoxToCart === box.id}
+                        className="absolute bottom-3 right-3 size-10 bg-primary text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:scale-110 active:scale-95 disabled:opacity-50"
+                      >
+                        {addingBoxToCart === box.id ? (
+                          <Loader2 className="size-5 animate-spin" />
+                        ) : (
+                          <ShoppingCart className="size-5" />
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Info */}
+                    <div className="p-4">
+                      <h4 className="font-black text-gray-800 text-sm mb-1 line-clamp-1">{box.boxType}</h4>
+                      {box.description && (
+                        <p className="text-xs text-gray-500 font-medium mb-2 line-clamp-2">{box.description}</p>
+                      )}
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-lg font-black text-primary">{box.price.toLocaleString('vi-VN')}đ</span>
+                        <button
+                          onClick={() => handleAddBoxToCart(box.id)}
+                          disabled={addingBoxToCart === box.id}
+                          className="px-3 py-1.5 bg-primary text-white text-[10px] font-black rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50 flex items-center gap-1"
+                        >
+                          {addingBoxToCart === box.id ? <Loader2 className="size-3 animate-spin" /> : <ShoppingCart className="size-3" />}
+                          Thêm vào giỏ
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Combos Section */}
+        {combos.length > 0 && (
+          <div className="mt-6">
+            <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
+                <div className="size-9 bg-green-100 rounded-xl flex items-center justify-center">
+                  <ChefHat className="size-5 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-gray-900">Combo Nấu Ăn</h3>
+                  <p className="text-xs text-gray-400 font-bold">{combos.length} combo đang bán</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {combos.map((combo) => {
+                  const totalOriginal = combo.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+                  const savings = totalOriginal - combo.discountPrice;
+                  return (
+                    <div key={combo.id} onClick={() => navigate(`/combo/${combo.id}`)} className="group bg-gradient-to-br from-green-50 to-white rounded-2xl border border-green-100 overflow-hidden hover:shadow-lg hover:border-green-200 transition-all cursor-pointer">
+                      {/* Header */}
+                      <div className="p-4 flex items-center gap-3 border-b border-green-100">
+                        <div className="size-11 bg-white rounded-xl flex items-center justify-center shadow-sm border border-green-100">
+                          <ChefHat className="size-5 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-black text-gray-900 text-sm truncate">{combo.comboName}</h4>
+                          {combo.description && (
+                            <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">{combo.description}</p>
+                          )}
+                        </div>
+                        {savings > 0 && (
+                          <span className="bg-red-100 text-red-600 text-[10px] font-black px-2 py-1 rounded-full whitespace-nowrap">
+                            -{Math.round((savings / totalOriginal) * 100)}%
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Items list */}
+                      <div className="px-4 py-3 space-y-1.5">
+                        {combo.items.map((item) => (
+                          <div key={item.productId} className="flex items-center justify-between text-xs">
+                            <span className="text-gray-700 font-medium truncate flex-1 pr-2">• {item.productName}</span>
+                            <span className="text-gray-500 font-bold">x{item.quantity}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Footer */}
+                      <div className="px-4 pb-4 pt-2">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <span className="text-lg font-black text-primary">{combo.discountPrice.toLocaleString('vi-VN')}đ</span>
+                            {savings > 0 && (
+                              <p className="text-[10px] text-green-600 font-bold flex items-center gap-1 mt-0.5">
+                                <Tag className="size-3" /> Tiết kiệm {savings.toLocaleString('vi-VN')}đ
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); navigate(`/combo/${combo.id}`); }}
+                          className="w-full px-3 py-2 bg-primary text-white text-xs font-black rounded-xl hover:bg-primary-dark transition-colors flex items-center justify-center gap-1.5"
+                        >
+                          <ChefHat className="size-3.5" />
+                          Chọn combo này
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Reviews Section */}
         {reviews.length > 0 && (

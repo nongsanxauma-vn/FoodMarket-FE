@@ -7,6 +7,7 @@ import { httpClient } from '../../services/http.client';
 type CartItemWithShop = {
    productId?: number;
    mysteryBoxId?: number;
+   buildComboId?: number;
    productName: string;
    quantity: number;
    price: number;
@@ -149,9 +150,13 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
             paymentMethod,
             items: cartData.items.map(item => {
                if (item.itemType === 'MYSTERY_BOX') {
-                  return { mysteryBoxId: item.mysteryBoxId, productId: undefined, quantity: item.quantity };
+                  return { mysteryBoxId: item.mysteryBoxId, quantity: item.quantity };
                }
-               return { productId: item.productId, mysteryBoxId: undefined, quantity: item.quantity };
+               if (item.itemType === 'BUILD_COMBO') {
+                  const comboId = item.buildComboId ?? (item as any).comboId ?? (item as any).id;
+                  return { buildComboId: comboId, quantity: item.quantity };
+               }
+               return { productId: item.productId, quantity: item.quantity };
             })
          };
 
@@ -184,7 +189,11 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
 
       } catch (error: any) {
          console.error('Checkout failed', error);
-         setError(error?.data?.message || 'Có lỗi xảy ra. Vui lòng thử lại.');
+         if (error?.data?.message?.includes('MYSTERY_BOX_OUT_OF_STOCK')) {
+            setError('Một số túi mù trong giỏ hàng đã hết hàng và đã được xóa. Vui lòng kiểm tra lại giỏ hàng.');
+         } else {
+            setError(error?.data?.message || 'Có lỗi xảy ra. Vui lòng thử lại.');
+         }
       } finally {
          setIsProcessing(false);
       }

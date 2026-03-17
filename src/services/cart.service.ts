@@ -3,19 +3,20 @@ import { httpClient as api, ApiResponse } from './http.client';
 export interface AddCartItemRequest {
     productId?: number;
     mysteryBoxId?: number;
+    buildComboId?: number;
     quantity: number;
 }
 
 export interface CartItemResponse {
     productId?: number;
     mysteryBoxId?: number;
+    buildComboId?: number;
     productName: string;
     quantity: number;
     price: number;
     imageUrl?: string;
     shopName?: string;
-    itemType: 'PRODUCT' | 'MYSTERY_BOX';
-    // ✅ Thêm để tính phí ship theo địa chỉ shop
+    itemType: 'PRODUCT' | 'MYSTERY_BOX' | 'BUILD_COMBO';
     shopOwnerId?: number;
 }
 
@@ -39,7 +40,11 @@ export const cartService = {
     },
 
     updateMysteryBoxQuantity: async (mysteryBoxId: number, quantity: number): Promise<ApiResponse<CartResponse>> => {
-        return await api.put<CartResponse>(`/cart/quantity?mysteryBoxId=${mysteryBoxId}&quantity=${quantity}`);
+        return await api.put<CartResponse>(`/cart/mystery-box/quantity?mysteryBoxId=${mysteryBoxId}&quantity=${quantity}`);
+    },
+
+    updateComboQuantity: async (buildComboId: number, quantity: number): Promise<ApiResponse<CartResponse>> => {
+        return await api.put<CartResponse>(`/cart/combo/quantity?buildComboId=${buildComboId}&quantity=${quantity}`);
     },
 
     removeItem: async (productId: number): Promise<ApiResponse<string>> => {
@@ -48,6 +53,10 @@ export const cartService = {
 
     removeMysteryBox: async (mysteryBoxId: number): Promise<ApiResponse<string>> => {
         return await api.delete<string>(`/cart/mystery-box/${mysteryBoxId}`);
+    },
+
+    removeCombo: async (buildComboId: number): Promise<ApiResponse<string>> => {
+        return await api.delete<string>(`/cart/combo/${buildComboId}`);
     },
 
     clearCart: async (): Promise<ApiResponse<string>> => {

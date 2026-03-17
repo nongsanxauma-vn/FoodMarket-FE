@@ -1,5 +1,4 @@
 import { httpClient, ApiResponse } from './http.client';
-import { API_BASE_URL, TOKEN_KEY } from './api.config';
 
 export interface MysteryBox {
   id: number;
@@ -9,6 +8,22 @@ export interface MysteryBox {
   description?: string;
   note?: string;
   shopOwnerId: number;
+  isActive?: boolean | number;
+}
+
+export interface ProductMysteryResponse {
+  productId: number;
+  productName: string;
+  quantity: number;
+}
+
+export interface MysteryBoxResponse extends MysteryBox {
+  products: ProductMysteryResponse[];
+}
+
+export interface ProductMysteryRequest {
+  productId: number;
+  quantity: number;
 }
 
 export interface MysteryBoxCreationRequest {
@@ -16,6 +31,7 @@ export interface MysteryBoxCreationRequest {
   price: number;
   description?: string;
   note?: string;
+  products: ProductMysteryRequest[];
 }
 
 export interface MysteryBoxUpdateRequest {
@@ -23,6 +39,8 @@ export interface MysteryBoxUpdateRequest {
   price?: number;
   description?: string;
   note?: string;
+  products?: ProductMysteryRequest[];
+  active?: boolean;
 }
 
 class MysteryBoxService {
@@ -34,8 +52,12 @@ class MysteryBoxService {
     return httpClient.get<MysteryBox[]>('/mystery-boxes');
   }
 
-  async getById(id: number): Promise<ApiResponse<MysteryBox>> {
-    return httpClient.get<MysteryBox>(`/mystery-boxes/${id}`);
+  async getById(id: number): Promise<ApiResponse<MysteryBoxResponse>> {
+    return httpClient.get<MysteryBoxResponse>(`/mystery-boxes/${id}`);
+  }
+
+  async getProductsByBoxId(boxId: number): Promise<ApiResponse<ProductMysteryResponse[]>> {
+    return httpClient.get<ProductMysteryResponse[]>(`/mystery-boxes/${boxId}/products`);
   }
 
   async createMysteryBox(data: MysteryBoxCreationRequest, image?: File): Promise<ApiResponse<MysteryBox>> {
@@ -54,6 +76,10 @@ class MysteryBoxService {
       formData.append('image', image);
     }
     return httpClient.put<MysteryBox>(`/mystery-boxes/${id}`, formData);
+  }
+
+  async toggleActive(id: number): Promise<ApiResponse<MysteryBox>> {
+    return httpClient.patch<MysteryBox>(`/mystery-boxes/${id}/toggle-active`);
   }
 
   async deleteMysteryBox(id: number): Promise<ApiResponse<void>> {
