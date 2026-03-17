@@ -3,7 +3,7 @@
  * Xử lý tất cả các HTTP requests với axios-like interface
  */
 
-import { API_BASE_URL, API_TIMEOUT, TOKEN_KEY } from './api.config';
+import { API_BASE_URL, API_TIMEOUT, TOKEN_KEY, REFRESH_TOKEN_KEY, USER_INFO_KEY } from './api.config';
 
 export interface ApiResponse<T = any> {
   code?: number;
@@ -51,6 +51,7 @@ class HttpClient {
         '/mystery-boxes',
         '/reviews',
         '/blogs',
+        '/build-combos',
       ];
       if (publicGetEndpoints.some(endpoint => url.includes(endpoint))) {
         return true;
@@ -162,9 +163,17 @@ class HttpClient {
 
           if (!isPaymentConfirmEndpoint && !this.isPublicEndpoint(method, url)) {
             console.error('[HTTP] Redirecting to login/home...');
-            localStorage.removeItem(TOKEN_KEY);
+            const token = localStorage.getItem(TOKEN_KEY);
             const basename = '/';
-            window.location.href = basename;
+
+            // Chỉ reload nếu đang có token (cần logout) và không ở trang chủ
+            // Nếu đã ở trang chủ và không có token, không cần reload nữa để tránh loop
+            if (token || window.location.pathname !== basename) {
+              localStorage.removeItem(TOKEN_KEY);
+              localStorage.removeItem(REFRESH_TOKEN_KEY);
+              localStorage.removeItem(USER_INFO_KEY);
+              window.location.href = basename;
+            }
           }
         }
 
