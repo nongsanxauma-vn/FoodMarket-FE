@@ -1,16 +1,22 @@
 import { httpClient as api, ApiResponse } from './http.client';
 
 export interface AddCartItemRequest {
-    productId: number;
+    productId?: number;
+    mysteryBoxId?: number;
     quantity: number;
 }
 
 export interface CartItemResponse {
-    productId: number;
+    productId?: number;
+    mysteryBoxId?: number;
     productName: string;
     quantity: number;
     price: number;
-    imageUrl?: string; // Opt-in, since we might need to fetch this or backend might add it later
+    imageUrl?: string;
+    shopName?: string;
+    itemType: 'PRODUCT' | 'MYSTERY_BOX';
+    // ✅ Thêm để tính phí ship theo địa chỉ shop
+    shopOwnerId?: number;
 }
 
 export interface CartResponse {
@@ -32,8 +38,16 @@ export const cartService = {
         return await api.put<CartResponse>(`/cart/quantity?productId=${productId}&quantity=${quantity}`);
     },
 
+    updateMysteryBoxQuantity: async (mysteryBoxId: number, quantity: number): Promise<ApiResponse<CartResponse>> => {
+        return await api.put<CartResponse>(`/cart/quantity?mysteryBoxId=${mysteryBoxId}&quantity=${quantity}`);
+    },
+
     removeItem: async (productId: number): Promise<ApiResponse<string>> => {
         return await api.delete<string>(`/cart/item/${productId}`);
+    },
+
+    removeMysteryBox: async (mysteryBoxId: number): Promise<ApiResponse<string>> => {
+        return await api.delete<string>(`/cart/mystery-box/${mysteryBoxId}`);
     },
 
     clearCart: async (): Promise<ApiResponse<string>> => {

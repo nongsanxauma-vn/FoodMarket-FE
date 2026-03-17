@@ -28,6 +28,7 @@ export interface AvailableOrderResponse {
   orderId: number;
   shopName: string;
   shopAddress: string;
+  shopPhone?: string | null;        // ✅ SĐT shop để shipper liên hệ
   shippingAddress: string;
   recipientName: string;
   recipientPhone: string;
@@ -36,7 +37,15 @@ export interface AvailableOrderResponse {
   status: string;
   createdAt: string;
   estimatedDeliveryDate: string | null;
-  distanceKm: number | null; // khoảng cách thực tế từ Goong (null nếu không geocode được)
+
+  // ✅ Khoảng cách shipper → shop (shipper tới lấy hàng)
+  shipToShopKm: number | null;
+
+  // ✅ Khoảng cách shop → nhà buyer (đường giao hàng)
+  shopToBuyerKm: number | null;
+
+  // backward compat (= shipToShopKm)
+  distanceKm: number | null;
 }
 
 /** Response từ POST /shipper/orders/{id}/accept và /status */
@@ -52,6 +61,11 @@ export interface ShipperOrderResponse {
   createdAt: string;
   estimatedDeliveryDate: string | null;
   note: string | null;
+  // ✅ Tọa độ thật để FakeGPS dùng đúng điểm
+  shopLatitude?: number | null;
+  shopLongitude?: number | null;
+  shippingLatitude?: number | null;
+  shippingLongitude?: number | null;
 }
 
 export type UpdateOrderStatus = 'DELIVERED' | 'FAILED';
@@ -69,7 +83,12 @@ export interface ShipperLocationResponse {
   latitude: number;
   longitude: number;
   updatedAt: string;
-  // ✅ Tọa độ điểm đến để vẽ đường trên map
+
+  // ✅ Điểm lấy hàng (shop)
+  shopLatitude?: number | null;
+  shopLongitude?: number | null;
+
+  // ✅ Điểm giao hàng (nhà buyer)
   destLatitude?: number | null;
   destLongitude?: number | null;
 }
@@ -78,77 +97,38 @@ export interface ShipperLocationResponse {
 
 class ShipperService {
 
-  /**
-   * Đăng ký tài khoản shipper
-   */
   async register(
     shipperData: ShipperRegisterRequest,
     documents?: { driverLicense?: File; portrait?: File }
   ): Promise<ApiResponse<ShipperRegisterResponse>> {
     const formData = new FormData();
-    formData.append('data', JSON.stringify({
-      ...shipperData,
-      roleName: 'SHIPPER',
-    }));
+    formData.append('data', JSON.stringify({ ...shipperData, roleName: 'SHIPPER' }));
     if (documents?.portrait) formData.append('logoUrl', documents.portrait);
     if (documents?.driverLicense) formData.append('achievement', documents.driverLicense);
-
-    const response = await fetch(`${API_BASE_URL}/users/register`, {
-      method: 'POST',
-      body: formData,
-    });
+    const response = await fetch(`${API_BASE_URL}/users/register`, { method: 'POST', body: formData });
     const data = await response.json();
     if (!response.ok) throw { status: response.status, data };
     return data;
   }
 
-  /**
-   * Lấy top 6 đơn gần nhất dựa vào GPS hiện tại của shipper
-   * FE cần gọi navigator.geolocation trước, rồi truyền lat/lng vào đây
-   */
   async getNearbyOrders(lat: number, lng: number): Promise<ApiResponse<AvailableOrderResponse[]>> {
-    return httpClient.get<AvailableOrderResponse[]>(
-      `/shipper/orders/nearby?lat=${lat}&lng=${lng}`
-    );
+    return httpClient.get<AvailableOrderResponse[]>(`/shipper/orders/nearby?lat=${lat}&lng=${lng}`);
   }
 
-  /**
-   * Shipper nhận đơn hàng
-   */
   async acceptOrder(orderId: number): Promise<ApiResponse<ShipperOrderResponse>> {
-    return httpClient.post<ShipperOrderResponse>(
-      `/shipper/orders/${orderId}/accept`,
-      {}
-    );
+    return httpClient.post<ShipperOrderResponse>(`/shipper/orders/${orderId}/accept`, {});
   }
 
-  /**
-   * Cập nhật trạng thái đơn hàng (DELIVERED / FAILED)
-   */
-  async updateOrderStatus(
-    orderId: number,
-    request: UpdateOrderStatusRequest
-  ): Promise<ApiResponse<ShipperOrderResponse>> {
-    return httpClient.post<ShipperOrderResponse>(
-      `/shipper/orders/${orderId}/status`,
-      request
-    );
+  async updateOrderStatus(orderId: number, request: UpdateOrderStatusRequest): Promise<ApiResponse<ShipperOrderResponse>> {
+    return httpClient.post<ShipperOrderResponse>(`/shipper/orders/${orderId}/status`, request);
   }
 
-  /**
-   * Xem tất cả đơn của shipper hiện tại
-   */
   async getMyOrders(): Promise<ApiResponse<ShipperOrderResponse[]>> {
     return httpClient.get<ShipperOrderResponse[]>('/shipper/orders/my');
   }
 
-  /**
-   * Lấy vị trí shipper đang giao đơn (REST fallback, dùng khi mới mở trang)
-   */
   async getShipperLocation(orderId: number): Promise<ApiResponse<ShipperLocationResponse>> {
-    return httpClient.get<ShipperLocationResponse>(
-      `/shipper/location/order/${orderId}`
-    );
+    return httpClient.get<ShipperLocationResponse>(`/shipper/location/order/${orderId}`);
   }
 }
 

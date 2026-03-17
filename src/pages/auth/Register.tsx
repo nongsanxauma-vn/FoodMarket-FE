@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AppRole } from '../../types/index';
+import { AppRole, KYCStatus } from '../../types/index';
 import { useAuth } from '../../contexts/AuthContext';
 import { ArrowLeft } from 'lucide-react';
 import { authService, otpService } from '../../services';
@@ -42,8 +42,14 @@ const Register: React.FC<RegisterProps> = ({ onGoToLogin, onGoToShipperRegister 
   React.useEffect(() => {
     if (isAuthenticated && user) {
       if (user.role === AppRole.ADMIN) navigate('/admin');
-      else if (user.role === AppRole.FARMER) navigate('/farmer');
-      else if (user.role === AppRole.SHIPPER) navigate('/shipper');
+      else if (user.role === AppRole.FARMER) {
+        if (user.kycStatus === KYCStatus.PENDING) navigate('/kyc');
+        else navigate('/farmer');
+      }
+      else if (user.role === AppRole.SHIPPER) {
+        if (user.kycStatus === KYCStatus.PENDING) navigate('/kyc');
+        else navigate('/shipper');
+      }
       else navigate('/');
     }
   }, [isAuthenticated, user, navigate]);
@@ -84,12 +90,51 @@ const Register: React.FC<RegisterProps> = ({ onGoToLogin, onGoToShipperRegister 
                 pendingRegistration.achievementFile
               );
               if (response.result) {
-                setSuccess('Đăng ký thành công! Đang chuyển hướng...');
-                setTimeout(() => {
+                // Sau khi đăng ký thành công, tự động đăng nhập để lấy token
+                let loginResponse;
+                try {
+                  loginResponse = await authService.login({
+                    email: email,
+                    password: password
+                  });
+                } catch (loginErr) {
+                  console.error("Auto-login failed:", loginErr);
+                }
+
+                if (loginResponse?.result?.token) {
+                  setSuccess('Đăng ký thành công! Đang chuyển hướng...');
                   login(selectedRole);
-                  if (selectedRole === AppRole.FARMER) navigate('/kyc');
-                  else navigate('/');
-                }, 1500);
+                  setTimeout(() => {
+                    if (selectedRole === AppRole.FARMER || selectedRole === AppRole.SHIPPER) navigate('/kyc');
+                    else navigate('/');
+                  }, 1500);
+                } else {
+                  // If login fails (e.g. pending approval), but registration was successful
+                  if (selectedRole === AppRole.FARMER || selectedRole === AppRole.SHIPPER) {
+                    setSuccess('Đăng ký thành công! Hồ sơ của bạn đang được chờ duyệt.');
+                    setTimeout(() => {
+                      navigate('/kyc', { 
+                        state: { 
+                          pendingUser: {
+                            name: fullName,
+                            email: email,
+                            role: selectedRole,
+                            phone: phone,
+                            shopName: shopName,
+                            address: address,
+                            bankAccount: bankAccount,
+                            description: description,
+                            avatar: logoFile ? URL.createObjectURL(logoFile) : null,
+                            achievement: achievementFile ? achievementFile.name : null
+                          }
+                        } 
+                      });
+                    }, 1500);
+                  } else {
+                    setError('Đăng ký thành công nhưng không thể đăng nhập tự động. Vui lòng đăng nhập thủ công.');
+                    setTimeout(() => onGoToLogin(), 2000);
+                  }
+                }
               }
             } catch (err: any) {
               setError(err?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.');
@@ -185,7 +230,7 @@ const Register: React.FC<RegisterProps> = ({ onGoToLogin, onGoToShipperRegister 
         <img
           alt="Nông sản tươi sạch"
           className="absolute inset-0 w-full h-full object-cover"
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuBAw_xXxVDDIwzdg7n_0cCpoahHsxdorA_yeN2hG9i7SiheR_1AB2x3P0ItoJzgOrqPBsP-Std_CyB2X-6LJXRVUTh98oI3GSmmrCGPL1B1N0CnJEnDgMo4t9t-RPv7zIu9SfLOCwvs1jn7Ou2ADuIjsQ4s3G0L5rbQxCX1JG9rnxMBh0mcPDpiUJuK-i--i8PHCjyX6Zje9FnOyhRZSP2zCVs4TLiu_nFT8sYdux441OYF8SOlGU1HxNAFJgIoI2SbjnHNathWZnIl"
+          src="https://moitruong.net.vn/rau-cu-ptag.html"
         />
         <div className="absolute inset-0 z-20 p-10 flex flex-col justify-between">
           {/* Top bar */}

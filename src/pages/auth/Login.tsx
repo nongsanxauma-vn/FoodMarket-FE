@@ -24,8 +24,14 @@ const Login: React.FC<LoginProps> = ({ onGoToRegister, onForgotPassword }) => {
   useEffect(() => {
     if (isAuthenticated && user) {
       if (user.role === AppRole.ADMIN) navigate('/admin');
-      else if (user.role === AppRole.FARMER) navigate('/farmer');
-      else if (user.role === AppRole.SHIPPER) navigate('/shipper');
+      else if (user.role === AppRole.FARMER) {
+        if (user.kycStatus === KYCStatus.PENDING) navigate('/kyc');
+        else navigate('/farmer');
+      }
+      else if (user.role === AppRole.SHIPPER) {
+        if (user.kycStatus === KYCStatus.PENDING) navigate('/kyc');
+        else navigate('/shipper');
+      }
       else navigate('/');
     }
   }, [isAuthenticated, user, navigate]);
@@ -44,7 +50,7 @@ const Login: React.FC<LoginProps> = ({ onGoToRegister, onForgotPassword }) => {
         <img
           alt="Nông sản tươi sạch trong hộp gỗ"
           className="absolute inset-0 w-full h-full object-cover"
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuBAw_xXxVDDIwzdg7n_0cCpoahHsxdorA_yeN2hG9i7SiheR_1AB2x3P0ItoJzgOrqPBsP-Std_CyB2X-6LJXRVUTh98oI3GSmmrCGPL1B1N0CnJEnDgMo4t9t-RPv7zIu9SfLOCwvs1jn7Ou2ADuIjsQ4s3G0L5rbQxCX1JG9rnxMBh0mcPDpiUJuK-i--i8PHCjyX6Zje9FnOyhRZSP2zCVs4TLiu_nFT8sYdux441OYF8SOlGU1HxNAFJgIoI2SbjnHNathWZnIl"
+          src="https://moitruong.net.vn/rau-cu-ptag.html"
         />
         <div className="absolute inset-0 z-20 p-12 flex flex-col justify-between">
           <div className="flex items-center gap-4">
@@ -113,20 +119,39 @@ const Login: React.FC<LoginProps> = ({ onGoToRegister, onForgotPassword }) => {
               }
             } catch (err: any) {
               console.error('Login failed:', err);
-              setError(err?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.');
+              const message = err?.data?.message || '';
+              
+              if (message === 'User account is pending approval') {
+                setError('Tài khoản của bạn đang chờ duyệt. Đang chuyển hướng...');
+                setTimeout(() => {
+                  navigate('/kyc', {
+                    state: {
+                      pendingUser: {
+                        email: email,
+                        // Nếu user chưa chọn đúng vai trò, ta thử truyền vai trò hiện tại hoặc mặc định là FARMER/SHIPPER
+                        // BE đã xác nhận account PENDING tức là role phải là FARMER hoặc SHIPPER
+                        role: (selectedRole === AppRole.SHIPPER ? AppRole.SHIPPER : AppRole.FARMER)
+                      }
+                    }
+                  });
+                }, 1500);
+                return;
+              }
+              
+              setError(message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.');
             } finally {
               setIsLoading(false);
             }
           }}>
-
+ 
             {/* Role Selection */}
             <div className="space-y-1.5">
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Vai trò:</label>
               <div className="grid grid-cols-4 gap-2">
                 {[
                   { role: AppRole.BUYER, icon: 'person' },
-                  { role: AppRole.SHIPPER, icon: 'agriculture' },
-                  { role: AppRole.FARMER, icon: 'local_shipping' },
+                  { role: AppRole.FARMER, icon: 'agriculture' },
+                  { role: AppRole.SHIPPER, icon: 'local_shipping' },
                   { role: AppRole.ADMIN, icon: 'shield' },
                 ].map((item) => (
                   <button

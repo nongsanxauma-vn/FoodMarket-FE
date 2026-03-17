@@ -3,13 +3,13 @@ import { httpClient, ApiResponse } from './http.client';
 export interface ReviewResponse {
     id: number;
     buyerId: number;
+    fullName?: string;
     shopOwnerId: number;
     orderDetailId: number;
     ratingStar: number;
     comment: string;
     evidence?: string;
     replyFromShop?: string;
-    buyerFullName?: string;
 }
 
 export interface ReviewCreateRequest {

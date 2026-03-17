@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { AppRole } from '../../types';
+import { AppRole, KYCStatus } from '../../types';
 import { ArrowLeft, CheckCircle, Store, User, Truck, ShieldAlert } from 'lucide-react';
 import { authService, otpService } from '../../services';
 import { useAuth } from '../../contexts/AuthContext';
 import OTPVerification from '../../components/auth/OTPVerification';
+import { useNavigate } from 'react-router-dom';
 
 interface OAuthRegisterProps {
     onGoToLogin: () => void;
@@ -92,6 +93,24 @@ const OAuthRegister: React.FC<OAuthRegisterProps> = ({ onGoToLogin }) => {
         }
     }, []);
 
+    // Redirect if already authenticated
+    const { isAuthenticated, user: authUser } = useAuth();
+    const navigate = useNavigate();
+    useEffect(() => {
+        if (isAuthenticated && authUser) {
+            if (authUser.role === AppRole.ADMIN) navigate('/admin');
+            else if (authUser.role === AppRole.FARMER) {
+                if (authUser.kycStatus === KYCStatus.PENDING) navigate('/kyc');
+                else navigate('/farmer');
+            }
+            else if (authUser.role === AppRole.SHIPPER) {
+                if (authUser.kycStatus === KYCStatus.PENDING) navigate('/kyc');
+                else navigate('/shipper');
+            }
+            else navigate('/');
+        }
+    }, [isAuthenticated, authUser, navigate]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
@@ -113,7 +132,6 @@ const OAuthRegister: React.FC<OAuthRegisterProps> = ({ onGoToLogin }) => {
         };
 
         // Prepare Registration Data
-        // Generate a random strong password for the user since they log in via Google
         const randomPassword = Math.random().toString(36).slice(-10) + "A1@";
 
         const registrationData: any = {
@@ -122,10 +140,9 @@ const OAuthRegister: React.FC<OAuthRegisterProps> = ({ onGoToLogin }) => {
             fullName,
             phoneNumber: phone,
             roleName: roleMap[selectedRole],
-            logoUrl: avatar // Pass google avatar URL by default if no file uploaded
+            logoUrl: avatar
         };
 
-        // Role-specific validation and data formatting
         if (selectedRole === AppRole.FARMER) {
             if (!shopName || !address || !bankAccount) {
                 setError('Vui lòng điền đầy đủ thông tin cửa hàng'); return;
@@ -154,8 +171,8 @@ const OAuthRegister: React.FC<OAuthRegisterProps> = ({ onGoToLogin }) => {
 
         setPendingRegistration({
             data: registrationData,
-            logoFile: selectedRole === AppRole.FARMER ? logoFile : portraitFile, // Use portraitFile instead of logoFile for shipper API
-            achievementFile: selectedRole === AppRole.FARMER ? achievementFile : driverLicenseFile // Use driverLicenseFile instead of achievementFile for shipper API
+            logoFile: selectedRole === AppRole.FARMER ? logoFile : portraitFile,
+            achievementFile: selectedRole === AppRole.FARMER ? achievementFile : driverLicenseFile
         });
 
         setIsLoading(true);
@@ -184,26 +201,54 @@ const OAuthRegister: React.FC<OAuthRegisterProps> = ({ onGoToLogin }) => {
                             );
                             if (response.result) {
                                 // Auto-login after registration
+                                let loginResponse;
                                 try {
-                                    const loginResponse = await authService.login({
+                                    loginResponse = await authService.login({
                                         email: email,
                                         password: pendingRegistration.data.password
                                     });
-
-                                    if (loginResponse.result?.token) {
-                                        setSuccess('Đăng ký thành công! Đang chuyển hướng...');
-                                        setTimeout(() => {
-                                            // Clear URL params
-                                            window.history.replaceState({}, document.title, "/nong_san_xau_ma/");
-                                            login(selectedRole);
-                                        }, 1000);
-                                    } else {
-                                        // If login fails for some reason but registration succeeded
-                                        onGoToLogin();
-                                    }
                                 } catch (loginErr) {
                                     console.error("Auto-login failed:", loginErr);
-                                    onGoToLogin();
+                                }
+
+                                if (loginResponse?.result?.token) {
+                                    setSuccess('Đăng ký thành công! Đang chuyển hướng...');
+                                    setTimeout(() => {
+                                        // Clear URL params
+                                        window.history.replaceState({}, document.title, "/");
+                                        login(selectedRole);
+                                        if (selectedRole === AppRole.FARMER || selectedRole === AppRole.SHIPPER) {
+                                            navigate('/kyc');
+                                        } else {
+                                            navigate('/');
+                                        }
+                                    }, 1000);
+                                } else {
+                                    // If login fails (e.g. pending approval), but registration was successful
+                                    if (selectedRole === AppRole.FARMER || selectedRole === AppRole.SHIPPER) {
+                                        setSuccess('Đăng ký thành công! Hồ sơ của bạn đang được chờ duyệt.');
+                                        setTimeout(() => {
+                                            window.history.replaceState({}, document.title, "/");
+                                            navigate('/kyc', { 
+                                                state: { 
+                                                    pendingUser: {
+                                                        name: fullName,
+                                                        email: email,
+                                                        role: selectedRole,
+                                                        phone: phone,
+                                                        shopName: selectedRole === AppRole.FARMER ? shopName : null,
+                                                        address: address,
+                                                        bankAccount: selectedRole === AppRole.FARMER ? bankAccount : shipperBankAccount,
+                                                        description: selectedRole === AppRole.FARMER ? description : null,
+                                                        avatar: avatar || (logoFile ? URL.createObjectURL(logoFile) : (portraitFile ? URL.createObjectURL(portraitFile) : null)),
+                                                        achievement: selectedRole === AppRole.FARMER ? (achievementFile ? achievementFile.name : null) : (driverLicenseFile ? driverLicenseFile.name : null)
+                                                    }
+                                                } 
+                                            });
+                                        }, 1500);
+                                    } else {
+                                        onGoToLogin();
+                                    }
                                 }
                             }
                         } catch (err: any) {
