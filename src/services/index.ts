@@ -38,7 +38,8 @@ export type {
     BuildComboCreationRequest,
     BuildComboUpdateRequest,
     ProductComboResponse,
-    ProductComboRequest
+    ProductComboRequest,
+    Region
 } from './combo.service';
 export type { AddCartItemRequest, CartItemResponse, CartResponse } from './cart.service';
 export type { ReviewResponse, ReviewCreateRequest, ReviewReplyRequest } from './review.service';

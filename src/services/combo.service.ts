@@ -5,11 +5,14 @@ export interface ProductComboRequest {
     quantity: number;
 }
 
+export type Region = 'MIEN_BAC' | 'MIEN_TRUNG' | 'MIEN_NAM';
+
 export interface BuildComboCreationRequest {
     comboName: string;
     discountPrice: number;
     description: string;
     type: string;
+    region?: Region;
     items: ProductComboRequest[];
 }
 
@@ -28,6 +31,7 @@ export interface BuildComboResponse {
     discountPrice: number;
     description: string;
     type: string;
+    region?: Region;
     shopOwnerId: number;
     items: ProductComboResponse[];
 }
@@ -41,11 +45,13 @@ class ComboService {
     }
 
     async create(request: BuildComboCreationRequest): Promise<ApiResponse<BuildComboResponse>> {
+        console.log('[ComboService] create payload:', JSON.stringify(request));
         const response = await httpClient.post<BuildComboResponse>(this.baseUrl, request);
         return response;
     }
 
     async update(id: number, request: BuildComboUpdateRequest): Promise<ApiResponse<BuildComboResponse>> {
+        console.log('[ComboService] update payload:', JSON.stringify(request));
         const response = await httpClient.put<BuildComboResponse>(`${this.baseUrl}/${id}`, request);
         return response;
     }

@@ -19,6 +19,7 @@ const BlindBoxTool: React.FC = () => {
   const [boxType, setBoxType] = useState('');
   const [description, setDescription] = useState('');
   const [note, setNote] = useState('');
+  const [totalQuantity, setTotalQuantity] = useState(10);
   // productId -> quantity
   const [selectedItems, setSelectedItems] = useState<Record<number, number>>({});
 
@@ -88,6 +89,7 @@ const BlindBoxTool: React.FC = () => {
         price: price,
         description: description.trim() || undefined,
         note: note.trim() || undefined,
+        totalQuantity,
         products,
       };
       await mysteryBoxService.createMysteryBox(data, boxImage || undefined);
@@ -98,6 +100,7 @@ const BlindBoxTool: React.FC = () => {
       setBoxType('');
       setDescription('');
       setNote('');
+      setTotalQuantity(10);
       await fetchMyBoxes();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
@@ -252,6 +255,16 @@ const BlindBoxTool: React.FC = () => {
                   />
                 </div>
                 <div className="flex flex-col gap-3">
+                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Số lượng túi bán ra *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={totalQuantity}
+                    onChange={(e) => setTotalQuantity(Math.max(1, Number(e.target.value)))}
+                    className="w-full p-4 bg-gray-50 border border-transparent rounded-[24px] text-sm font-black outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all"
+                  />
+                </div>
+                <div className="flex flex-col gap-3">
                   <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Hình ảnh túi mù</label>
                   <div className="relative group">
                     <input
@@ -322,6 +335,10 @@ const BlindBoxTool: React.FC = () => {
               <div className="flex justify-between items-center text-sm font-black text-gray-900">
                 <span>Giá niêm yết:</span>
                 <span className="text-primary">{price.toLocaleString('vi-VN')}đ</span>
+              </div>
+              <div className="flex justify-between items-center text-[11px] font-bold text-gray-500 italic">
+                <span>Số lượng:</span>
+                <span>{totalQuantity} túi</span>
               </div>
               <div className="flex justify-between items-center text-[11px] font-bold text-gray-500 italic">
                 <span>Gồm:</span>

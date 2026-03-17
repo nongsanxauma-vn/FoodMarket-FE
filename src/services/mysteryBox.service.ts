@@ -9,6 +9,8 @@ export interface MysteryBox {
   note?: string;
   shopOwnerId: number;
   isActive?: boolean | number;
+  totalQuantity?: number;
+  soldQuantity?: number;
 }
 
 export interface ProductMysteryResponse {
@@ -32,6 +34,7 @@ export interface MysteryBoxCreationRequest {
   price: number;
   description?: string;
   note?: string;
+  totalQuantity: number;
   products: ProductMysteryRequest[];
 }
 
@@ -40,6 +43,7 @@ export interface MysteryBoxUpdateRequest {
   price?: number;
   description?: string;
   note?: string;
+  totalQuantity?: number;
   products?: ProductMysteryRequest[];
   active?: boolean;
 }

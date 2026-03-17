@@ -137,6 +137,14 @@ const ComboDetail: React.FC = () => {
               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ID: {combo.id}</span>
             </div>
             <h1 className="text-3xl font-black font-display text-gray-800 mb-2 leading-tight">{combo.comboName}</h1>
+            {combo.region && (
+              <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1.5 rounded-full mt-1 mb-1 border border-green-100">
+                <MapPin className="size-3.5" />
+                <span className="text-[11px] font-black uppercase tracking-widest">
+                  {combo.region === 'MIEN_BAC' ? '🌿 Ẩm thực Miền Bắc' : combo.region === 'MIEN_TRUNG' ? '🌶 Ẩm thực Miền Trung' : '🥥 Ẩm thực Miền Nam'}
+                </span>
+              </div>
+            )}
             {savings > 0 && (
               <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1.5 rounded-full mt-2">
                 <Tag className="size-3.5" />

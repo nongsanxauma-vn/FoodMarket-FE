@@ -227,7 +227,14 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated 
                         <ChefHat className="size-6 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-black text-gray-900 text-sm truncate">{combo.comboName}</h4>
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <h4 className="font-black text-gray-900 text-sm truncate">{combo.comboName}</h4>
+                          {combo.region && (
+                            <span className="shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full bg-white/80 text-primary border border-primary/20">
+                              {combo.region === 'MIEN_BAC' ? '🌿 Bắc' : combo.region === 'MIEN_TRUNG' ? '🌶 Trung' : '🥥 Nam'}
+                            </span>
+                          )}
+                        </div>
                         {combo.description && (
                           <p className="text-xs text-gray-500 font-medium line-clamp-1 mt-0.5">{combo.description}</p>
                         )}

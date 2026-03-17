@@ -25,6 +25,7 @@ const MysteryBoxEditor: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [description, setDescription] = useState('');
   const [note, setNote] = useState('');
   const [price, setPrice] = useState('');
+  const [totalQuantity, setTotalQuantity] = useState('');
   const [boxImage, setBoxImage] = useState<File | null>(null);
   const [boxImagePreview, setBoxImagePreview] = useState<string>('');
   const [isActive, setIsActive] = useState(true);
@@ -50,14 +51,26 @@ const MysteryBoxEditor: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             const boxRes = await mysteryBoxService.getById(Number(boxId));
             if (boxRes.result) {
               const box = boxRes.result;
+              console.log('[MysteryBoxEditor] loaded box:', box);
               setBoxType(box.boxType);
               setDescription(box.description || '');
               setNote(box.note || '');
               setPrice(box.price.toString());
+              setTotalQuantity(box.totalQuantity?.toString() || '');
               setBoxImagePreview(box.imageUrl || '');
               setIsActive(box.isActive !== false && box.isActive !== 0);
               if (box.products && box.products.length > 0) {
-                setSelectedProducts(box.products.map(bp => {
+                // deduplicate by productId (sum quantities if duplicate)
+                const deduped = box.products.reduce((acc, bp) => {
+                  const existing = acc.find(p => p.productId === bp.productId);
+                  if (existing) {
+                    existing.quantity += bp.quantity;
+                  } else {
+                    acc.push({ ...bp });
+                  }
+                  return acc;
+                }, [] as typeof box.products);
+                setSelectedProducts(deduped.map(bp => {
                   const full = productsList.find(p => p.id === bp.productId);
                   return {
                     productId: bp.productId,
@@ -124,8 +137,10 @@ const MysteryBoxEditor: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const handleSave = async () => {
     if (!boxType.trim()) { alert('Vui lòng nhập tên hộp mù.'); return; }
     if (!price || Number(price) <= 0) { alert('Vui lòng nhập giá hợp lệ.'); return; }
+    if (!totalQuantity || Number(totalQuantity) < 1) { alert('Vui lòng nhập số lượng túi bán ra.'); return; }
     if (selectedProducts.length === 0) { alert('Vui lòng chọn ít nhất một sản phẩm.'); return; }
     const priceNum = Number(price);
+    const qtyNum = Number(totalQuantity);
     if (priceNum > totalProductsPrice) {
       alert(`Giá bán (${priceNum.toLocaleString('vi-VN')}đ) không được lớn hơn tổng giá trị sản phẩm (${totalProductsPrice.toLocaleString('vi-VN')}đ). Túi mù nên rẻ hơn hoặc bằng giá lẻ.`);
       return;
@@ -135,9 +150,9 @@ const MysteryBoxEditor: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     try {
       const products: ProductMysteryRequest[] = selectedProducts.map(p => ({ productId: p.productId, quantity: p.quantity }));
       if (isEditMode && boxId) {
-        await mysteryBoxService.updateMysteryBox(Number(boxId), { boxType, price: priceNum, description, note, products, active: isActive }, boxImage || undefined);
+        await mysteryBoxService.updateMysteryBox(Number(boxId), { boxType, price: priceNum, description, note, totalQuantity: qtyNum, products, active: isActive }, boxImage || undefined);
       } else {
-        await mysteryBoxService.createMysteryBox({ boxType, price: priceNum, description, note, products }, boxImage || undefined);
+        await mysteryBoxService.createMysteryBox({ boxType, price: priceNum, description, note, totalQuantity: qtyNum, products }, boxImage || undefined);
       }
       onBack();
     } catch (err: any) {
@@ -216,6 +231,14 @@ const MysteryBoxEditor: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                       ⚠ Giá bán không được vượt quá tổng giá trị sản phẩm
                     </p>
                   )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Số lượng túi bán ra *</label>
+                  <input type="number" min="1" value={totalQuantity} onChange={e => setTotalQuantity(e.target.value)}
+                    placeholder="VD: 10"
+                    className="w-full px-4 py-4 bg-gray-50 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-primary/10 transition-all" />
+                  <p className="text-xs text-gray-400 mt-2 font-bold">Số túi mù tối đa có thể bán ra</p>
                 </div>
 
                 <div>

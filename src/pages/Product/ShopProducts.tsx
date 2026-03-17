@@ -551,6 +551,11 @@ const ShopProducts: React.FC<ShopProductsProps> = ({
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="font-black text-gray-900 text-sm truncate">{combo.comboName}</h4>
+                          {combo.region && (
+                            <span className="inline-block text-[9px] font-black px-2 py-0.5 rounded-full bg-primary/10 text-primary mt-0.5">
+                              {combo.region === 'MIEN_BAC' ? '🌿 Miền Bắc' : combo.region === 'MIEN_TRUNG' ? '🌶 Miền Trung' : '🥥 Miền Nam'}
+                            </span>
+                          )}
                           {combo.description && (
                             <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">{combo.description}</p>
                           )}

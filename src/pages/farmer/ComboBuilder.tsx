@@ -2,9 +2,9 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   ArrowLeft, Save, Plus, Minus, Check, Trash2,
-  ChefHat, Sparkles, Loader2, AlertCircle
+  ChefHat, Sparkles, Loader2, AlertCircle, MapPin
 } from 'lucide-react';
-import { productService, comboService, authService, ProductResponse } from '../../services/index';
+import { productService, comboService, authService, ProductResponse, Region } from '../../services/index';
 
 interface SelectedIngredient {
   productId: number;
@@ -21,6 +21,7 @@ const ComboBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [comboName, setComboName] = useState('');
   const [comboDescription, setComboDescription] = useState('');
   const [comboPrice, setComboPrice] = useState('');
+  const [comboRegion, setComboRegion] = useState<Region | ''>('');
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +46,7 @@ const ComboBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             setComboName(combo.comboName);
             setComboDescription(combo.description || '');
             setComboPrice(combo.discountPrice.toString());
+            setComboRegion(combo.region || '');
             setSelectedIngredients(combo.items.map(item => ({
               productId: item.productId,
               productName: productsList.find(p => p.id === item.productId)?.productName || `Sản phẩm #${item.productId}`,
@@ -113,8 +115,10 @@ const ComboBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         description: comboDescription,
         discountPrice: priceNum,
         type: 'CUSTOM' as const,
+        region: comboRegion || undefined,
         items: selectedIngredients.map(ing => ({ productId: ing.productId, quantity: ing.quantity }))
       };
+      console.log('[ComboBuilder] Sending payload:', JSON.stringify(payload, null, 2));
       if (isEditMode) {
         await comboService.update(Number(comboId), payload);
       } else {
@@ -179,6 +183,25 @@ const ComboBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                   <input type="text" value={comboName} onChange={e => setComboName(e.target.value)}
                     placeholder="VD: Combo Salad Tươi Mát"
                     className="w-full px-4 py-4 bg-gray-50 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-primary/10 transition-all" />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">
+                    <span className="flex items-center gap-2"><MapPin className="size-3" />Vùng miền</span>
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {([
+                      { value: 'MIEN_BAC', label: '🌿 Miền Bắc' },
+                      { value: 'MIEN_TRUNG', label: '🌶 Miền Trung' },
+                      { value: 'MIEN_NAM', label: '🥥 Miền Nam' },
+                    ] as { value: Region; label: string }[]).map(opt => (
+                      <button key={opt.value} type="button"
+                        onClick={() => setComboRegion(prev => prev === opt.value ? '' : opt.value)}
+                        className={`py-3 px-2 rounded-2xl text-xs font-black border-2 transition-all ${comboRegion === opt.value ? 'border-primary bg-primary/10 text-primary' : 'border-gray-100 bg-gray-50 text-gray-500 hover:border-primary/30'}`}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div>
