@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ShoppingCart, Trash2, Plus, Minus, Info, ArrowRight, ArrowLeft, Loader2, Package, Gift } from 'lucide-react';
+import { ShoppingCart, Trash2, Plus, Minus, Info, ArrowRight, ArrowLeft, Loader2, Package, Gift, ChefHat } from 'lucide-react';
 import { cartService, CartResponse, CartItemResponse } from '../../services/cart.service';
 
 interface CartProps {
@@ -46,8 +46,11 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
     return () => window.removeEventListener('cart-updated', handleCartUpdate);
   }, []);
 
-  const itemKey = (item: CartItemResponse) =>
-    item.itemType === 'MYSTERY_BOX' ? `b-${item.mysteryBoxId}` : `p-${item.productId}`;
+  const itemKey = (item: CartItemResponse) => {
+    if (item.itemType === 'MYSTERY_BOX') return `b-${item.mysteryBoxId}`;
+    if (item.itemType === 'BUILD_COMBO') return `c-${item.buildComboId}`;
+    return `p-${item.productId}`;
+  };
 
   const handleUpdateQuantity = async (item: CartItemResponse, change: number) => {
     const newQty = item.quantity + change;
@@ -57,6 +60,8 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
     try {
       if (item.itemType === 'MYSTERY_BOX' && item.mysteryBoxId) {
         await cartService.updateMysteryBoxQuantity(item.mysteryBoxId, newQty);
+      } else if (item.itemType === 'BUILD_COMBO' && item.buildComboId) {
+        await cartService.updateComboQuantity(item.buildComboId, newQty);
       } else if (item.productId) {
         await cartService.updateQuantity(item.productId, newQty);
       }
@@ -74,6 +79,8 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
     try {
       if (item.itemType === 'MYSTERY_BOX' && item.mysteryBoxId) {
         await cartService.removeMysteryBox(item.mysteryBoxId);
+      } else if (item.itemType === 'BUILD_COMBO' && item.buildComboId) {
+        await cartService.removeCombo(item.buildComboId);
       } else if (item.productId) {
         await cartService.removeItem(item.productId);
       }
@@ -164,6 +171,7 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
                       const key = itemKey(item);
                       const isUpdating = updatingKey === key;
                       const isMysteryBox = item.itemType === 'MYSTERY_BOX';
+                      const isCombo = item.itemType === 'BUILD_COMBO';
                       return (
                         <div key={key} className={`flex items-center gap-6 ${idx > 0 ? 'pt-6 border-t border-gray-50' : ''}`}>
                           <div className="size-24 rounded-[32px] overflow-hidden bg-gray-50 flex-shrink-0 border border-gray-100 relative">
@@ -173,6 +181,10 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
                               <div className="w-full h-full bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center">
                                 <Package className="size-10 text-green-300" />
                               </div>
+                            ) : isCombo ? (
+                              <div className="w-full h-full bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center">
+                                <ChefHat className="size-10 text-emerald-300" />
+                              </div>
                             ) : (
                               <img src={`https://picsum.photos/seed/${item.productId}/120/120`} className="w-full h-full object-cover" alt={item.productName} />
                             )}
@@ -181,19 +193,24 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
                                 <Gift className="size-3 text-white" />
                               </div>
                             )}
+                            {isCombo && (
+                              <div className="absolute -top-1 -right-1 size-6 bg-emerald-500 rounded-full flex items-center justify-center shadow-sm">
+                                <ChefHat className="size-3 text-white" />
+                              </div>
+                            )}
                           </div>
                           <div className="flex-1">
                             <div className="flex justify-between items-start mb-2">
                               <div>
                                 <p className="text-[10px] font-black text-primary uppercase mb-1">
-                                  {isMysteryBox ? '🎁 Túi mù nông sản' : 'Nông sản'}
+                                  {isMysteryBox ? '🎁 Túi mù nông sản' : isCombo ? '🍳 Combo nấu ăn' : 'Nông sản'}
                                 </p>
                                 <h4 className="text-lg font-black text-gray-900">{item.productName}</h4>
                               </div>
                               <div className="text-right">
                                 <p className="text-lg font-black text-gray-900">{(item.price || 0).toLocaleString('vi-VN')}đ</p>
                                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                                  {isMysteryBox ? 'Mỗi túi' : 'Mỗi đơn vị'}
+                                  {isMysteryBox ? 'Mỗi túi' : isCombo ? 'Mỗi combo' : 'Mỗi đơn vị'}
                                 </p>
                               </div>
                             </div>

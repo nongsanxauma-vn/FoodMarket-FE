@@ -2,6 +2,7 @@ import { Route, Navigate, useNavigate } from 'react-router-dom';
 import BuyerHome from '../pages/BuyerHome';
 import ProductDetail from '../pages/Product/ProductDetail';
 import MysteryBoxDetail from '../pages/MysteryBox/MysteryBoxDetail';
+import ComboDetail from '../pages/Combo/ComboDetail';
 import News from '../pages/News/News';
 import NewsDetail from '../pages/News/NewsDetail';
 import PaymentSuccess from '../pages/auth/PaymentSuccess';
@@ -16,10 +17,10 @@ const PublicRoutes = () => {
 
     const handleSelectProduct = (id: string) => {
         if (id.startsWith('box-')) {
-            // Túi mù: bỏ prefix "box-" rồi navigate đến trang detail riêng
             navigate(`/mystery-box/${id.replace('box-', '')}`);
+        } else if (id.startsWith('combo-')) {
+            navigate(`/combo/${id.replace('combo-', '')}`);
         } else {
-            // Sản phẩm thường
             navigate(`/product/${id}`);
         }
     };
@@ -30,7 +31,7 @@ const PublicRoutes = () => {
             if (user.role === AppRole.FARMER) return <Navigate to="/farmer" replace />;
             if (user.role === AppRole.SHIPPER) return <Navigate to="/shipper" replace />;
         }
-        return <BuyerHome onSelectProduct={handleSelectProduct} />;
+        return <BuyerHome onSelectProduct={handleSelectProduct} isAuthenticated={isAuthenticated} onOpenLogin={() => navigate('/login')} />;
     };
 
     return (
@@ -38,8 +39,8 @@ const PublicRoutes = () => {
             <Route path="/" element={renderRoot()} />
             <Route path="/meal-plan" element={<MealPlan />} />
             <Route path="/product/:productId" element={<ProductDetail />} />
-            {/* Route mới cho túi mù */}
             <Route path="/mystery-box/:boxId" element={<MysteryBoxDetail />} />
+            <Route path="/combo/:comboId" element={<ComboDetail />} />
             <Route path="/news" element={<News />} />
             <Route path="/news/:id" element={<NewsDetail />} />
 

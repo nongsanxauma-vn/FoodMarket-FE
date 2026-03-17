@@ -3,6 +3,7 @@ import { httpClient, ApiResponse } from './http.client';
 export interface OrderItemRequest {
     productId?: number;
     mysteryBoxId?: number;
+    buildComboId?: number;
     quantity: number;
 }
 

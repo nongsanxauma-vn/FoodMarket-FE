@@ -7,6 +7,7 @@ import { httpClient } from '../../services/http.client';
 type CartItemWithShop = {
    productId?: number;
    mysteryBoxId?: number;
+   buildComboId?: number;
    productName: string;
    quantity: number;
    price: number;
@@ -149,9 +150,13 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
             paymentMethod,
             items: cartData.items.map(item => {
                if (item.itemType === 'MYSTERY_BOX') {
-                  return { mysteryBoxId: item.mysteryBoxId, productId: undefined, quantity: item.quantity };
+                  return { mysteryBoxId: item.mysteryBoxId, quantity: item.quantity };
                }
-               return { productId: item.productId, mysteryBoxId: undefined, quantity: item.quantity };
+               if (item.itemType === 'BUILD_COMBO') {
+                  const comboId = item.buildComboId ?? (item as any).comboId ?? (item as any).id;
+                  return { buildComboId: comboId, quantity: item.quantity };
+               }
+               return { productId: item.productId, quantity: item.quantity };
             })
          };
 
