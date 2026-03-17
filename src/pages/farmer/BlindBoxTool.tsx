@@ -67,6 +67,14 @@ const BlindBoxTool: React.FC = () => {
       setError('Vui lòng nhập tên túi mù.');
       return;
     }
+    const totalProductsPrice = Object.entries(selectedItems).reduce((sum, [id, qty]) => {
+      const product = realItems.find(p => p.id === Number(id));
+      return sum + (Number(product?.sellingPrice) || 0) * qty;
+    }, 0);
+    if (totalProductsPrice > 0 && price > totalProductsPrice) {
+      setError(`Giá bán (${price.toLocaleString('vi-VN')}đ) không được lớn hơn tổng giá trị sản phẩm (${totalProductsPrice.toLocaleString('vi-VN')}đ). Túi mù nên rẻ hơn hoặc bằng giá lẻ.`);
+      return;
+    }
     setCreating(true);
     setError(null);
     setSuccessMsg(null);
@@ -213,6 +221,23 @@ const BlindBoxTool: React.FC = () => {
                   <span>29.000đ</span>
                   <span>199.000đ</span>
                 </div>
+                {Object.keys(selectedItems).length > 0 && (() => {
+                  const total = Object.entries(selectedItems).reduce((sum, [id, qty]) => {
+                    const product = realItems.find(p => p.id === Number(id));
+                    return sum + (Number(product?.sellingPrice) || 0) * qty;
+                  }, 0);
+                  return total > 0 ? (
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xs font-bold">
+                        <span className="text-gray-500">Tổng giá trị sản phẩm:</span>
+                        <span className="text-primary">{total.toLocaleString('vi-VN')}đ</span>
+                      </div>
+                      {price > total && (
+                        <p className="text-xs text-red-500 font-bold">⚠ Giá bán không được vượt quá tổng giá trị sản phẩm</p>
+                      )}
+                    </div>
+                  ) : null;
+                })()}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">

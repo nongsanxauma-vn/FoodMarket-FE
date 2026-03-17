@@ -15,6 +15,7 @@ export interface ProductMysteryResponse {
   productId: number;
   productName: string;
   quantity: number;
+  sellingPrice?: number;
 }
 
 export interface MysteryBoxResponse extends MysteryBox {
