@@ -34,6 +34,7 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated 
   const [isLoadingBoxes, setIsLoadingBoxes] = useState(false);
   const [isLoadingCombos, setIsLoadingCombos] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [visibleProducts, setVisibleProducts] = useState<number>(8);
 
   const categories = [
     { name: 'Rau ăn lá', icon: Leaf },
@@ -95,6 +96,10 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated 
     };
     fetchCombos();
   }, []);
+
+  const handleLoadMore = () => {
+    setVisibleProducts(prev => prev + 8);
+  };
 
   return (
     <main className="flex-1 w-full max-w-[1280px] mx-auto px-4 md:px-10 lg:px-40 py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -299,42 +304,53 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated 
             <button onClick={() => window.location.reload()} className="mt-4 text-primary font-black underline">Tải lại trang</button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {products.map((product) => (
-              <div
-                key={product.id}
-                onClick={() => onSelectProduct(product.id.toString())}
-                className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all border border-gray-100 flex flex-col cursor-pointer group"
+          <div className="flex flex-col gap-8 items-center">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 w-full">
+              {products.slice(0, visibleProducts).map((product) => (
+                <div
+                  key={product.id}
+                  onClick={() => onSelectProduct(product.id.toString())}
+                  className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all border border-gray-100 flex flex-col cursor-pointer group"
+                >
+                  <div className="relative aspect-[4/3] w-full overflow-hidden">
+                    <img className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" src={product.imageUrl || 'https://picsum.photos/seed/product/400/300'} alt={product.productName} />
+                    <button className="absolute bottom-4 right-4 size-10 bg-primary text-white rounded-full shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100">
+                      <ShoppingCart className="size-5" />
+                    </button>
+                  </div>
+                  <div className="p-5 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-primary text-[10px] font-bold uppercase">Nông sản</span>
+                      <div className="flex items-center gap-1 text-gray-400 text-[10px] font-bold">
+                        <MapPin className="size-3" /> {product.shopName || (product.shopId ? `Farm #${product.shopId}` : 'Vườn nhà')}
+                      </div>
+                    </div>
+                    <h3 className="text-gray-900 font-extrabold text-lg line-clamp-1">{product.productName}</h3>
+                    <div className="flex items-center gap-1 text-yellow-500">
+                      <Star className="size-4 fill-current" />
+                      <span className="text-xs font-bold text-gray-900">4.9</span>
+                      <span className="text-gray-400 text-[10px]">(100+)</span>
+                    </div>
+                    <div className="flex items-end justify-between mt-2">
+                      <div className="flex flex-col">
+                        <span className="text-primary font-black text-2xl">{product.sellingPrice.toLocaleString('vi-VN')}đ</span>
+                        <span className="text-[10px] text-gray-400 font-bold uppercase">Mỗi {product.unit}</span>
+                      </div>
+                      <span className="bg-green-100 text-green-700 text-[10px] font-black px-2 py-1 rounded-md">TƯƠI SẠCH</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {visibleProducts < products.length && (
+              <button 
+                onClick={handleLoadMore}
+                className="px-8 py-3 bg-white border-2 border-primary text-primary font-black rounded-xl hover:bg-primary hover:text-white transition-colors duration-300 shadow-sm"
               >
-                <div className="relative aspect-[4/3] w-full overflow-hidden">
-                  <img className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" src={product.imageUrl || 'https://picsum.photos/seed/product/400/300'} alt={product.productName} />
-                  <button className="absolute bottom-4 right-4 size-10 bg-primary text-white rounded-full shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100">
-                    <ShoppingCart className="size-5" />
-                  </button>
-                </div>
-                <div className="p-5 flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-primary text-[10px] font-bold uppercase">Nông sản</span>
-                    <div className="flex items-center gap-1 text-gray-400 text-[10px] font-bold">
-                      <MapPin className="size-3" /> {product.shopName || (product.shopId ? `Farm #${product.shopId}` : 'Vườn nhà')}
-                    </div>
-                  </div>
-                  <h3 className="text-gray-900 font-extrabold text-lg line-clamp-1">{product.productName}</h3>
-                  <div className="flex items-center gap-1 text-yellow-500">
-                    <Star className="size-4 fill-current" />
-                    <span className="text-xs font-bold text-gray-900">4.9</span>
-                    <span className="text-gray-400 text-[10px]">(100+)</span>
-                  </div>
-                  <div className="flex items-end justify-between mt-2">
-                    <div className="flex flex-col">
-                      <span className="text-primary font-black text-2xl">{product.sellingPrice.toLocaleString('vi-VN')}đ</span>
-                      <span className="text-[10px] text-gray-400 font-bold uppercase">Mỗi {product.unit}</span>
-                    </div>
-                    <span className="bg-green-100 text-green-700 text-[10px] font-black px-2 py-1 rounded-md">TƯƠI SẠCH</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+                Xem Thêm
+              </button>
+            )}
           </div>
         )}
       </div>
