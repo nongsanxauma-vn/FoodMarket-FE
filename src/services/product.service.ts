@@ -23,6 +23,7 @@ export interface ProductResponse {
     shopOwnerId?: number;
     shopId?: number;
     shopName?: string;
+    categoryId?: number;
 }
 
 function normalizeProduct(p: ProductResponse): ProductResponse {

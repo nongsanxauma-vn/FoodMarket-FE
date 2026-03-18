@@ -1,13 +1,14 @@
 
 import React, { useEffect, useState } from 'react';
 import { ShoppingCart, TrendingUp, Star, Wallet, Package, Clock, MoreVertical, Plus, Sparkles, Landmark, History, ChefHat, Loader2, AlertCircle } from 'lucide-react';
-import { productService, orderService, walletService, authService, comboService, ProductResponse, OrderResponse, WalletResponse, BuildComboResponse } from '../../services';
+import { productService, orderService, walletService, authService, comboService, mysteryBoxService, ProductResponse, OrderResponse, WalletResponse, BuildComboResponse, MysteryBox } from '../../services';
 
 const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }) => {
   const [products, setProducts] = useState<ProductResponse[]>([]);
   const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [wallet, setWallet] = useState<WalletResponse | null>(null);
   const [combos, setCombos] = useState<BuildComboResponse[]>([]);
+  const [mysteryBoxes, setMysteryBoxes] = useState<MysteryBox[]>([]);
   const [activeTab, setActiveTab] = useState<'NONG_SAN' | 'COMBO' | 'BLIND_BOX'>('NONG_SAN');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +22,7 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
         const userInfo = await authService.getMyInfo();
         const shopId = userInfo.result?.id;
 
-        const [productsRes, ordersRes, walletRes, combosRes] = await Promise.all([
+        const [productsRes, ordersRes, walletRes, combosRes, mysteryBoxesRes] = await Promise.all([
           (shopId ? productService.getByShopId(shopId) : productService.getAll())
             .catch(e => { console.error('Products fetch error', e); return { result: [] }; }),
           orderService.getAllOrders()
@@ -30,12 +31,15 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
             .catch(e => { console.error('Wallet fetch error', e); return { result: null }; }),
           (shopId ? comboService.getByShop(shopId) : Promise.resolve({ result: [] }))
             .catch(e => { console.error('Combos fetch error', e); return { result: [] }; }),
+          mysteryBoxService.getMyBoxes()
+            .catch(e => { console.error('Mystery boxes fetch error', e); return { result: [] }; }),
         ]);
 
         if (productsRes.result) setProducts(Array.isArray(productsRes.result) ? productsRes.result : [productsRes.result]);
         if (ordersRes.result) setOrders(Array.isArray(ordersRes.result) ? ordersRes.result : [ordersRes.result]);
         if (walletRes.result) setWallet(walletRes.result as WalletResponse);
         if (combosRes.result) setCombos(Array.isArray(combosRes.result) ? combosRes.result : [combosRes.result]);
+        if (mysteryBoxesRes.result) setMysteryBoxes(Array.isArray(mysteryBoxesRes.result) ? mysteryBoxesRes.result : [mysteryBoxesRes.result]);
       } catch (err) {
         console.error('Failed to load dashboard data', err);
         setError('Không thể tải một số dữ liệu. Vui lòng làm mới trang.');
@@ -50,7 +54,7 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
   const walletBalance = wallet?.totalBalance || 0;
   const frozenBalance = wallet?.frozenBalance || 0;
   const totalCombos = combos.filter(c => c.type === 'CUSTOM').length;
-  const totalBlindBoxes = combos.filter(c => c.type !== 'CUSTOM').length;
+  const totalBlindBoxes = mysteryBoxes.length;
 
   if (loading) {
     return (
@@ -203,55 +207,89 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
                     </tr>
                   ))}
 
-                  {/* Rendering Combos/Blind Boxes */}
-                  {activeTab !== 'NONG_SAN' && combos.filter(c => activeTab === 'COMBO' ? c.type === 'CUSTOM' : c.type !== 'CUSTOM').slice(0, 5).map((c, i) => {
-                    const isBlindBox = c.type !== 'CUSTOM';
-                    return (
-                      <tr key={c.id || i} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className={`size-10 rounded-xl flex items-center justify-center text-white shadow-sm ${isBlindBox ? 'bg-purple-500' : 'bg-orange-500'}`}>
-                              {isBlindBox ? <Sparkles className="size-5" /> : <ChefHat className="size-5" />}
-                            </div>
-                            <div>
-                              <p className={`text-sm font-bold line-clamp-1 ${isBlindBox ? 'text-purple-700' : 'text-orange-600'}`}>{c.comboName}</p>
-                              <p className="text-[10px] text-gray-400 font-medium">{isBlindBox ? 'Hộp mù' : 'Combo Tự Chọn'}</p>
-                            </div>
+                  {/* Rendering Combos */}
+                  {activeTab === 'COMBO' && combos.filter(c => c.type === 'CUSTOM').slice(0, 5).map((c, i) => (
+                    <tr key={c.id || i} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="size-10 rounded-xl flex items-center justify-center text-white shadow-sm bg-orange-500">
+                            <ChefHat className="size-5" />
                           </div>
-                        </td>
-                        <td className="px-6 py-4 text-center text-sm font-bold text-gray-700">{(c.discountPrice || 0).toLocaleString('vi-VN')}đ</td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="px-3 py-1 bg-gray-100 text-gray-600 text-[10px] font-bold rounded-full">{c.items.length} món</span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <span className="size-1.5 bg-green-500 rounded-full"></span>
-                            <span className="text-[11px] font-bold text-gray-600">Đang Mở</span>
+                          <div>
+                            <p className="text-sm font-bold line-clamp-1 text-orange-600">{c.comboName}</p>
+                            <p className="text-[10px] text-gray-400 font-medium">Combo Tự Chọn</p>
                           </div>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <button className="size-8 rounded-lg hover:bg-gray-100 flex items-center justify-center ml-auto">
-                            <MoreVertical className="size-4 text-gray-400" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center text-sm font-bold text-gray-700">{(c.discountPrice || 0).toLocaleString('vi-VN')}đ</td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="px-3 py-1 bg-gray-100 text-gray-600 text-[10px] font-bold rounded-full">{c.items?.length || 0} món</span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <span className="size-1.5 bg-green-500 rounded-full"></span>
+                          <span className="text-[11px] font-bold text-gray-600">Đang Mở</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button className="size-8 rounded-lg hover:bg-gray-100 flex items-center justify-center ml-auto">
+                          <MoreVertical className="size-4 text-gray-400" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+
+                  {/* Rendering Blind Boxes */}
+                  {activeTab === 'BLIND_BOX' && mysteryBoxes.slice(0, 5).map((box, i) => (
+                    <tr key={box.id || i} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="size-10 rounded-xl flex items-center justify-center text-white shadow-sm bg-purple-500">
+                            <Sparkles className="size-5" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold line-clamp-1 text-purple-700">{box.boxType}</p>
+                            <p className="text-[10px] text-gray-400 font-medium">Hộp mù</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center text-sm font-bold text-gray-700">{(box.price || 0).toLocaleString('vi-VN')}đ</td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="px-3 py-1 bg-gray-100 text-gray-600 text-[10px] font-bold rounded-full">{box.totalQuantity || 0} túi</span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <span className={`size-1.5 ${(box.isActive === true || box.isActive === 1) ? 'bg-green-500' : 'bg-gray-300'} rounded-full`}></span>
+                          <span className="text-[11px] font-bold text-gray-600">{(box.isActive === true || box.isActive === 1) ? 'Đang Mở' : 'Đang Ẩn'}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button className="size-8 rounded-lg hover:bg-gray-100 flex items-center justify-center ml-auto">
+                          <MoreVertical className="size-4 text-gray-400" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
 
                   {activeTab === 'NONG_SAN' && products.length === 0 && (
                     <tr>
                       <td colSpan={5} className="px-6 py-8 text-center text-gray-400 font-bold text-sm">Chưa có sản phẩm nào. Hãy thêm sản phẩm mới!</td>
                     </tr>
                   )}
-                  {activeTab !== 'NONG_SAN' && combos.filter(c => activeTab === 'COMBO' ? c.type === 'CUSTOM' : c.type !== 'CUSTOM').length === 0 && (
+                  {activeTab === 'COMBO' && combos.filter(c => c.type === 'CUSTOM').length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-6 py-8 text-center text-gray-400 font-bold text-sm">Chưa có {activeTab === 'COMBO' ? 'combo' : 'hộp mù'} nào được tạo.</td>
+                      <td colSpan={5} className="px-6 py-8 text-center text-gray-400 font-bold text-sm">Chưa có combo nào được tạo.</td>
+                    </tr>
+                  )}
+                  {activeTab === 'BLIND_BOX' && mysteryBoxes.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-8 text-center text-gray-400 font-bold text-sm">Chưa có hộp mù nào được tạo.</td>
                     </tr>
                   )}
                 </tbody>
               </table>
-              <button onClick={() => onNavigate('products')} className="w-full py-4 text-primary text-xs font-bold hover:bg-primary/5 border-t border-gray-50 transition-all uppercase tracking-widest">
-                Xem chi tiết tất cả {activeTab === 'NONG_SAN' ? products.length : combos.filter(c => activeTab === 'COMBO' ? c.type === 'CUSTOM' : c.type !== 'CUSTOM').length} đối tượng
+              <button onClick={() => onNavigate(activeTab === 'NONG_SAN' ? 'products' : activeTab === 'COMBO' ? 'combo-list' : 'blind-box-list')} className="w-full py-4 text-primary text-xs font-bold hover:bg-primary/5 border-t border-gray-50 transition-all uppercase tracking-widest">
+                Xem chi tiết tất cả {activeTab === 'NONG_SAN' ? products.length : activeTab === 'COMBO' ? combos.filter(c => c.type === 'CUSTOM').length : mysteryBoxes.length} đối tượng
               </button>
             </div>
           </div>

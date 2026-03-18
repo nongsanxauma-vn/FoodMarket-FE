@@ -128,6 +128,11 @@ const ShopProducts: React.FC<ShopProductsProps> = ({
     }
   };
 
+  const handleChatNow = () => {
+    if (!isAuthenticated) { onOpenLogin(); return; }
+    navigate(`/chat?userId=${shopId}&userName=${encodeURIComponent(shopName)}`);
+  };
+
   // Filter and sort products
   const categories = Array.from(new Set(products.map(p => p.unit || 'Khác')));
   
@@ -290,7 +295,10 @@ const ShopProducts: React.FC<ShopProductsProps> = ({
 
               {/* Actions */}
               <div className="flex gap-2">
-                <button className="px-4 py-2 bg-primary text-white font-bold text-xs rounded-xl hover:bg-primary-dark transition-colors flex items-center gap-2 shadow-lg shadow-primary/20">
+                <button 
+                  onClick={handleChatNow}
+                  className="px-4 py-2 bg-primary text-white font-bold text-xs rounded-xl hover:bg-primary-dark transition-colors flex items-center gap-2 shadow-lg shadow-primary/20"
+                >
                   <MessageCircle className="size-3.5" />
                   Chat ngay
                 </button>
