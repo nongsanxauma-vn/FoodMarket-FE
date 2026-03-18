@@ -1,4 +1,5 @@
 import { httpClient, ApiResponse } from './http.client';
+import { PageResponse } from './product.service';
 
 export interface ReviewResponse {
     id: number;
@@ -13,8 +14,8 @@ export interface ReviewResponse {
 }
 
 export interface ReviewCreateRequest {
-    orderDetailId?: number;  // cho sản phẩm thường
-    mysteryBoxId?: number;   // cho mystery box
+    orderDetailId?: number;
+    mysteryBoxId?: number;
     ratingStar: number;
     comment: string;
 }
@@ -36,21 +37,21 @@ class ReviewService {
         return httpClient.get<ReviewResponse[]>(`/reviews/shop/${shopId}`);
     }
 
+    async getByShopIdPaged(shopId: number, page = 0, size = 10): Promise<ApiResponse<PageResponse<ReviewResponse>>> {
+        return httpClient.get<PageResponse<ReviewResponse>>(`/reviews/shop/${shopId}/paged?page=${page}&size=${size}`);
+    }
+
     async createReview(data: ReviewCreateRequest, evidence?: File): Promise<ApiResponse<ReviewResponse>> {
         const formData = new FormData();
         formData.append('data', JSON.stringify(data));
-        if (evidence) {
-            formData.append('evidence', evidence);
-        }
+        if (evidence) formData.append('evidence', evidence);
         return httpClient.post<ReviewResponse>('/reviews', formData);
     }
 
     async updateReview(id: number, data: Partial<ReviewCreateRequest>, evidence?: File): Promise<ApiResponse<ReviewResponse>> {
         const formData = new FormData();
         formData.append('data', JSON.stringify(data));
-        if (evidence) {
-            formData.append('evidence', evidence);
-        }
+        if (evidence) formData.append('evidence', evidence);
         return httpClient.put<ReviewResponse>(`/reviews/${id}`, formData);
     }
 

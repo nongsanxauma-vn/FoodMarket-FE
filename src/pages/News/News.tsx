@@ -12,32 +12,35 @@ import {
 } from "lucide-react";
 import { blogService, BlogResponse } from "../../services";
 import NewsDetail from "./NewsDetail";
+import Pagination, { PageInfo } from "../../components/ui/Pagination";
+
+const PAGE_SIZE = 9;
 
 const News: React.FC = () => {
   const [articles, setArticles] = useState<BlogResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBlogId, setSelectedBlogId] = useState<number | null>(null);
+  const [page, setPage] = useState(0);
+  const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
 
   useEffect(() => {
-    // Đảm bảo scroll hoạt động mượt mà
     document.body.style.setProperty("overflow", "auto", "important");
     document.documentElement.style.setProperty("overflow", "auto", "important");
 
     const fetchBlogs = async () => {
       try {
-        console.log('[News] Starting to fetch published blogs...');
-        const res = await blogService.getPublishedBlogs();
-        console.log('[News] Published blogs response:', res);
-        
+        const res = await blogService.getPublishedBlogsPaged(page, PAGE_SIZE);
         if (res.result) {
-          setArticles(res.result);
-          console.log(`[News] Loaded ${res.result.length} articles`);
-          res.result.forEach((article, index) => {
-            console.log(`[News] Article ${index + 1}: ID=${article.id}, Title="${article.title}"`);
+          setArticles(res.result.content);
+          setPageInfo({
+            page: res.result.page,
+            size: res.result.size,
+            totalElements: res.result.totalElements,
+            totalPages: res.result.totalPages,
+            first: res.result.first,
+            last: res.result.last,
           });
-        } else {
-          console.error('[News] No result in published blogs response');
         }
       } catch (error) {
         console.error("Fetch blogs failed:", error);
@@ -52,7 +55,7 @@ const News: React.FC = () => {
       document.body.style.removeProperty("overflow");
       document.documentElement.style.removeProperty("overflow");
     };
-  }, []);
+  }, [page]);
 
   const categories = [
     { name: "Xu hướng", icon: Flame, color: "text-orange-500" },
@@ -212,7 +215,14 @@ const News: React.FC = () => {
           ))}
         </div>
 
-        {/* 4. Newsletter Section */}
+        {/* 4. Pagination */}
+        {pageInfo && (
+          <div className="mt-16">
+            <Pagination pageInfo={pageInfo} onPageChange={setPage} />
+          </div>
+        )}
+
+        {/* 5. Newsletter Section */}
         <div className="mt-32 p-12 md:p-24 bg-[#f2f6f2] rounded-[60px] relative overflow-hidden flex flex-col items-center text-center border border-green-50/50">
             <div className="relative z-10 max-w-2xl">
               <div className="size-20 bg-white rounded-[24px] flex items-center justify-center text-[#63b34a] mx-auto mb-10 shadow-xl shadow-green-900/5">

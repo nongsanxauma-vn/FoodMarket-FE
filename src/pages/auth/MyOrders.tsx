@@ -7,6 +7,9 @@ import { orderService, OrderResponse, OrderItemResponse } from '../../services/o
 import { authService } from '../../services/auth.service';
 import { reviewService } from '../../services/review.service';
 import { Star, Camera, X, Loader2 } from 'lucide-react';
+import Pagination, { PageInfo } from '../../components/ui/Pagination';
+
+const PAGE_SIZE = 10;
 
 interface MyOrdersProps {
   onBack: () => void;
@@ -20,6 +23,9 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<OrderStatusFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(0);
+  const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
+  const [userId, setUserId] = useState<number | null>(null);
 
   // Review state
   const [selectedItem, setSelectedItem] = useState<OrderItemResponse | null>(null);
@@ -38,35 +44,32 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
         return;
       }
 
-      console.log('Fetching orders for user:', userInfo.result.id);
+      const uid = userInfo.result.id;
+      setUserId(uid);
 
-      // Sử dụng getOrdersByUserId thay vì getAllOrders
-      const response = await orderService.getOrdersByUserId(userInfo.result.id);
-
-      console.log('Orders response:', response);
+      const response = await orderService.getOrdersByUserIdPaged(uid, page, PAGE_SIZE);
 
       if (response.result) {
-        // Filter orders by current user
-        const myOrders = response.result.filter(
-          order => order.items && order.items.length > 0
-        );
-        
-        // Debug: Log order items to understand structure
+        const myOrders = response.result.content;
+
         myOrders.forEach(order => {
           console.log(`Order #${order.id} items:`, order.items);
-          order.items?.forEach(item => {
-            console.log(`Item: ${item.productName}, Type: ${item.itemType}, MysteryBoxId: ${item.mysteryBoxId}, OrderDetailId: ${item.orderDetailId}`);
-          });
         });
-        
+
         setOrders(myOrders.sort((a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         ));
+        setPageInfo({
+          page: response.result.page,
+          size: response.result.size,
+          totalElements: response.result.totalElements,
+          totalPages: response.result.totalPages,
+          first: response.result.first,
+          last: response.result.last,
+        });
       }
     } catch (error: any) {
       console.error('Failed to fetch orders:', error);
-
-      // Hiển thị lỗi cho user
       if (error.status === 401) {
         alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
       } else {
@@ -79,24 +82,24 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
 
   const handleReviewSubmit = async () => {
     if (!selectedItem) return;
-    
+
     try {
       setSubmittingReview(true);
-      
+
       // Validate comment
       if (!comment.trim()) {
         alert('Vui lòng nhập nhận xét của bạn');
         return;
       }
-      
+
       // Phân biệt product vs mystery box
       const reviewData: any = {
         ratingStar: rating,
         comment: comment.trim()
       };
-      
+
       console.log('Selected item for review:', selectedItem);
-      
+
       if (selectedItem.itemType === 'MYSTERY_BOX') {
         if (!selectedItem.mysteryBoxId) {
           console.error('Mystery box item missing mysteryBoxId:', selectedItem);
@@ -129,21 +132,21 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
       }
     } catch (err: any) {
       console.error('Failed to submit review:', err);
-      
+
       // Better error handling
       let errorMessage = 'Không thể gửi đánh giá. Vui lòng thử lại.';
-      
+
       if (err.data?.message) {
         errorMessage = err.data.message;
       } else if (err.message) {
         errorMessage = err.message;
       }
-      
+
       // Handle specific error cases
       if (err.data?.code === 9999) {
         errorMessage = 'Dữ liệu không hợp lệ. Vui lòng thử lại hoặc liên hệ hỗ trợ.';
       }
-      
+
       alert(errorMessage);
     } finally {
       setSubmittingReview(false);
@@ -152,7 +155,7 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
 
   const handleCancelOrder = async (orderId: number) => {
     if (!window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) return;
-    
+
     try {
       setLoading(true);
       const res = await orderService.updateOrder(orderId, { status: 'CANCELLED' });
@@ -170,7 +173,7 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [page]);
 
   const getStatusConfig = (status: string) => {
     const configs: Record<string, { label: string; color: string; icon: any; bg: string }> = {
@@ -257,8 +260,8 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
                   key={status}
                   onClick={() => setFilter(status)}
                   className={`px-6 py-3 rounded-[18px] text-[11px] font-black uppercase tracking-wider transition-all transform hover:scale-105 active:scale-95 ${filter === status
-                      ? 'bg-primary text-white shadow-xl shadow-primary/20 scale-105'
-                      : 'bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+                    ? 'bg-primary text-white shadow-xl shadow-primary/20 scale-105'
+                    : 'bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600'
                     }`}
                 >
                   {status === 'ALL' ? 'Tất cả' : getStatusConfig(status).label}
@@ -295,8 +298,7 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
           </div>
         ) : (
           <div className="space-y-6">
-            {filteredOrders.map((order) => {
-              const statusConfig = getStatusConfig(order.status);
+            {filteredOrders.map((order) => {              const statusConfig = getStatusConfig(order.status);
               const StatusIcon = statusConfig.icon;
               const trackable = canTrack(order.status);
 
@@ -429,6 +431,7 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
             })}
           </div>
         )}
+        {pageInfo && <Pagination pageInfo={pageInfo} onPageChange={setPage} className="mt-6" />}
       </div>
 
       {/* Review Modal */}
@@ -441,8 +444,8 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
                   {selectedItem.itemType === 'MYSTERY_BOX' ? 'Đánh giá hộp mù' : 'Đánh giá sản phẩm'}
                 </h3>
                 <p className="text-gray-400 font-bold text-sm mt-1">
-                  {selectedItem.itemType === 'MYSTERY_BOX' 
-                    ? selectedItem.mysteryBoxType || selectedItem.productName 
+                  {selectedItem.itemType === 'MYSTERY_BOX'
+                    ? selectedItem.mysteryBoxType || selectedItem.productName
                     : selectedItem.productName
                   }
                 </p>

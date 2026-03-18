@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Star, Search, MessageSquare, CheckCircle, Clock, AlertCircle, Loader2, Filter, Reply, CornerDownRight } from 'lucide-react';
 import { reviewService, productService, authService, ReviewResponse, ProductResponse } from '../../services';
+import Pagination, { PageInfo } from '../../components/ui/Pagination';
+
+const PAGE_SIZE = 10;
 
 const Reviews: React.FC = () => {
   const [reviews, setReviews] = useState<ReviewResponse[]>([]);
   const [products, setProducts] = useState<ProductResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
+  const [shopId, setShopId] = useState<number | null>(null);
   
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [replyText, setReplyText] = useState('');
@@ -16,18 +22,26 @@ const Reviews: React.FC = () => {
     try {
       setIsLoading(true);
       const userRes = await authService.getMyInfo();
-      const shopId = userRes.result?.id;
-      
-      if (shopId) {
+      const id = userRes.result?.id;
+
+      if (id) {
+        setShopId(Number(id));
         const [reviewsRes, productsRes] = await Promise.all([
-          reviewService.getByShopId(shopId).catch(() => ({ result: [] })),
-          productService.getByShopId(shopId).catch(() => ({ result: [] }))
+          reviewService.getByShopIdPaged(id, page, PAGE_SIZE).catch(() => ({ result: null })),
+          productService.getByShopId(id).catch(() => ({ result: [] }))
         ]);
-        
+
         if (reviewsRes.result) {
-          // Sort by newest first
-          const sortedReviews = reviewsRes.result.sort((a, b) => b.id - a.id);
+          const sortedReviews = reviewsRes.result.content.sort((a, b) => b.id - a.id);
           setReviews(sortedReviews);
+          setPageInfo({
+            page: reviewsRes.result.page,
+            size: reviewsRes.result.size,
+            totalElements: reviewsRes.result.totalElements,
+            totalPages: reviewsRes.result.totalPages,
+            first: reviewsRes.result.first,
+            last: reviewsRes.result.last,
+          });
         }
         if (productsRes.result) {
           setProducts(productsRes.result);
@@ -43,7 +57,7 @@ const Reviews: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [page]);
 
   const handleReplySubmit = async (reviewId: number) => {
     if (!replyText.trim()) return;
@@ -246,6 +260,7 @@ const Reviews: React.FC = () => {
           })}
         </div>
       </div>
+      {pageInfo && <Pagination pageInfo={pageInfo} onPageChange={setPage} className="mt-4" />}
     </div>
   );
 };

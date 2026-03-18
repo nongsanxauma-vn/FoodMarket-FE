@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Edit3, EyeOff, Eye, Trash2, CheckCircle, Clock, AlertCircle, Loader2, X, Sparkles, ChefHat } from 'lucide-react';
 import { productService, comboService, mysteryBoxService, authService, ProductResponse, ProductCreationRequest, BuildComboResponse, MysteryBox } from '../../services';
+import Pagination, { PageInfo } from '../../components/ui/Pagination';
+
+const PAGE_SIZE = 10;
 
 interface EditModalProps {
   product: ProductResponse;
@@ -154,19 +157,33 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
   const [isDeleting, setIsDeleting] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductResponse | null>(null);
   const [togglingBox, setTogglingBox] = useState<number | null>(null);
+  const [page, setPage] = useState(0);
+  const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
+  const [shopId, setShopId] = useState<number | null>(null);
 
   const fetchData = async () => {
     try {
       setIsLoading(true);
       const userRes = await authService.getMyInfo();
-      const shopId = userRes.result?.id;
-      if (shopId) {
+      const id = userRes.result?.id;
+      if (id) {
+        setShopId(Number(id));
         const [productsRes, combosRes, mysteryRes] = await Promise.all([
-          productService.getByShopId(Number(shopId)).catch(() => ({ result: [] })),
-          comboService.getByShop(Number(shopId)).catch(() => ({ result: [] })),
+          productService.getByShopIdPaged(Number(id), page, PAGE_SIZE).catch(() => ({ result: null })),
+          comboService.getByShop(Number(id)).catch(() => ({ result: [] })),
           mysteryBoxService.getMyBoxes().catch(() => ({ result: [] }))
         ]);
-        if (productsRes.result) setProducts(productsRes.result);
+        if (productsRes.result) {
+          setProducts(productsRes.result.content);
+          setPageInfo({
+            page: productsRes.result.page,
+            size: productsRes.result.size,
+            totalElements: productsRes.result.totalElements,
+            totalPages: productsRes.result.totalPages,
+            first: productsRes.result.first,
+            last: productsRes.result.last,
+          });
+        }
         if (combosRes.result) setCombos(combosRes.result);
         if (mysteryRes.result) setMysteryBoxes(mysteryRes.result);
       }
@@ -180,7 +197,7 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [page]);
 
   const handleDelete = async (id: number) => {
     if (!window.confirm(`Bạn có chắc muốn xóa sản phẩm ID #${id}? Hành động này không thể hoàn tác.`)) return;
@@ -486,6 +503,9 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
             Hiển thị {activeTab === 'NONG_SAN' ? products.length : activeTab === 'COMBO' ? combos.filter(c => c.type === 'CUSTOM').length : mysteryBoxes.length} mục
           </p>
         </div>
+        {activeTab === 'NONG_SAN' && pageInfo && (
+          <Pagination pageInfo={pageInfo} onPageChange={setPage} className="px-6" />
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

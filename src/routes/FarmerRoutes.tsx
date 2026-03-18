@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, useNavigate, useParams, Navigate } from 'react-router-dom';
+import { Route, Navigate, useNavigate, useParams } from 'react-router-dom';
 import FarmerLayout from './FarmerLayout';
 import ProtectedRoute from './ProtectedRoute';
 import FarmerDashboard from '../pages/farmer/Dashboard';
@@ -14,43 +14,87 @@ import Profile from '../pages/farmer/Profile';
 import BlindBoxTool from '../pages/farmer/BlindBoxTool';
 import FarmerNotifications from '../pages/farmer/Notifications';
 import Reviews from '../pages/farmer/Reviews';
+import Tracking from '../pages/auth/Tracking';
 import { AppRole, KYCStatus } from '../types';
 
-const OrderPreparationWrapper = ({ onBack, onComplete }: { onBack: () => void, onComplete: () => void }) => {
-  const { orderId } = useParams();
-  
-  if (!orderId) {
-    return <Navigate to="/farmer/orders" replace />;
-  }
+// ── Wrapper components ──────────────────────────────────────────────────────
 
-  return <OrderPreparation orderId={orderId} onBack={onBack} onComplete={onComplete} />;
+const DashboardWrapper = () => {
+    const navigate = useNavigate();
+    return <FarmerDashboard onNavigate={(path) => navigate(`/farmer/${path}`)} />;
 };
 
-const FarmerRoutes = () => {
+const ProductsWrapper = () => {
     const navigate = useNavigate();
+    return <Products onNavigate={(path) => navigate(`/farmer/${path}`)} />;
+};
 
+const AddProductWrapper = () => {
+    const navigate = useNavigate();
+    return <AddProduct onBack={() => navigate('/farmer/products')} />;
+};
+
+const ComboBuilderWrapper = () => {
+    const navigate = useNavigate();
+    return <ComboBuilder onBack={() => navigate('/farmer/products')} />;
+};
+
+const MysteryBoxEditorWrapper = () => {
+    const navigate = useNavigate();
+    return <MysteryBoxEditor onBack={() => navigate('/farmer/products')} />;
+};
+
+const OrdersWrapper = () => {
+    const navigate = useNavigate();
+    return <Orders onPrepareOrder={(id) => navigate(`/farmer/order-prep/${id}`)} />;
+};
+
+const OrderPreparationWrapper = () => {
+    const navigate = useNavigate();
+    const { orderId } = useParams();
+    if (!orderId) return <Navigate to="/farmer/orders" replace />;
     return (
-        <Route path="/farmer" element={
-            <ProtectedRoute allowedRoles={[AppRole.FARMER]} requiredStatus={KYCStatus.APPROVED}>
-                <FarmerLayout />
-            </ProtectedRoute>
-        }>
-            <Route index element={<FarmerDashboard onNavigate={(path) => navigate(`/farmer/${path}`)} />} />
-            <Route path="overview" element={<FarmerDashboard onNavigate={(path) => navigate(`/farmer/${path}`)} />} />
-            <Route path="products" element={<Products onNavigate={(path) => navigate(`/farmer/${path}`)} />} />
-            <Route path="add-product" element={<AddProduct onBack={() => navigate('/farmer/products')} />} />
-            <Route path="combo-builder" element={<ComboBuilder onBack={() => navigate('/farmer/products')} />} />
-            <Route path="combo-builder/:comboId" element={<ComboBuilder onBack={() => navigate('/farmer/products')} />} />
-            <Route path="mystery-box-editor" element={<MysteryBoxEditor onBack={() => navigate('/farmer/products')} />} />
-            <Route path="mystery-box-editor/:boxId" element={<MysteryBoxEditor onBack={() => navigate('/farmer/products')} />} />
-            <Route path="wallet" element={<Wallet />} />
-            <Route path="orders" element={<Orders onPrepareOrder={(id) => navigate(`/farmer/order-prep/${id}`)} />} />
-            <Route path="order-prep/:orderId" element={<OrderPreparationWrapper onBack={() => navigate('/farmer/orders')} onComplete={() => navigate('/farmer/orders')} />} />
+        <OrderPreparation
+            orderId={orderId}
+            onBack={() => navigate('/farmer/orders')}
+            onComplete={() => navigate('/farmer/orders')}
+        />
+    );
+};
 
+const TrackingWrapper = () => {
+    const navigate = useNavigate();
+    return <Tracking onBack={() => navigate(-1)} viewerRole="SHOP_OWNER" />;
+};
+
+// ── FarmerRoutes ────────────────────────────────────────────────────────────
+
+const FarmerRoutes = () => {
+    return (
+        <Route
+            path="/farmer"
+            element={
+                <ProtectedRoute allowedRoles={[AppRole.FARMER]} requiredStatus={KYCStatus.APPROVED}>
+                    <FarmerLayout />
+                </ProtectedRoute>
+            }
+        >
+            <Route index element={<DashboardWrapper />} />
+            <Route path="overview" element={<DashboardWrapper />} />
+            <Route path="products" element={<ProductsWrapper />} />
+            <Route path="add-product" element={<AddProductWrapper />} />
+            <Route path="combo-builder" element={<ComboBuilderWrapper />} />
+            <Route path="combo-builder/:comboId" element={<ComboBuilderWrapper />} />
+            <Route path="mystery-box-editor" element={<MysteryBoxEditorWrapper />} />
+            <Route path="mystery-box-editor/:boxId" element={<MysteryBoxEditorWrapper />} />
+            <Route path="wallet" element={<Wallet />} />
+            <Route path="orders" element={<OrdersWrapper />} />
+            <Route path="order-prep/:orderId" element={<OrderPreparationWrapper />} />
             <Route path="notifications" element={<FarmerNotifications />} />
             <Route path="profile" element={<Profile />} />
             <Route path="blind-box" element={<BlindBoxTool />} />
             <Route path="reviews" element={<Reviews />} />
+            <Route path="tracking/:orderId" element={<TrackingWrapper />} />
         </Route>
     );
 };

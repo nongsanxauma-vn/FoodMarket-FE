@@ -1,4 +1,5 @@
 import { httpClient, ApiResponse } from './http.client';
+import { PageResponse } from './product.service';
 
 export interface OrderItemRequest {
     productId?: number;
@@ -25,7 +26,8 @@ export interface OrderItemResponse {
     quantity: number;
     unitPrice: number;
     itemType: 'PRODUCT' | 'MYSTERY_BOX';
-    category?: string; // Added for personalization
+    category?: string;
+    imageUrl?: string;
 }
 
 export interface OrderResponse {
@@ -47,8 +49,16 @@ class OrderService {
         return httpClient.get<OrderResponse[]>('/orders');
     }
 
+    async getAllOrdersPaged(page = 0, size = 10): Promise<ApiResponse<PageResponse<OrderResponse>>> {
+        return httpClient.get<PageResponse<OrderResponse>>(`/orders/paged?page=${page}&size=${size}`);
+    }
+
     async getOrdersByUserId(userId: number): Promise<ApiResponse<OrderResponse[]>> {
         return httpClient.get<OrderResponse[]>(`/orders/user/${userId}`);
+    }
+
+    async getOrdersByUserIdPaged(userId: number, page = 0, size = 10): Promise<ApiResponse<PageResponse<OrderResponse>>> {
+        return httpClient.get<PageResponse<OrderResponse>>(`/orders/user/${userId}/paged?page=${page}&size=${size}`);
     }
 
     async getOrderById(id: number): Promise<ApiResponse<OrderResponse>> {

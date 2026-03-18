@@ -1,7 +1,9 @@
-
 import React, { useEffect, useState } from 'react';
 import { ShieldCheck, UserCheck, CheckCircle, Search, Bell, Info, ChevronLeft, ChevronRight, FileText, Landmark, AlertCircle } from 'lucide-react';
 import { userService, UserResponse } from '../../services';
+import Pagination, { PageInfo } from '../../components/ui/Pagination';
+
+const PAGE_SIZE = 10;
 
 const KYCApproval: React.FC = () => {
   const [pendingUsers, setPendingUsers] = useState<UserResponse[]>([]);
@@ -10,15 +12,26 @@ const KYCApproval: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<number | null>(null);
   const [viewingUser, setViewingUser] = useState<UserResponse | null>(null);
+  const [page, setPage] = useState(0);
+  const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await userService.getAllUsers();
-        const all = response.result || [];
-        // Chờ duyệt: SHOP_OWNER hoặc SHIPPER chưa ACTIVE
+        const response = await userService.getAllUsersPaged(page, PAGE_SIZE);
+        const all = response.result?.content || [];
+        if (response.result) {
+          setPageInfo({
+            page: response.result.page,
+            size: response.result.size,
+            totalElements: response.result.totalElements,
+            totalPages: response.result.totalPages,
+            first: response.result.first,
+            last: response.result.last,
+          });
+        }
         const pending = all.filter(
           (u) => (u.role?.name === 'SHOP_OWNER' || u.role?.name === 'SHIPPER') && u.status === 'PENDING'
         );
@@ -36,7 +49,7 @@ const KYCApproval: React.FC = () => {
     };
 
     fetchUsers();
-  }, []);
+  }, [page]);
 
   const handleApprove = async (userId: number, roleName: string) => {
     setApprovingId(userId);
@@ -228,6 +241,7 @@ const KYCApproval: React.FC = () => {
             </tbody>
           </table>
         </div>
+        {pageInfo && <Pagination pageInfo={pageInfo} onPageChange={setPage} className="px-10" />}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

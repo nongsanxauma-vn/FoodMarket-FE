@@ -2,20 +2,34 @@
 import React, { useEffect, useState } from 'react';
 import { UserX, Search, Bell, ShieldAlert, Zap, AlertCircle, Lock, Unlock, History, MoreHorizontal, Filter, Download, ChevronRight, XCircle, Loader2 } from 'lucide-react';
 import { userService, UserResponse } from '../../services';
+import Pagination, { PageInfo } from '../../components/ui/Pagination';
+
+const PAGE_SIZE = 10;
 
 const BadBuyers: React.FC = () => {
   const [buyers, setBuyers] = useState<UserResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState<number | null>(null);
+  const [page, setPage] = useState(0);
+  const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
 
   useEffect(() => {
     const fetchBuyers = async () => {
       setLoading(true);
       try {
-        const res = await userService.getAllUsers();
-        const allUsers = Array.isArray(res.result) ? res.result : [res.result];
-        // Filter buyers
+        const res = await userService.getAllUsersPaged(page, PAGE_SIZE);
+        const allUsers = res.result?.content || [];
+        if (res.result) {
+          setPageInfo({
+            page: res.result.page,
+            size: res.result.size,
+            totalElements: res.result.totalElements,
+            totalPages: res.result.totalPages,
+            first: res.result.first,
+            last: res.result.last,
+          });
+        }
         const buyerList = allUsers.filter((u: UserResponse) => u.roleName === 'BUYER');
         setBuyers(buyerList);
       } catch (err) {
@@ -26,7 +40,7 @@ const BadBuyers: React.FC = () => {
       }
     };
     fetchBuyers();
-  }, []);
+  }, [page]);
 
   const handleBlock = async (userId: number) => {
     if (!window.confirm('Bạn có chắc muốn khóa tài khoản này?')) return;
@@ -154,6 +168,7 @@ const BadBuyers: React.FC = () => {
           <div className="p-8 bg-white border-t border-gray-50 flex items-center justify-between">
             <p className="text-xs text-gray-400 font-medium">Hiển thị {buyers.length} người mua</p>
           </div>
+          {pageInfo && <Pagination pageInfo={pageInfo} onPageChange={setPage} className="px-8" />}
         </div>
 
         {/* Sidebar */}

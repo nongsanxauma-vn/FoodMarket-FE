@@ -1,16 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Truck, CheckCircle2, XCircle, User, AlertTriangle, X, Loader2, AlertCircle, Trash2, PackageCheck, PackageX, Gift } from 'lucide-react';
+import { Truck, CheckCircle2, XCircle, User, AlertTriangle, X, Loader2, AlertCircle, Trash2, PackageCheck, PackageX, Gift, Eye } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { orderService, OrderResponse } from '../../services';
+import Pagination, { PageInfo } from '../../components/ui/Pagination';
+
+const PAGE_SIZE = 10;
 
 interface OrdersProps {
   onPrepareOrder?: (orderId: string) => void;
 }
 
 const Orders: React.FC<OrdersProps> = ({ onPrepareOrder }) => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Tất cả');
   const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
 
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancellingOrderId, setCancellingOrderId] = useState<number | null>(null);
@@ -19,9 +26,17 @@ const Orders: React.FC<OrdersProps> = ({ onPrepareOrder }) => {
   const fetchOrders = async () => {
     try {
       setIsLoading(true);
-      const res = await orderService.getAllOrders();
+      const res = await orderService.getAllOrdersPaged(page, PAGE_SIZE);
       if (res.result) {
-        setOrders(res.result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        setOrders(res.result.content.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        setPageInfo({
+          page: res.result.page,
+          size: res.result.size,
+          totalElements: res.result.totalElements,
+          totalPages: res.result.totalPages,
+          first: res.result.first,
+          last: res.result.last,
+        });
       }
     } catch (err) {
       console.error('Failed to fetch orders:', err);
@@ -31,7 +46,7 @@ const Orders: React.FC<OrdersProps> = ({ onPrepareOrder }) => {
     }
   };
 
-  useEffect(() => { fetchOrders(); }, []);
+  useEffect(() => { fetchOrders(); }, [page]);
 
   const handleOpenCancelModal = (orderId: number) => {
     setCancellingOrderId(orderId);
@@ -282,6 +297,12 @@ const Orders: React.FC<OrdersProps> = ({ onPrepareOrder }) => {
                         <Truck className="size-8 text-blue-500 mx-auto mb-3" />
                         <p className="text-sm font-black text-blue-700">Đơn hàng đang giao</p>
                         <p className="text-[11px] text-blue-500 font-bold mt-1">Shipper đang trên đường đến khách hàng</p>
+                        <button
+                          onClick={() => navigate(`/farmer/tracking/${order.id}`)}
+                          className="mt-4 w-full py-3 bg-blue-500 text-white font-black rounded-2xl flex items-center justify-center gap-2 hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20"
+                        >
+                          <Eye className="size-4" /> Theo dõi đơn hàng
+                        </button>
                       </div>
                     )}
 
@@ -325,6 +346,8 @@ const Orders: React.FC<OrdersProps> = ({ onPrepareOrder }) => {
           })}
         </div>
       </div>
+
+      {pageInfo && <Pagination pageInfo={pageInfo} onPageChange={setPage} className="mt-4" />}
 
       {/* Cancel Modal */}
       {showCancelModal && (

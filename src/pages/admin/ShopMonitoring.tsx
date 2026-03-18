@@ -2,20 +2,34 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, Clock, Search, Filter, History, Lock, Bell, ChevronRight, Star, ShieldAlert, Loader2, AlertCircle } from 'lucide-react';
 import { userService, UserResponse } from '../../services';
+import Pagination, { PageInfo } from '../../components/ui/Pagination';
+
+const PAGE_SIZE = 10;
 
 const ShopMonitoring: React.FC = () => {
    const [shops, setShops] = useState<UserResponse[]>([]);
    const [loading, setLoading] = useState(true);
    const [error, setError] = useState<string | null>(null);
    const [searchTerm, setSearchTerm] = useState('');
+   const [page, setPage] = useState(0);
+   const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
 
    useEffect(() => {
       const fetchShops = async () => {
          setLoading(true);
          try {
-            const res = await userService.getAllUsers();
-            const allUsers = Array.isArray(res.result) ? res.result : [res.result];
-            // Filter shop owners only
+            const res = await userService.getAllUsersPaged(page, PAGE_SIZE);
+            const allUsers = res.result?.content || [];
+            if (res.result) {
+               setPageInfo({
+                  page: res.result.page,
+                  size: res.result.size,
+                  totalElements: res.result.totalElements,
+                  totalPages: res.result.totalPages,
+                  first: res.result.first,
+                  last: res.result.last,
+               });
+            }
             const shopOwners = allUsers.filter((u: UserResponse) => u.role?.name === 'SHOP_OWNER' || u.role?.name === 'FARMER');
             setShops(shopOwners);
          } catch (err) {
@@ -26,7 +40,7 @@ const ShopMonitoring: React.FC = () => {
          }
       };
       fetchShops();
-   }, []);
+   }, [page]);
 
    const handleDeactivate = async (userId: number) => {
       if (!window.confirm('Bạn có chắc muốn khóa tạm thời cửa hàng này?')) return;
@@ -181,6 +195,7 @@ const ShopMonitoring: React.FC = () => {
                   * Hiển thị {filteredShops.length} cửa hàng.
                </p>
             </div>
+            {pageInfo && <Pagination pageInfo={pageInfo} onPageChange={(p) => { setPage(p); }} className="px-10" />}
          </div>
       </div>
    );
