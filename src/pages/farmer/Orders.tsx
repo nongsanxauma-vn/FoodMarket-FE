@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Truck, CheckCircle2, XCircle, User, AlertTriangle, X, Loader2, AlertCircle, Trash2, PackageCheck, PackageX, Gift } from 'lucide-react';
+import { Truck, CheckCircle2, XCircle, User, AlertTriangle, X, Loader2, AlertCircle, Trash2, PackageCheck, PackageX, Gift, Eye } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { orderService, OrderResponse } from '../../services';
 
 interface OrdersProps {
@@ -7,6 +8,7 @@ interface OrdersProps {
 }
 
 const Orders: React.FC<OrdersProps> = ({ onPrepareOrder }) => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Tất cả');
   const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -282,6 +284,12 @@ const Orders: React.FC<OrdersProps> = ({ onPrepareOrder }) => {
                         <Truck className="size-8 text-blue-500 mx-auto mb-3" />
                         <p className="text-sm font-black text-blue-700">Đơn hàng đang giao</p>
                         <p className="text-[11px] text-blue-500 font-bold mt-1">Shipper đang trên đường đến khách hàng</p>
+                        <button
+                          onClick={() => navigate(`/farmer/tracking/${order.id}`)}
+                          className="mt-4 w-full py-3 bg-blue-500 text-white font-black rounded-2xl flex items-center justify-center gap-2 hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20"
+                        >
+                          <Eye className="size-4" /> Theo dõi đơn hàng
+                        </button>
                       </div>
                     )}
 

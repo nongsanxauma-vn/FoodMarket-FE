@@ -16,6 +16,7 @@ interface TrackingProps {
   onBack: () => void;
   orderId?: number;
   orderCode?: string;
+  viewerRole?: 'BUYER' | 'SHOP_OWNER';
 }
 
 interface LocationState {
@@ -41,11 +42,15 @@ const fmtDateTime = (d: string) => {
   } catch { return '--'; }
 };
 
-const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, orderCode }) => {
+const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, orderCode, viewerRole = 'BUYER' }) => {
   const { orderId: orderIdParam } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const orderId = orderIdProp || Number(orderIdParam) || 0;
   const displayCode = orderCode || `#${orderId}`;
+
+  // Keep viewerRole in a ref so drawRoutes closure always sees latest value
+  const viewerRoleRef = useRef(viewerRole);
+  useEffect(() => { viewerRoleRef.current = viewerRole; }, [viewerRole]);
 
   // ---- MAP REFS ----
   const mapRef = useRef<HTMLDivElement>(null);
@@ -76,27 +81,30 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
   const [orderData, setOrderData] = useState<OrderResponse | null>(null);
   const [loadingOrder, setLoadingOrder] = useState(true);
 
-  // ✅ Dùng getOrdersByUserId rồi filter theo orderId
-  // — BUYER có quyền, không dùng getOrderById (Admin only)
+  // ✅ Fetch order: BUYER dùng getOrdersByUserId, SHOP_OWNER dùng getAllOrders
   useEffect(() => {
     if (!orderId) return;
     (async () => {
       setLoadingOrder(true);
       try {
-        const userRes = await authService.getMyInfo();
-        if (!userRes.result) return;
-        const ordersRes = await orderService.getOrdersByUserId(userRes.result.id);
-        if (ordersRes.result) {
-          const found = ordersRes.result.find((o) => o.id === orderId);
-          if (found) setOrderData(found);
+        let found: OrderResponse | undefined;
+        if (viewerRole === 'SHOP_OWNER') {
+          const ordersRes = await orderService.getAllOrders();
+          if (ordersRes.result) found = ordersRes.result.find((o) => o.id === orderId);
+        } else {
+          const userRes = await authService.getMyInfo();
+          if (!userRes.result) return;
+          const ordersRes = await orderService.getOrdersByUserId(userRes.result.id);
+          if (ordersRes.result) found = ordersRes.result.find((o) => o.id === orderId);
         }
+        if (found) setOrderData(found);
       } catch (e) {
         console.error('[Tracking] fetch order failed:', e);
       } finally {
         setLoadingOrder(false);
       }
     })();
-  }, [orderId]);
+  }, [orderId, viewerRole]);
 
   // ---- TIMELINE ----
   // Đã đặt hàng + Nhà vườn chuẩn bị: xanh lá (done) khi CONFIRMED trở lên
@@ -265,6 +273,7 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
       const map = leafletMapRef.current;
       if (!map) return;
       if (!map._shopMarker) {
+        const shopLabel = viewerRoleRef.current === 'SHOP_OWNER' ? 'Shop của bạn' : 'Lấy hàng';
         const shopIcon = L.divIcon({
           html: `<div style="width:40px;height:40px;background:#F97316;border:3px solid white;border-radius:10px;
               display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(249,115,22,0.5);">
@@ -274,12 +283,13 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
                 <polyline points="9 22 9 12 15 12 15 22"/></svg></div>
             <div style="position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);
               background:#EA580C;color:white;padding:2px 8px;border-radius:12px;
-              font-size:9px;font-weight:900;white-space:nowrap;">Lấy hàng</div>`,
+              font-size:9px;font-weight:900;white-space:nowrap;">${shopLabel}</div>`,
           className: '', iconSize: [40, 40], iconAnchor: [20, 20],
         });
         map._shopMarker = L.marker([shopLat, shopLng], { icon: shopIcon }).addTo(map);
       }
-      if (!map._destMarker) {
+      // Dest marker chỉ hiện với BUYER
+      if (viewerRoleRef.current !== 'SHOP_OWNER' && !map._destMarker) {
         const destIcon = L.divIcon({
           html: `<div style="width:40px;height:40px;background:#22C55E;border:3px solid white;border-radius:50%;
               display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(34,197,94,0.5);">
@@ -300,20 +310,30 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
           fetch(`https://router.project-osrm.org/route/v1/driving/${shopLng},${shopLat};${destLng},${destLat}?overview=full&geometries=geojson`),
         ]);
         const [d1, d2] = await Promise.all([r1.json(), r2.json()]);
-        if (d1.routes?.length) {
+
+        const role = viewerRoleRef.current;
+        // SHOP_OWNER: chỉ thấy shipper→shop (cam, route1)
+        // BUYER: chỉ thấy shop→buyer (xanh, route2)
+        if (role !== 'BUYER' && d1.routes?.length) {
           fullRoute1Ref.current = d1.routes[0].geometry.coordinates.map(([lng, lat]: number[]) => [lat, lng] as [number, number]);
           if (routeLayer1Ref.current) { try { map.removeLayer(routeLayer1Ref.current); } catch {} }
           routeLayer1Ref.current = L.polyline(fullRoute1Ref.current, { color: '#F97316', weight: 5, opacity: 0.8 }).addTo(map);
         }
-        if (d2.routes?.length) {
+        if (role !== 'SHOP_OWNER' && d2.routes?.length) {
           fullRoute2Ref.current = d2.routes[0].geometry.coordinates.map(([lng, lat]: number[]) => [lat, lng] as [number, number]);
           if (routeLayer2Ref.current) { try { map.removeLayer(routeLayer2Ref.current); } catch {} }
           routeLayer2Ref.current = L.polyline(fullRoute2Ref.current, { color: '#3B82F6', weight: 5, opacity: 0.8 }).addTo(map);
         }
+
+        // fitBounds: chỉ dùng các điểm liên quan đến role
+        const boundsPoints: [number, number][] = role === 'BUYER'
+          ? [[shopLat, shopLng], [destLat, destLng]]
+          : role === 'SHOP_OWNER'
+          ? [[sLat, sLng], [shopLat, shopLng]]
+          : [[sLat, sLng], [shopLat, shopLng], [destLat, destLng]];
         if (!userInteractingRef.current) {
-          map.fitBounds(L.latLngBounds([[sLat, sLng], [shopLat, shopLng], [destLat, destLng]]), { padding: [50, 50], animate: true });
+          map.fitBounds(L.latLngBounds(boundsPoints), { padding: [50, 50], animate: true });
         }
-        // ✅ Route đã fetch xong, FakeGPS update tiếp theo sẽ trimRoute đúng
         (drawRoutes as any)._fetching = false;
       } catch (e) {
         console.warn('[Route]', e);
@@ -503,10 +523,16 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
             {/* Chú thích */}
             <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-6 flex flex-col gap-4">
               <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Chú thích bản đồ</h4>
-              <div className="flex items-center gap-3"><div className="w-8 h-1 rounded-full bg-orange-500" /><span className="text-xs font-bold text-gray-600">Shipper → Lấy hàng tại shop</span></div>
-              <div className="flex items-center gap-3"><div className="w-8 h-1 rounded-full bg-blue-500" /><span className="text-xs font-bold text-gray-600">Shop → Giao tới nhà bạn</span></div>
-              <div className="flex items-center gap-3"><div className="size-4 bg-orange-500 rounded" /><span className="text-xs font-bold text-gray-600">Điểm lấy hàng (shop)</span></div>
-              <div className="flex items-center gap-3"><div className="size-4 bg-green-500 rounded-full" /><span className="text-xs font-bold text-gray-600">Điểm giao hàng (nhà bạn)</span></div>
+              {viewerRole !== 'BUYER' && (
+                <div className="flex items-center gap-3"><div className="w-8 h-1 rounded-full bg-orange-500" /><span className="text-xs font-bold text-gray-600">Shipper → Lấy hàng tại shop</span></div>
+              )}
+              {viewerRole !== 'SHOP_OWNER' && (
+                <div className="flex items-center gap-3"><div className="w-8 h-1 rounded-full bg-blue-500" /><span className="text-xs font-bold text-gray-600">Shop → Giao tới nhà bạn</span></div>
+              )}
+              <div className="flex items-center gap-3"><div className="size-4 bg-orange-500 rounded" /><span className="text-xs font-bold text-gray-600">{viewerRole === 'SHOP_OWNER' ? 'Shop của bạn' : 'Điểm lấy hàng (shop)'}</span></div>
+              {viewerRole !== 'SHOP_OWNER' && (
+                <div className="flex items-center gap-3"><div className="size-4 bg-green-500 rounded-full" /><span className="text-xs font-bold text-gray-600">Điểm giao hàng (nhà bạn)</span></div>
+              )}
             </div>
 
             {/* ✅ Chỉ hiện khi đơn đang SHIPPING */}

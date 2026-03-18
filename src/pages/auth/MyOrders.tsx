@@ -46,11 +46,12 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
       console.log('Orders response:', response);
 
       if (response.result) {
-        // Filter orders by current user
-        const myOrders = response.result.filter(
-          order => order.items && order.items.length > 0
-        );
-        
+        //         // Filter orders by current user
+        //         console.log('Before filter:', response.result.length);
+        // const myOrders = response.result.filter(order => order.items && order.items.length > 0);
+        // console.log('After filter:', myOrders.length); // Chắc chắn = 0
+        const myOrders = response.result;
+
         // Debug: Log order items to understand structure
         myOrders.forEach(order => {
           console.log(`Order #${order.id} items:`, order.items);
@@ -58,7 +59,7 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
             console.log(`Item: ${item.productName}, Type: ${item.itemType}, MysteryBoxId: ${item.mysteryBoxId}, OrderDetailId: ${item.orderDetailId}`);
           });
         });
-        
+
         setOrders(myOrders.sort((a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         ));
@@ -79,24 +80,24 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
 
   const handleReviewSubmit = async () => {
     if (!selectedItem) return;
-    
+
     try {
       setSubmittingReview(true);
-      
+
       // Validate comment
       if (!comment.trim()) {
         alert('Vui lòng nhập nhận xét của bạn');
         return;
       }
-      
+
       // Phân biệt product vs mystery box
       const reviewData: any = {
         ratingStar: rating,
         comment: comment.trim()
       };
-      
+
       console.log('Selected item for review:', selectedItem);
-      
+
       if (selectedItem.itemType === 'MYSTERY_BOX') {
         if (!selectedItem.mysteryBoxId) {
           console.error('Mystery box item missing mysteryBoxId:', selectedItem);
@@ -129,21 +130,21 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
       }
     } catch (err: any) {
       console.error('Failed to submit review:', err);
-      
+
       // Better error handling
       let errorMessage = 'Không thể gửi đánh giá. Vui lòng thử lại.';
-      
+
       if (err.data?.message) {
         errorMessage = err.data.message;
       } else if (err.message) {
         errorMessage = err.message;
       }
-      
+
       // Handle specific error cases
       if (err.data?.code === 9999) {
         errorMessage = 'Dữ liệu không hợp lệ. Vui lòng thử lại hoặc liên hệ hỗ trợ.';
       }
-      
+
       alert(errorMessage);
     } finally {
       setSubmittingReview(false);
@@ -152,7 +153,7 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
 
   const handleCancelOrder = async (orderId: number) => {
     if (!window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) return;
-    
+
     try {
       setLoading(true);
       const res = await orderService.updateOrder(orderId, { status: 'CANCELLED' });
@@ -257,8 +258,8 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
                   key={status}
                   onClick={() => setFilter(status)}
                   className={`px-6 py-3 rounded-[18px] text-[11px] font-black uppercase tracking-wider transition-all transform hover:scale-105 active:scale-95 ${filter === status
-                      ? 'bg-primary text-white shadow-xl shadow-primary/20 scale-105'
-                      : 'bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+                    ? 'bg-primary text-white shadow-xl shadow-primary/20 scale-105'
+                    : 'bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600'
                     }`}
                 >
                   {status === 'ALL' ? 'Tất cả' : getStatusConfig(status).label}
@@ -441,8 +442,8 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
                   {selectedItem.itemType === 'MYSTERY_BOX' ? 'Đánh giá hộp mù' : 'Đánh giá sản phẩm'}
                 </h3>
                 <p className="text-gray-400 font-bold text-sm mt-1">
-                  {selectedItem.itemType === 'MYSTERY_BOX' 
-                    ? selectedItem.mysteryBoxType || selectedItem.productName 
+                  {selectedItem.itemType === 'MYSTERY_BOX'
+                    ? selectedItem.mysteryBoxType || selectedItem.productName
                     : selectedItem.productName
                   }
                 </p>
