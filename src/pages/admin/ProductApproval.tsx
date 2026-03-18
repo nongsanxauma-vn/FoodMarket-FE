@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, Search, Filter, MoreVertical, Eye, Trash2, Check, X, ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
 import { productService, ProductResponse } from '../../services';
+import Pagination, { PageInfo } from '../../components/ui/Pagination';
+
+const PAGE_SIZE = 10;
 
 const ProductApproval: React.FC = () => {
   const [products, setProducts] = useState<ProductResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
 
   const [selectedProduct, setSelectedProduct] = useState<ProductResponse | null>(null);
   const [rejectReason, setRejectReason] = useState('');
@@ -16,9 +21,17 @@ const ProductApproval: React.FC = () => {
   const fetchProducts = async () => {
     try {
       setIsLoading(true);
-      const response = await productService.getAll();
+      const response = await productService.getAllPaged(page, PAGE_SIZE);
       if (response.result) {
-        setProducts(response.result);
+        setProducts(response.result.content);
+        setPageInfo({
+          page: response.result.page,
+          size: response.result.size,
+          totalElements: response.result.totalElements,
+          totalPages: response.result.totalPages,
+          first: response.result.first,
+          last: response.result.last,
+        });
       }
     } catch (err) {
       console.error('Failed to fetch products', err);
@@ -30,7 +43,7 @@ const ProductApproval: React.FC = () => {
 
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [page]);
 
   const handleApprove = async (product: ProductResponse) => {
     if (!window.confirm(`Bạn có chắc muốn duyệt sản phẩm "${product.productName}"?`)) return;
@@ -269,7 +282,7 @@ const ProductApproval: React.FC = () => {
               </div>
               <div>
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">TỔNG SẢN PHẨM</p>
-                <h4 className="text-xl font-black text-gray-900">{products.length}</h4>
+                <h4 className="text-xl font-black text-gray-900">{pageInfo?.totalElements ?? products.length}</h4>
               </div>
             </div>
             <button onClick={fetchProducts} className="size-12 bg-white rounded-[24px] border border-gray-100 shadow-sm flex items-center justify-center text-gray-400 hover:text-primary transition-colors">
@@ -289,7 +302,7 @@ const ProductApproval: React.FC = () => {
           <div className="px-10 py-8 border-b border-gray-50 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <h4 className="font-black text-gray-800 uppercase tracking-tight">Danh sách sản phẩm</h4>
-              <span className="px-3 py-1 bg-gray-100 text-gray-400 text-[10px] font-black rounded-full">Hiện có {products.length} sản phẩm</span>
+              <span className="px-3 py-1 bg-gray-100 text-gray-400 text-[10px] font-black rounded-full">Hiện có {pageInfo?.totalElements ?? products.length} sản phẩm</span>
             </div>
             <div className="flex items-center gap-4">
               <button className="size-10 flex items-center justify-center text-gray-300 hover:text-gray-900"><Filter className="size-5" /></button>
@@ -364,6 +377,7 @@ const ProductApproval: React.FC = () => {
               </tbody>
             </table>
           </div>
+          {pageInfo && <Pagination pageInfo={pageInfo} onPageChange={setPage} className="px-10" />}
         </div>
       </div>
     </>

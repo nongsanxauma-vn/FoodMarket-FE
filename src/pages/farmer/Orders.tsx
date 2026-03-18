@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Truck, CheckCircle2, XCircle, User, AlertTriangle, X, Loader2, AlertCircle, Trash2, PackageCheck, PackageX, Gift, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { orderService, OrderResponse } from '../../services';
+import Pagination, { PageInfo } from '../../components/ui/Pagination';
+
+const PAGE_SIZE = 10;
 
 interface OrdersProps {
   onPrepareOrder?: (orderId: string) => void;
@@ -13,6 +16,8 @@ const Orders: React.FC<OrdersProps> = ({ onPrepareOrder }) => {
   const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
 
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancellingOrderId, setCancellingOrderId] = useState<number | null>(null);
@@ -21,9 +26,17 @@ const Orders: React.FC<OrdersProps> = ({ onPrepareOrder }) => {
   const fetchOrders = async () => {
     try {
       setIsLoading(true);
-      const res = await orderService.getAllOrders();
+      const res = await orderService.getAllOrdersPaged(page, PAGE_SIZE);
       if (res.result) {
-        setOrders(res.result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        setOrders(res.result.content.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        setPageInfo({
+          page: res.result.page,
+          size: res.result.size,
+          totalElements: res.result.totalElements,
+          totalPages: res.result.totalPages,
+          first: res.result.first,
+          last: res.result.last,
+        });
       }
     } catch (err) {
       console.error('Failed to fetch orders:', err);
@@ -33,7 +46,7 @@ const Orders: React.FC<OrdersProps> = ({ onPrepareOrder }) => {
     }
   };
 
-  useEffect(() => { fetchOrders(); }, []);
+  useEffect(() => { fetchOrders(); }, [page]);
 
   const handleOpenCancelModal = (orderId: number) => {
     setCancellingOrderId(orderId);
@@ -333,6 +346,8 @@ const Orders: React.FC<OrdersProps> = ({ onPrepareOrder }) => {
           })}
         </div>
       </div>
+
+      {pageInfo && <Pagination pageInfo={pageInfo} onPageChange={setPage} className="mt-4" />}
 
       {/* Cancel Modal */}
       {showCancelModal && (

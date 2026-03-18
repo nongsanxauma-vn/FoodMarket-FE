@@ -2,12 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Newspaper, Plus, Search, Filter, Edit3, Trash2, Eye, Calendar, User, Clock, CheckCircle2, ChevronLeft, ChevronRight, RefreshCcw } from 'lucide-react';
 import { blogService, BlogResponse, BlogCreationRequest } from '../../services';
 import MyCKEditor from '../../components/MyCKEditor';
+import Pagination, { PageInfo } from '../../components/ui/Pagination';
+
+const PAGE_SIZE = 10;
 
 const NewsManagement: React.FC = () => {
    const [blogs, setBlogs] = useState<BlogResponse[]>([]);
    const [loading, setLoading] = useState(true);
    const [isAddingNew, setIsAddingNew] = useState(false);
    const [error, setError] = useState<string | null>(null);
+   const [page, setPage] = useState(0);
+   const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
 
    // Form state
    const [title, setTitle] = useState('');
@@ -23,14 +28,22 @@ const NewsManagement: React.FC = () => {
 
    useEffect(() => {
       fetchBlogs();
-   }, []);
+   }, [page]);
 
    const fetchBlogs = async () => {
       try {
          setLoading(true);
-         const response = await blogService.getAllBlogs();
+         const response = await blogService.getAllBlogsPaged(page, PAGE_SIZE);
          if (response.result) {
-            setBlogs(response.result);
+            setBlogs(response.result.content);
+            setPageInfo({
+               page: response.result.page,
+               size: response.result.size,
+               totalElements: response.result.totalElements,
+               totalPages: response.result.totalPages,
+               first: response.result.first,
+               last: response.result.last,
+            });
          }
       } catch (err) {
          console.error('Failed to fetch blogs', err);
@@ -366,17 +379,8 @@ const NewsManagement: React.FC = () => {
                </table>
             </div>
 
-            <div className="p-10 bg-white border-t border-gray-50 flex items-center justify-between">
-               <div className="flex items-center gap-2">
-                  <button className="size-10 border border-gray-100 rounded-2xl flex items-center justify-center text-gray-300 hover:bg-gray-50 transition-colors">
-                     <ChevronLeft className="size-5" />
-                  </button>
-                  <button className="size-10 bg-primary text-white rounded-2xl flex items-center justify-center text-sm font-black shadow-lg shadow-primary/20">1</button>
-                  <button className="size-10 border border-gray-100 rounded-2xl flex items-center justify-center text-sm font-black text-gray-400 hover:bg-gray-50 transition-colors">2</button>
-                  <button className="size-10 border border-gray-100 rounded-2xl flex items-center justify-center text-gray-300 hover:bg-gray-50 transition-colors">
-                     <ChevronRight className="size-5" />
-                  </button>
-               </div>
+            <div className="p-10 bg-white border-t border-gray-50">
+               {pageInfo && <Pagination pageInfo={pageInfo} onPageChange={setPage} />}
             </div>
          </div>
 

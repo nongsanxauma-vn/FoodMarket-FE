@@ -1,6 +1,7 @@
 import { httpClient, ApiResponse } from './http.client';
 import { UserResponse } from './auth.service';
 import { API_BASE_URL, TOKEN_KEY } from './api.config';
+import { PageResponse } from './product.service';
 
 export interface UserUpdateRequest {
   fullName?: string;
@@ -12,11 +13,12 @@ export interface UserUpdateRequest {
 }
 
 class UserService {
-  /**
-   * Get all users (Admin only)
-   */
   async getAllUsers(): Promise<ApiResponse<UserResponse[]>> {
     return httpClient.get<UserResponse[]>('/users');
+  }
+
+  async getAllUsersPaged(page = 0, size = 10): Promise<ApiResponse<PageResponse<UserResponse>>> {
+    return httpClient.get<PageResponse<UserResponse>>(`/users/paged?page=${page}&size=${size}`);
   }
 
   /**

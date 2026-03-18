@@ -7,6 +7,9 @@ import { orderService, OrderResponse, OrderItemResponse } from '../../services/o
 import { authService } from '../../services/auth.service';
 import { reviewService } from '../../services/review.service';
 import { Star, Camera, X, Loader2 } from 'lucide-react';
+import Pagination, { PageInfo } from '../../components/ui/Pagination';
+
+const PAGE_SIZE = 10;
 
 interface MyOrdersProps {
   onBack: () => void;
@@ -20,6 +23,9 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<OrderStatusFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(0);
+  const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
+  const [userId, setUserId] = useState<number | null>(null);
 
   // Review state
   const [selectedItem, setSelectedItem] = useState<OrderItemResponse | null>(null);
@@ -38,36 +44,32 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
         return;
       }
 
-      console.log('Fetching orders for user:', userInfo.result.id);
+      const uid = userInfo.result.id;
+      setUserId(uid);
 
-      // Sử dụng getOrdersByUserId thay vì getAllOrders
-      const response = await orderService.getOrdersByUserId(userInfo.result.id);
-
-      console.log('Orders response:', response);
+      const response = await orderService.getOrdersByUserIdPaged(uid, page, PAGE_SIZE);
 
       if (response.result) {
-        //         // Filter orders by current user
-        //         console.log('Before filter:', response.result.length);
-        // const myOrders = response.result.filter(order => order.items && order.items.length > 0);
-        // console.log('After filter:', myOrders.length); // Chắc chắn = 0
-        const myOrders = response.result;
+        const myOrders = response.result.content;
 
-        // Debug: Log order items to understand structure
         myOrders.forEach(order => {
           console.log(`Order #${order.id} items:`, order.items);
-          order.items?.forEach(item => {
-            console.log(`Item: ${item.productName}, Type: ${item.itemType}, MysteryBoxId: ${item.mysteryBoxId}, OrderDetailId: ${item.orderDetailId}`);
-          });
         });
 
         setOrders(myOrders.sort((a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         ));
+        setPageInfo({
+          page: response.result.page,
+          size: response.result.size,
+          totalElements: response.result.totalElements,
+          totalPages: response.result.totalPages,
+          first: response.result.first,
+          last: response.result.last,
+        });
       }
     } catch (error: any) {
       console.error('Failed to fetch orders:', error);
-
-      // Hiển thị lỗi cho user
       if (error.status === 401) {
         alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
       } else {
@@ -171,7 +173,7 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [page]);
 
   const getStatusConfig = (status: string) => {
     const configs: Record<string, { label: string; color: string; icon: any; bg: string }> = {
@@ -296,8 +298,7 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
           </div>
         ) : (
           <div className="space-y-6">
-            {filteredOrders.map((order) => {
-              const statusConfig = getStatusConfig(order.status);
+            {filteredOrders.map((order) => {              const statusConfig = getStatusConfig(order.status);
               const StatusIcon = statusConfig.icon;
               const trackable = canTrack(order.status);
 
@@ -430,6 +431,7 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
             })}
           </div>
         )}
+        {pageInfo && <Pagination pageInfo={pageInfo} onPageChange={setPage} className="mt-6" />}
       </div>
 
       {/* Review Modal */}
