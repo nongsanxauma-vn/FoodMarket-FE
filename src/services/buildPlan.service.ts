@@ -1,35 +1,27 @@
 import { httpClient, ApiResponse } from './http.client';
-import { BuildPlanResponse, BuildPlanCreateRequest, BuildPlanItemCreateRequest } from '../types';
+import { BuildPlanResponse, BuildPlanDetailRequest } from '../types';
 
 class BuildPlanService {
-    private readonly baseUrl = '/build-plans';
+    private readonly baseUrl = '/build_plans';
 
-    async createPlan(request: BuildPlanCreateRequest): Promise<ApiResponse<BuildPlanResponse>> {
+    async createPlan(request: BuildPlanDetailRequest): Promise<ApiResponse<BuildPlanResponse>> {
         return httpClient.post<BuildPlanResponse>(this.baseUrl, request);
     }
 
-    async getPlan(id: number): Promise<ApiResponse<BuildPlanResponse>> {
+    async getPlanById(id: number): Promise<ApiResponse<BuildPlanResponse>> {
         return httpClient.get<BuildPlanResponse>(`${this.baseUrl}/${id}`);
     }
 
-    async getPlansByBuyer(buyerId: number): Promise<ApiResponse<BuildPlanResponse[]>> {
-        return httpClient.get<BuildPlanResponse[]>(`${this.baseUrl}/buyer/${buyerId}`);
+    async getPlansByUser(userId: number): Promise<ApiResponse<BuildPlanResponse[]>> {
+        return httpClient.get<BuildPlanResponse[]>(`${this.baseUrl}/user/${userId}`);
     }
 
-    async addMeal(planId: number, request: BuildPlanItemCreateRequest): Promise<ApiResponse<void>> {
-        return httpClient.post<void>(`${this.baseUrl}/${planId}/meals`, request);
+    async updatePlan(id: number, request: BuildPlanDetailRequest): Promise<ApiResponse<BuildPlanResponse>> {
+        return httpClient.put<BuildPlanResponse>(`${this.baseUrl}/${id}`, request);
     }
 
-    async markMealCompleted(mealId: number): Promise<ApiResponse<void>> {
-        return httpClient.put<void>(`${this.baseUrl}/meals/${mealId}/complete`, {});
-    }
-
-    async deletePlan(planId: number): Promise<ApiResponse<void>> {
-        return httpClient.delete<void>(`${this.baseUrl}/${planId}`);
-    }
-
-    async deleteMeal(mealId: number): Promise<ApiResponse<void>> {
-        return httpClient.delete<void>(`${this.baseUrl}/meals/${mealId}`);
+    async deletePlan(id: number): Promise<ApiResponse<string>> {
+        return httpClient.delete<string>(`${this.baseUrl}/${id}`);
     }
 }
 

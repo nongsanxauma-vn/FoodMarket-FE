@@ -101,37 +101,68 @@ export interface CookingCombo {
   createdDate: string;
 }
 
+
 // Build Plan Types
+export interface BuildPlanRequest {
+  planName: string;
+  numberOfPeople: number;
+  numberOfDays: number;
+  mealType: string;
+  targetBudget: number;
+}
+
+export interface MealItemRequest {
+  comboId: number;
+  quantity: number;
+}
+
+export interface MealRequest {
+  mealType: string;
+  items: MealItemRequest[];
+}
+
+export interface PlanDayRequest {
+  dayIndex: number;
+  meals: MealRequest[];
+}
+
+export interface BuildPlanDetailRequest {
+  plan: BuildPlanRequest;
+  days: PlanDayRequest[];
+}
+
+export interface MealItemResponse {
+  id: number;
+  quantity: number;
+  combo: {
+    id: number;
+    comboName: string;
+    discountPrice: number;
+    description: string;
+    type: string;
+    mealType?: string;
+    items?: any[];
+  };
+}
+
+export interface MealResponse {
+  id: number;
+  mealType: string;
+  items: MealItemResponse[];
+}
+
+export interface PlanDayResponse {
+  id: number;
+  dayIndex: number;
+  meals: MealResponse[];
+}
+
 export interface BuildPlanResponse {
   id: number;
-  buyerId: number;
   planName: string;
-  planType: string;
-  mealName: string;
+  numberOfPeople: number;
+  numberOfDays: number;
+  mealType: string;
   targetBudget: number;
-  items: BuildPlanItemResponse[];
-}
-
-export interface BuildPlanItemResponse {
-  id: number;
-  mealName: string;
-  mealTime: string;
-  description?: string;
-  completed: boolean;
-  productId?: number;
-  productName?: string;
-}
-
-export interface BuildPlanCreateRequest {
-  planName: string;
-  mealName: string;
-  planType: 'DAILY' | 'WEEKLY';
-  targetBudget: number;
-}
-
-export interface BuildPlanItemCreateRequest {
-  mealName: string;
-  mealTime: string;
-  description?: string;
-  productIds: number[]; // BE expects List<Integer>
+  days: PlanDayResponse[];
 }
