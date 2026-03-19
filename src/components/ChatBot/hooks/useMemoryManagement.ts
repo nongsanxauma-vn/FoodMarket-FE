@@ -4,8 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { ChatMessage } from '../types';
-
+import { ChatMessage } from '../chatbot.types';
 export interface MemoryManagementOptions {
   maxMessages?: number;
   cleanupInterval?: number; // in milliseconds
@@ -29,7 +28,8 @@ export function useMessageMemoryManagement(
   } = options;
 
   const [optimizedMessages, setOptimizedMessages] = useState<ChatMessage[]>(messages);
-  const cleanupTimerRef = useRef<NodeJS.Timeout>();
+  const cleanupTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
+
 
   // Cleanup old messages when limit is exceeded
   const cleanupMessages = useCallback((messageList: ChatMessage[]) => {
@@ -37,7 +37,7 @@ export function useMessageMemoryManagement(
 
     // Keep the most recent messages
     const recentMessages = messageList.slice(-maxMessages);
-    
+
     // Log cleanup for debugging
     if (process.env.NODE_ENV === 'development') {
       console.log(`ChatBot: Cleaned up ${messageList.length - recentMessages.length} old messages`);
@@ -162,7 +162,7 @@ export function useThrottle<T extends (...args: any[]) => any>(
   delay: number
 ): T {
   const lastCallRef = useRef<number>(0);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   const throttledCallback = useCallback((...args: Parameters<T>) => {
     const now = Date.now();
@@ -175,7 +175,7 @@ export function useThrottle<T extends (...args: any[]) => any>(
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
-      
+
       timeoutRef.current = setTimeout(() => {
         lastCallRef.current = Date.now();
         callback(...args);

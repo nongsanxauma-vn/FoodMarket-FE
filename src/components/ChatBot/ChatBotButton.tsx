@@ -14,6 +14,7 @@ interface ChatBotButtonProps {
 
 export function ChatBotButton({ unreadCount = 0, className = '' }: ChatBotButtonProps) {
   const { isOpen, toggleChat } = useChatBotContext();
+  if (isOpen) return null;
 
   return (
     <button

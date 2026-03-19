@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { TypingIndicatorProps } from './types';
+import { TypingIndicatorProps } from './chatbot.types';
 
 /**
  * TypingIndicator Component
@@ -7,7 +7,7 @@ import { TypingIndicatorProps } from './types';
  */
 export const TypingIndicator: React.FC<TypingIndicatorProps> = ({
   isVisible,
-  message = 'AI is typing'
+  message = 'Đang trả lời...'
 }) => {
   const [dots, setDots] = useState('');
 
