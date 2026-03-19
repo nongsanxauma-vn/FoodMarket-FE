@@ -61,5 +61,9 @@ export const cartService = {
 
     clearCart: async (): Promise<ApiResponse<string>> => {
         return await api.delete<string>('/cart/clear');
+    },
+
+    addPlanToCart: async (planId: number): Promise<ApiResponse<CartResponse>> => {
+        return await api.post<CartResponse>(`/cart/add-plan/${planId}`);
     }
 };

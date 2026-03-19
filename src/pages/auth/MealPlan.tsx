@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Users,
   Utensils,
@@ -22,6 +23,7 @@ import {
 import { buildPlanService } from '../../services/buildPlan.service';
 import { comboService, BuildComboResponse } from '../../services/combo.service';
 import { productService, ProductResponse } from '../../services/product.service';
+import { cartService } from '../../services/cart.service';
 import { useAuth } from '../../contexts/AuthContext';
 import { BuildPlanDetailRequest, BuildPlanResponse, PlanDayRequest, MealRequest, MealItemRequest } from '../../types';
 
@@ -82,8 +84,11 @@ export default function MealPlan() {
   const [isRenaming, setIsRenaming] = useState<{ dayIndex: number, mealId: string } | null>(null);
   const [allPlans, setAllPlans] = useState<BuildPlanResponse[]>([]);
   const [showPlansList, setShowPlansList] = useState(false);
+  const [isBuying, setIsBuying] = useState(false);
+  const [viewingDish, setViewingDish] = useState<Dish | null>(null);
 
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   // Map Backend MealType
   const mapToBackendType = (type: MealType): string => {
@@ -135,14 +140,14 @@ export default function MealPlan() {
     const style = mapFromBackendStyle(combo.type || 'FAMILY');
 
     return {
-      id: combo.id.toString(),
-      name: combo.comboName,
+      id: combo.id?.toString() || '',
+      name: combo.comboName || 'Món ăn mới',
       mealType: mealType,
       style: [style],
       price: combo.discountPrice,
-      image: combo.items[0]?.productName ? `https://picsum.photos/seed/${combo.id}/200/200` : undefined, // Placeholder if no image
-      recipes: combo.items.map(item => ({
-        ingredientId: item.productId.toString(),
+      image: (combo.items && combo.items[0]?.productName) ? `https://picsum.photos/seed/${combo.id}/200/200` : undefined, // Placeholder if no image
+      recipes: (combo.items || []).map(item => ({
+        ingredientId: item.productId?.toString() || '',
         quantityPerPerson: item.quantity
       }))
     };
@@ -225,10 +230,10 @@ export default function MealPlan() {
       // Group meals from backend
       const mealInstances: MealInstance[] = day.meals.map((m, idx) => {
         const frontendType = mapFromBackendType(m.mealType);
-        
+
         // Lấy tất cả comboId từ meal items
         const dishIds = (m.items || []).map(i => i.combo?.id?.toString()).filter(id => id !== undefined);
-        
+
         // Tìm các món ăn tương ứng trong danh sách combo hiện có
         const foundDishes = currentDishes.filter(d => dishIds.includes(d.id));
 
@@ -462,6 +467,45 @@ export default function MealPlan() {
     }
   };
 
+  const handleBuyPlan = async (id?: number) => {
+    const targetId = id || planId;
+    if (!targetId) {
+      alert("Vui lòng lưu thực đơn trước khi mua");
+      return;
+    }
+
+    if (!window.confirm("Hệ thống sẽ thêm tất cả nguyên liệu trong thực đơn này vào giỏ hàng và chuyển đến trang thanh toán. Bạn có muốn tiếp tục?")) {
+      return;
+    }
+
+    setIsBuying(true);
+    try {
+      await cartService.addPlanToCart(targetId);
+      navigate('/checkout');
+    } catch (err) {
+      console.error("Error buying plan:", err);
+      alert("Không thể thực hiện mua. Vui lòng thử lại.");
+    } finally {
+      setIsBuying(false);
+    }
+  };
+
+  const handleBuyCombo = async (comboId: string) => {
+    setIsBuying(true);
+    try {
+      await cartService.addToCart({
+        buildComboId: parseInt(comboId),
+        quantity: numPeople
+      });
+      navigate('/checkout');
+    } catch (err) {
+      console.error("Error buying combo:", err);
+      alert("Không thể mua món ăn này. Vui lòng thử lại.");
+    } finally {
+      setIsBuying(false);
+    }
+  };
+
   const handleDeletePlan = async () => {
     if (!planId) return;
     handleDeleteAnyPlan(planId);
@@ -562,8 +606,8 @@ export default function MealPlan() {
                         key={s}
                         onClick={() => setStyle(s as EatingStyle)}
                         className={`py-2 px-3 rounded-xl border text-sm transition-all ${style === s
-                            ? 'bg-emerald-50 border-emerald-500 text-emerald-700 font-semibold'
-                            : 'border-stone-200 hover:border-stone-300 text-stone-600'
+                          ? 'bg-emerald-50 border-emerald-500 text-emerald-700 font-semibold'
+                          : 'border-stone-200 hover:border-stone-300 text-stone-600'
                           }`}
                       >
                         {s}
@@ -684,7 +728,7 @@ export default function MealPlan() {
                           <div className="flex items-center gap-4">
                             <span className="font-bold text-stone-800 text-lg">Ngày {dayPlan.day}</span>
                             <div className="flex gap-1">
-                              {dayPlan.meals.some(m => m.dishes.some(d => d.price && d.price )) && (
+                              {dayPlan.meals.some(m => m.dishes.some(d => d.price && d.price)) && (
                                 <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full uppercase tracking-wider">Ưu tiên nông sản xanh</span>
                               )}
                             </div>
@@ -739,15 +783,36 @@ export default function MealPlan() {
                               <div className="space-y-2 flex-1">
                                 {meal.dishes.length > 0 ? (
                                   meal.dishes.map((dish, dIdx) => (
-                                    <div key={`${dish.id}-${dIdx}`} className="bg-white border border-stone-50 rounded-xl p-3 shadow-sm relative group/dish">
+                                    <div
+                                      key={`${dish.id}-${dIdx}`}
+                                      className="bg-white border border-stone-50 rounded-xl p-3 shadow-sm relative group/dish cursor-pointer hover:border-emerald-500 transition-all"
+                                      onClick={() => setViewingDish(dish)}
+                                    >
                                       <h4 className="font-bold text-stone-800 text-xs leading-tight">{dish.name}</h4>
                                       <p className="text-[10px] text-stone-400 mt-1">{dish.price?.toLocaleString()}đ</p>
-                                      <button
-                                        onClick={() => removeDishFromMeal(dayPlan.day, meal.id, dish.id)}
-                                        className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover/dish:opacity-100 transition-opacity shadow-lg"
-                                      >
-                                        <X size={10} />
-                                      </button>
+
+                                      <div className="absolute -top-2 -right-2 flex gap-1 opacity-0 group-hover/dish:opacity-100 transition-opacity">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleBuyCombo(dish.id);
+                                          }}
+                                          className="bg-emerald-600 text-white p-1.5 rounded-full shadow-lg hover:bg-emerald-700 transition-colors"
+                                          title="Mua ngay món này"
+                                        >
+                                          <ShoppingCart size={10} />
+                                        </button>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            removeDishFromMeal(dayPlan.day, meal.id, dish.id);
+                                          }}
+                                          className="bg-red-500 text-white p-1.5 rounded-full shadow-lg hover:bg-red-600 transition-colors"
+                                          title="Xóa khỏi thực đơn"
+                                        >
+                                          <X size={10} />
+                                        </button>
+                                      </div>
                                     </div>
                                   ))
                                 ) : (
@@ -780,19 +845,36 @@ export default function MealPlan() {
                           <p className="text-emerald-300/80 text-sm">Tổng hợp từ thực đơn {numDays} ngày</p>
                         </div>
                       </div>
-                      <button
-                        onClick={saveToBackend}
-                        disabled={isSaving}
-                        className="bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold px-8 py-4 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 group disabled:opacity-50"
-                      >
-                        {isSaving ? (
-                          <RefreshCw size={18} className="animate-spin" />
-                        ) : (
-                          <ShoppingCart size={18} />
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <button
+                          onClick={saveToBackend}
+                          disabled={isSaving}
+                          className="bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold px-8 py-4 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 group disabled:opacity-50"
+                        >
+                          {isSaving ? (
+                            <RefreshCw size={18} className="animate-spin" />
+                          ) : (
+                            <CheckCircle2 size={18} />
+                          )}
+                          Lưu thực đơn
+                        </button>
+
+                        {planId && (
+                          <button
+                            onClick={() => handleBuyPlan()}
+                            disabled={isBuying}
+                            className="bg-white hover:bg-stone-50 text-emerald-900 font-bold px-8 py-4 rounded-2xl transition-all shadow-lg border-2 border-emerald-500 flex items-center justify-center gap-2 group disabled:opacity-50"
+                          >
+                            {isBuying ? (
+                              <RefreshCw size={18} className="animate-spin" />
+                            ) : (
+                              <ShoppingCart size={18} />
+                            )}
+                            Mua tất cả
+                            <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                          </button>
                         )}
-                        Lưu & Mua nguyên liệu
-                        <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                      </button>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -800,8 +882,8 @@ export default function MealPlan() {
                         <div
                           key={item.id}
                           className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${item.isUglyProduce
-                              ? 'bg-emerald-800/40 border-emerald-500/30'
-                              : 'bg-white/5 border-white/10'
+                            ? 'bg-emerald-800/40 border-emerald-500/30'
+                            : 'bg-white/5 border-white/10'
                             }`}
                         >
                           <div className="flex items-center gap-3">
@@ -1034,10 +1116,100 @@ export default function MealPlan() {
                         Mở thực đơn
                         <ChevronRight size={16} />
                       </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleBuyPlan(plan.id);
+                        }}
+                        className="w-full mt-2 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm transition-all shadow-sm flex items-center justify-center gap-2"
+                      >
+                        <ShoppingCart size={16} />
+                        Mua ngay
+                      </button>
                     </div>
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dish Details Modal */}
+      {viewingDish && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm"
+            onClick={() => setViewingDish(null)}
+          ></div>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden relative z-10 flex flex-col font-sans animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-stone-100 flex items-center justify-between bg-white">
+              <div>
+                <h3 className="text-xl font-bold text-stone-800">{viewingDish.name}</h3>
+                <p className="text-xs text-stone-500 font-bold uppercase tracking-widest mt-1">Thành phần nguyên liệu</p>
+              </div>
+              <button
+                onClick={() => setViewingDish(null)}
+                className="p-2 hover:bg-stone-100 rounded-full transition-colors"
+              >
+                <X size={20} className="text-stone-400" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="bg-stone-50 rounded-2xl p-4">
+                <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-3">Định lượng cho {numPeople} người</p>
+                <div className="space-y-3">
+                  {viewingDish.recipes.length > 0 ? (
+                    viewingDish.recipes.map((item, idx) => {
+                      const product = getProductInfo(item.ingredientId);
+                      const totalQty = item.quantityPerPerson * numPeople;
+                      return (
+                        <div key={idx} className="flex items-center justify-between border-b border-stone-200 pb-2 last:border-0 last:pb-0">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-emerald-600 border border-stone-200">
+                              <Leaf size={14} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-stone-800">{product?.productName || 'Đang tải...'}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-mono font-bold text-emerald-700">
+                              {totalQty >= 1000 ? (totalQty / 1000).toFixed(1) : totalQty}
+                              <span className="text-[10px] ml-1 font-sans text-stone-400">{totalQty >= 1000 ? 'kg' : (product?.unit || 'g')}</span>
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-4 text-stone-400 italic text-sm">
+                      Dữ liệu thành phần đang được cập nhật...
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    handleBuyCombo(viewingDish.id);
+                    setViewingDish(null);
+                  }}
+                  className="flex-1 py-3.5 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 flex items-center justify-center gap-2"
+                >
+                  <ShoppingCart size={18} />
+                  Mua nguyên liệu
+                </button>
+                <button
+                  onClick={() => setViewingDish(null)}
+                  className="flex-1 py-3.5 bg-stone-100 text-stone-600 rounded-xl font-bold text-sm hover:bg-stone-200 transition-all flex items-center justify-center"
+                >
+                  Đóng
+                </button>
+              </div>
             </div>
           </div>
         </div>
