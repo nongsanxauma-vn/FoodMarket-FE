@@ -5,7 +5,7 @@ import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
 import TextAlign from '@tiptap/extension-text-align';
 import Underline from '@tiptap/extension-underline';
-import { TOKEN_KEY, API_BASE_URL } from '../services/api.config';
+import { blogService } from '../services';
 
 import './MyCKEditor.css';
 
@@ -24,60 +24,40 @@ const MyCKEditor: React.FC<MyCKEditorProps> = ({ value, onChange, placeholder = 
       return;
     }
 
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      alert('Bạn cần đăng nhập để upload ảnh');
-      return;
-    }
-
     try {
+      // use the centralized service which already attaches auth headers and base URL
       const formData = new FormData();
-      formData.append('file', file); // Backend expect 'file', not 'upload'
+      formData.append('upload', file);
 
-      const uploadUrl = `${API_BASE_URL}/blogs/upload-image`;
-      console.log('[MyCKEditor] Uploading image:', file.name);
-      console.log('[MyCKEditor] Upload URL:', uploadUrl);
-      console.log('[MyCKEditor] Token:', token ? 'Present' : 'Missing');
+      console.log('Uploading image via blogService:', file.name);
 
-      const response = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
+      const response = await blogService.uploadImage(file);
+      console.log('Upload response data:', response);
 
-      console.log('[MyCKEditor] Upload response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[MyCKEditor] Upload error response:', errorText);
-        throw new Error(`Server error ${response.status}: ${errorText}`);
-      }
-
-      const data = await response.json();
-      console.log('[MyCKEditor] Upload response data:', data);
-      
-      const imageUrl = data.url || data.result?.url;
-      
+      // backend returns plain map { "url": "..." }
+      const imageUrl = response.result?.url || (response as any).url;
+      console.log('Extracted image URL:', imageUrl);
+      h
       if (!imageUrl) {
+        console.error('Response structure:', JSON.stringify(response));
         throw new Error('Server did not return image URL');
       }
 
       if (editor && imageUrl) {
+        console.log('Inserting image into editor:', imageUrl);
         editor.chain().focus().setImage({ src: imageUrl }).run();
         alert('Ảnh tải lên thành công!');
       }
     } catch (error: any) {
-      console.error('[MyCKEditor] Image upload error:', error);
+      console.error('Image upload error:', error);
       
       let errorMsg = 'Không thể tải ảnh lên';
       
       if (error.message.includes('Failed to fetch')) {
-        errorMsg = `⚠️ Lỗi kết nối: Không thể kết nối đến Backend server.\n\nKiểm tra:\n1. Backend có đang chạy không?\n2. URL: ${API_BASE_URL}/blogs/upload-image\n3. Mở Console để xem chi tiết`;
-      } else if (error.message.includes('Server error')) {
-        errorMsg = error.message;
-      } else {
+        errorMsg = '⚠️ Lỗi kết nối: Backend server không chạy. Vui lòng kiểm tra server lại.';
+      } else if (error.message.includes('timeout')) {
+        errorMsg = 'Yêu cầu tải ảnh quá thời gian, vui lòng thử lại.';
+      } else if (error.message) {
         errorMsg = error.message;
       }
       
