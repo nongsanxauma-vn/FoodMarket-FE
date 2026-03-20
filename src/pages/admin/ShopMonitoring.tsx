@@ -173,7 +173,12 @@ const ShopMonitoring: React.FC = () => {
                               <span className={`px-3 py-1 rounded-lg text-[10px] font-black ${shop.status === 'ACTIVE' ? 'bg-green-50 text-green-600' :
                                  shop.status === 'DEACTIVATED' || shop.status === 'INACTIVE' ? 'bg-red-50 text-red-500' :
                                     'bg-orange-50 text-orange-500'
-                                 }`}>{shop.status || 'N/A'}</span>
+                                 }`}>
+                                 {shop.status === 'ACTIVE' ? 'Hoạt động' :
+                                  shop.status === 'DEACTIVATED' ? 'Đã khóa' :
+                                  shop.status === 'INACTIVE' ? 'Tạm ngưng' :
+                                  shop.status || 'N/A'}
+                              </span>
                            </td>
                            <td className="px-10 py-6 text-right">
                               <div className="flex items-center justify-end gap-3">

@@ -189,6 +189,14 @@ const NewsManagement: React.FC = () => {
    };
 
 
+   // Calculate statistics
+   const totalViews = blogs.reduce((sum, b) => sum + (b.views || 0), 0);
+   const newBlogsThisMonth = blogs.filter(b => {
+      const date = new Date(b.createAt);
+      const now = new Date();
+      return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+   }).length;
+
    if (isAddingNew || isEditing) {
       return (
          <div className="flex flex-col gap-8 p-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
@@ -430,24 +438,24 @@ const NewsManagement: React.FC = () => {
                                     </div>
                                  </div>
                               </td>
-                              <td className="px-6 py-6">
-                                 <span className="px-3 py-1 bg-green-50 text-primary text-[10px] font-black rounded-lg uppercase tracking-tight">
+                              <td className="px-6 py-6 text-center">
+                                 <span className="inline-block px-3 py-1 bg-green-50 text-primary text-[10px] font-black rounded-lg uppercase tracking-tight whitespace-nowrap">
                                     {art.category}
                                  </span>
                               </td>
                               <td className="px-6 py-6 text-center">
-                                 <div className="flex flex-col items-center">
-                                    <span className="text-xs font-bold text-gray-600">{art.adminName}</span>
+                                 <div className="flex flex-col items-center justify-center">
+                                    <span className="text-xs font-bold text-gray-600 whitespace-nowrap">{art.adminName}</span>
                                  </div>
                               </td>
                               <td className="px-6 py-6 text-center">
                                  <div className="flex items-center justify-center gap-1.5 text-gray-400">
                                     <Eye className="size-3" />
-                                    <span className="text-xs font-bold">0</span>
+                                    <span className="text-xs font-bold">{art.views || 0}</span>
                                  </div>
                               </td>
                               <td className="px-6 py-6 text-center">
-                                 <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${art.status === 'PUBLISHED' ? 'text-emerald-600 bg-emerald-50' : 'text-gray-400 bg-gray-50'}`}>
+                                 <span className={`inline-block px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest whitespace-nowrap ${art.status === 'PUBLISHED' ? 'text-emerald-600 bg-emerald-50' : 'text-gray-400 bg-gray-50'}`}>
                                     {art.status === 'PUBLISHED' ? 'Đã đăng' : 'Bản nháp'}
                                  </span>
                               </td>
@@ -530,14 +538,14 @@ const NewsManagement: React.FC = () => {
                <div className="space-y-4">
                   <div className="flex justify-between items-center">
                      <span className="text-xs font-bold text-gray-400 uppercase">Bài mới:</span>
-                     <span className="text-lg font-black text-primary">12</span>
+                     <span className="text-lg font-black text-primary">{newBlogsThisMonth}</span>
                   </div>
                   <div className="w-full h-1.5 bg-gray-100 rounded-full">
-                     <div className="w-[65%] h-full bg-primary rounded-full" />
+                     <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min((newBlogsThisMonth / 20) * 100, 100)}%` }} />
                   </div>
                   <div className="flex justify-between items-center">
                      <span className="text-xs font-bold text-gray-400 uppercase">Tổng views:</span>
-                     <span className="text-lg font-black text-gray-900">45,820</span>
+                     <span className="text-lg font-black text-gray-900">{totalViews.toLocaleString('vi-VN')}</span>
                   </div>
                </div>
                <div className="absolute -right-4 -bottom-4 size-24 bg-primary/5 rounded-full blur-2xl" />
