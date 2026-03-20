@@ -358,7 +358,13 @@ const Profile: React.FC = () => {
                 {/* Role Badge */}
                 <div className="p-4 bg-gradient-to-br from-green-50 to-blue-50 rounded-xl border border-green-100">
                   <p className="text-[10px] font-black text-gray-500 uppercase mb-2">Vai trò</p>
-                  <p className="text-sm font-black text-gray-900">{user?.role?.name || 'N/A'}</p>
+                  <p className="text-sm font-black text-gray-900">
+                    {user?.role?.name === 'SHOP_OWNER' ? 'Chủ cửa hàng' : 
+                     user?.role?.name === 'BUYER' ? 'Người mua' : 
+                     user?.role?.name === 'SHIPPER' ? 'Người giao hàng' : 
+                     user?.role?.name === 'ADMIN' ? 'Quản trị viên' : 
+                     user?.role?.name || 'N/A'}
+                  </p>
                 </div>
 
                 {/* Join Date */}
@@ -372,29 +378,45 @@ const Profile: React.FC = () => {
                   <p className="text-[10px] font-black text-gray-500 uppercase mb-3">Chứng chỉ</p>
                   
                   <div className="space-y-2">
-                    <div className="p-3 bg-gray-50 rounded-lg border border-gray-100 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="size-8 bg-white rounded-lg flex items-center justify-center">
-                          <CheckCircle2 className="size-4 text-green-600" />
+                    {user?.achievement ? (
+                      <div className="p-3 bg-green-50 rounded-lg border border-green-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="size-8 bg-white rounded-lg flex items-center justify-center">
+                            <CheckCircle2 className="size-4 text-green-600" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-gray-900">Chứng chỉ/Thành tựu</p>
+                            <p className="text-[9px] text-gray-500 line-clamp-1">{user.achievement}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs font-bold text-gray-900">VietGAP</p>
-                          <p className="text-[9px] text-gray-500">Chưa cập nhật</p>
-                        </div>
+                        <Award className="size-4 text-primary opacity-20" />
                       </div>
-                    </div>
-
-                    <div className="p-3 bg-gray-50 rounded-lg border border-gray-100 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="size-8 bg-white rounded-lg flex items-center justify-center">
-                          <Leaf className="size-4 text-green-600" />
+                    ) : (
+                      <>
+                        <div className="p-3 bg-gray-50 rounded-lg border border-gray-100 flex items-center justify-between opacity-60">
+                          <div className="flex items-center gap-2">
+                            <div className="size-8 bg-white rounded-lg flex items-center justify-center">
+                              <CheckCircle2 className="size-4 text-gray-400" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-gray-400">VietGAP</p>
+                              <p className="text-[9px] text-gray-400">Chưa cập nhật</p>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs font-bold text-gray-900">Organic</p>
-                          <p className="text-[9px] text-gray-500">Chưa cập nhật</p>
+                        <div className="p-3 bg-gray-50 rounded-lg border border-gray-100 flex items-center justify-between opacity-60">
+                          <div className="flex items-center gap-2">
+                            <div className="size-8 bg-white rounded-lg flex items-center justify-center">
+                              <Leaf className="size-4 text-gray-400" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-gray-400">Organic</p>
+                              <p className="text-[9px] text-gray-400">Chưa cập nhật</p>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
+                      </>
+                    )}
 
                     <button className="w-full py-2.5 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 flex items-center justify-center gap-2 hover:border-primary/40 hover:text-primary transition-all text-xs font-bold">
                       <Plus className="size-3.5" /> Tải lên chứng chỉ

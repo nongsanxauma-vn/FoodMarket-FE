@@ -147,6 +147,29 @@ const Header: React.FC<HeaderProps> = ({
     }
   };
 
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Sync search input with URL if user navigates back or types directly
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const q = params.get('search') || '';
+    setSearchQuery(q);
+  }, [location.search]);
+
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      navigate(`/?search=${encodeURIComponent(searchQuery.trim())}`);
+    } else {
+      navigate('/');
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
   const containerClass = 'w-full max-w-[1280px] mx-auto';
   const outerPaddingClass = 'px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12';
 
@@ -164,11 +187,14 @@ const Header: React.FC<HeaderProps> = ({
           {/* Search Bar */}
           <div className="flex-1 max-w-[700px] relative">
             <div className="relative flex items-center bg-white rounded-full h-11 px-5 overflow-hidden shadow-inner">
-              <Search className="size-4 text-gray-400 mr-3" />
+              <Search className="size-4 text-gray-400 mr-3 cursor-pointer hover:text-primary transition-colors" onClick={handleSearch} />
               <input
                 className="w-full border-none focus:ring-0 text-sm text-gray-800 placeholder:text-gray-400 font-medium"
                 placeholder="Tìm kiếm nông sản, nhà vườn..."
                 type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
               />
             </div>
           </div>

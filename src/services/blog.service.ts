@@ -11,7 +11,9 @@ export interface BlogResponse {
     createAt: string;
     adminId: number;
     adminName: string;
+    views: number;
 }
+
 
 export interface BlogCreationRequest {
     title: string;
