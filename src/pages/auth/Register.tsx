@@ -68,6 +68,22 @@ const Register: React.FC<RegisterProps> = ({ onGoToLogin, onGoToShipperRegister 
   const [pendingRegistration, setPendingRegistration] = useState<any>(null);
   const [farmerStep, setFarmerStep] = useState<1 | 2>(1);
 
+  const handleGoogleLogin = () => {
+    // Determine the role to send to the backend
+    // Similar to Login.tsx logic
+    let roleParam = selectedRole === AppRole.FARMER ? 'SHOP_OWNER' : selectedRole;
+    
+    // Construct the backend URL for OAuth2
+    const backendOAuthUrl = `http://localhost:8080/api/v1/oauth2/authorization/google?role=${roleParam}`;
+    window.location.href = backendOAuthUrl;
+  };
+
+  const handleFacebookLogin = () => {
+    let roleParam = selectedRole === AppRole.FARMER ? 'SHOP_OWNER' : selectedRole;
+    const backendOAuthUrl = `http://localhost:8080/api/v1/oauth2/authorization/facebook?role=${roleParam}`;
+    window.location.href = backendOAuthUrl;
+  };
+
   // Shop Owner specific fields
   const [shopName, setShopName] = useState('');
   const [address, setAddress] = useState('');
@@ -330,8 +346,8 @@ const Register: React.FC<RegisterProps> = ({ onGoToLogin, onGoToShipperRegister 
                     </div>
                   </div>
 
-                  {/* ── Social login (Buyer only) ── */}
-                  {!isFarmer && onGoToShipperRegister && (
+                  {/* ── Social login (All roles) ── */}
+                  {onGoToShipperRegister && (
                     <div className="space-y-2 mt-4">
                       <div className="relative flex items-center gap-3">
                         <div className="h-px bg-cream flex-1" />
@@ -339,10 +355,10 @@ const Register: React.FC<RegisterProps> = ({ onGoToLogin, onGoToShipperRegister 
                         <div className="h-px bg-cream flex-1" />
                       </div>
                       <div className="grid grid-cols-2 gap-2.5">
-                        <button type="button" className="flex items-center justify-center gap-2 py-2.5 bg-white border-2 border-cream rounded-xl hover:bg-cream/30 transition-all font-bold text-slate-600 text-sm">
+                        <button type="button" onClick={handleGoogleLogin} className="flex items-center justify-center gap-2 py-2.5 bg-white border-2 border-cream rounded-xl hover:bg-cream/30 transition-all font-bold text-slate-600 text-sm">
                           <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-4 h-4" /> Google
                         </button>
-                        <button type="button" className="flex items-center justify-center gap-2 py-2.5 bg-white border-2 border-cream rounded-xl hover:bg-cream/30 transition-all font-bold text-slate-600 text-sm">
+                        <button type="button" onClick={handleFacebookLogin} className="flex items-center justify-center gap-2 py-2.5 bg-white border-2 border-cream rounded-xl hover:bg-cream/30 transition-all font-bold text-slate-600 text-sm">
                           Facebook
                         </button>
                       </div>
