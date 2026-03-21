@@ -6,6 +6,7 @@ import {
   Navigation, Play, Square, MapPin, ChevronRight,
   Loader2, Route, Zap
 } from 'lucide-react';
+import { globalShowAlert } from '../../contexts/PopupContext';
 
 interface FakeGPSProps {
   orderId: number;           // orderId đang giao
@@ -158,7 +159,7 @@ const FakeGPS: React.FC<FakeGPSProps> = ({
       ]);
 
       if (!route1.length || !route2.length) {
-        alert('Không lấy được đường đi từ OSRM. Thử lại!');
+        globalShowAlert('Không lấy được đường đi từ OSRM. Thử lại!', 'Lỗi', 'error');
         setPhase('idle');
         return;
       }

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { TypingIndicatorProps } from './chatbot.types';
+import styles from './ChatBot.module.css';
 
 /**
  * TypingIndicator Component
@@ -34,7 +35,7 @@ export const TypingIndicator: React.FC<TypingIndicatorProps> = ({
 
   return (
     <div 
-      className="typing-indicator"
+      className={styles['typing-indicator']}
       style={{
         display: 'flex',
         alignItems: 'center',

@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ChatBotProvider, ChatBot } from './components/ChatBot';
 import AppRouter from './routes/AppRouter';
 import ScrollToTop from './components/layout/ScrollToTop';
+import { PopupProvider } from './contexts/PopupContext';
 import './App.css';
 
 const ChatBotWrapper: React.FC = () => {
@@ -39,10 +40,12 @@ const App: React.FC = () => {
   return (
     <BrowserRouter basename="/">
       <ScrollToTop />
-      <AuthProvider>
-        <AppRouter />
-        <ChatBotWrapper />
-      </AuthProvider>
+      <PopupProvider>
+        <AuthProvider>
+          <AppRouter />
+          <ChatBotWrapper />
+        </AuthProvider>
+      </PopupProvider>
     </BrowserRouter>
   );
 };

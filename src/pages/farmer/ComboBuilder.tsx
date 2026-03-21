@@ -5,6 +5,7 @@ import {
   ChefHat, Sparkles, Loader2, AlertCircle, MapPin
 } from 'lucide-react';
 import { productService, comboService, authService, ProductResponse, Region } from '../../services/index';
+import { globalShowAlert } from '../../contexts/PopupContext';
 
 interface SelectedIngredient {
   productId: number;
@@ -99,12 +100,12 @@ const ComboBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   };
 
   const handleSave = async () => {
-    if (!comboName.trim()) { alert('Vui lòng nhập tên combo.'); return; }
-    if (!comboPrice || Number(comboPrice) <= 0) { alert('Vui lòng nhập giá hợp lệ.'); return; }
-    if (selectedIngredients.length === 0) { alert('Vui lòng chọn ít nhất một nguyên liệu.'); return; }
+    if (!comboName.trim()) { globalShowAlert('Vui lòng nhập tên combo.', 'Nhắc nhở', 'warning'); return; }
+    if (!comboPrice || Number(comboPrice) <= 0) { globalShowAlert('Vui lòng nhập giá hợp lệ.', 'Nhắc nhở', 'warning'); return; }
+    if (selectedIngredients.length === 0) { globalShowAlert('Vui lòng chọn ít nhất một nguyên liệu.', 'Nhắc nhở', 'warning'); return; }
     const priceNum = Number(comboPrice);
     if (priceNum > totalIngredientsPrice) {
-      alert(`Giá bán combo (${priceNum.toLocaleString('vi-VN')}đ) không được lớn hơn tổng giá trị nguyên liệu (${totalIngredientsPrice.toLocaleString('vi-VN')}đ). Combo nên rẻ hơn hoặc bằng giá lẻ.`);
+      globalShowAlert(`Giá bán combo (${priceNum.toLocaleString('vi-VN')}đ) không được lớn hơn tổng giá trị nguyên liệu (${totalIngredientsPrice.toLocaleString('vi-VN')}đ). Combo nên rẻ hơn hoặc bằng giá lẻ.`, 'Cảnh báo', 'warning');
       return;
     }
     setIsSaving(true);

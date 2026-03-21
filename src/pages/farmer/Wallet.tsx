@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { walletService, WalletResponse, WithdrawRequestResponse } from '../../services';
+import { globalShowAlert } from '../../contexts/PopupContext';
 
 const Wallet: React.FC = () => {
    const [wallet, setWallet] = useState<WalletResponse | null>(null);
@@ -43,11 +44,11 @@ const Wallet: React.FC = () => {
       e.preventDefault();
       const amountNum = Number(withdrawAmount);
       if (!amountNum || amountNum <= 0) {
-         alert('Vui lòng nhập số tiền hợp lệ');
+         globalShowAlert('Vui lòng nhập số tiền hợp lệ', 'Lỗi', 'warning');
          return;
       }
       if (wallet && amountNum > wallet.totalBalance) {
-         alert('Số tiền rút vượt quá số dư khả dụng');
+         globalShowAlert('Số tiền rút vượt quá số dư khả dụng', 'Lỗi', 'warning');
          return;
       }
 
@@ -62,7 +63,7 @@ const Wallet: React.FC = () => {
          });
 
          if (res.result) {
-            alert('Đã gửi yêu cầu rút tiền thành công!');
+            globalShowAlert('Đã gửi yêu cầu rút tiền thành công!', 'Thành công', 'success');
             setIsWithdrawModalOpen(false);
             setWithdrawAmount('');
             setWithdrawReason('');
@@ -71,7 +72,7 @@ const Wallet: React.FC = () => {
             if (withdrawRes.result) setWithdrawRequests(withdrawRes.result);
          }
       } catch (err: any) {
-         alert(err?.data?.message || 'Có lỗi xảy ra khi tạo yêu cầu rút tiền');
+         globalShowAlert(err?.data?.message || 'Có lỗi xảy ra khi tạo yêu cầu rút tiền', 'Lỗi', 'error');
       } finally {
          setIsSubmitting(false);
       }
@@ -220,7 +221,7 @@ const Wallet: React.FC = () => {
                               <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                                  <td className="px-6 py-5 font-mono text-sm text-slate-600">#WD-{item.id}</td>
                                  <td className="px-6 py-5 text-sm text-slate-600">
-                                    {item.createdAt ? new Date(item.createdAt).toLocaleDateString('vi-VN') : 'N/A'}
+                                    {(item as any).createdAt ? new Date((item as any).createdAt).toLocaleDateString('vi-VN') : 'N/A'}
                                  </td>
                                  <td className="px-6 py-5 text-sm font-bold text-slate-900">
                                     {item.amount.toLocaleString('vi-VN')}đ

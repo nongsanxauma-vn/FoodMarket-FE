@@ -13,7 +13,7 @@ import ChatWindow from '../../components/chat/ChatWindow';
 import type { Conversation } from '../../types/chat';
 
 const HEADER_H = 60; // px
-const ADMIN_USER_ID = 6; // ID của Admin trong database - cần cập nhật theo thực tế
+const ADMIN_USER_ID = 1; // ID của Admin trong database - cần cập nhật theo thực tế
 const SUPPORT_CENTER_NAME = 'Trung tâm hỗ trợ';
 
 const ChatPage: React.FC = () => {

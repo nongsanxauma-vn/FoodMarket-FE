@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Edit3, EyeOff, Eye, Trash2, CheckCircle, Clock, AlertCircle, Loader2, X, Sparkles, ChefHat } from 'lucide-react';
 import { productService, comboService, mysteryBoxService, authService, ProductResponse, ProductCreationRequest, BuildComboResponse, MysteryBox } from '../../services';
 import Pagination, { PageInfo } from '../../components/ui/Pagination';
+import { globalShowAlert, globalShowConfirm } from '../../contexts/PopupContext';
 
 const PAGE_SIZE = 10;
 
@@ -195,44 +196,44 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
   }, []); // Only fetch once initially or when forced
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm(`Bạn có chắc muốn xóa sản phẩm ID #${id}? Hành động này không thể hoàn tác.`)) return;
+    if (!await globalShowConfirm(`Bạn có chắc muốn xóa sản phẩm ID #${id}? Hành động này không thể hoàn tác.`)) return;
 
     try {
       setIsDeleting(true);
       await productService.deleteProduct(id);
-      alert('Đã xóa thành công!');
+      globalShowAlert('Đã xóa thành công!', 'Thành công', 'success');
       fetchData();
     } catch (err: any) {
-      alert(err?.data?.message || 'Có lỗi khi xóa sản phẩm');
+      globalShowAlert(err?.data?.message || 'Có lỗi khi xóa sản phẩm', 'Lỗi', 'error');
     } finally {
       setIsDeleting(false);
     }
   };
 
   const handleDeleteCombo = async (id: number) => {
-    if (!window.confirm(`Bạn có chắc muốn xóa combo/hộp mù ID #${id}? Hành động này không thể hoàn tác.`)) return;
+    if (!await globalShowConfirm(`Bạn có chắc muốn xóa combo/hộp mù ID #${id}? Hành động này không thể hoàn tác.`)) return;
 
     try {
       setIsDeleting(true);
       await comboService.delete(id);
-      alert('Đã xóa thành công!');
+      globalShowAlert('Đã xóa thành công!', 'Thành công', 'success');
       fetchData();
     } catch (err: any) {
-      alert(err?.data?.message || 'Có lỗi khi xóa combo/hộp mù');
+      globalShowAlert(err?.data?.message || 'Có lỗi khi xóa combo/hộp mù', 'Lỗi', 'error');
     } finally {
       setIsDeleting(false);
     }
   };
 
   const handleDeleteMysteryBox = async (id: number) => {
-    if (!window.confirm(`Bạn có chắc muốn xóa hộp mù ID #${id}?`)) return;
+    if (!await globalShowConfirm(`Bạn có chắc muốn xóa hộp mù ID #${id}?`)) return;
     try {
       setIsDeleting(true);
       await mysteryBoxService.deleteMysteryBox(id);
-      alert('Đã xóa thành công!');
+      globalShowAlert('Đã xóa thành công!', 'Thành công', 'success');
       fetchData();
     } catch (err: any) {
-      alert(err?.data?.message || 'Có lỗi khi xóa hộp mù');
+      globalShowAlert(err?.data?.message || 'Có lỗi khi xóa hộp mù', 'Lỗi', 'error');
     } finally {
       setIsDeleting(false);
     }
@@ -248,7 +249,7 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
       await mysteryBoxService.toggleActive(box.id);
       fetchData();
     } catch (err: any) {
-      alert(err?.data?.message || 'Không thể thay đổi trạng thái túi mù');
+      globalShowAlert(err?.data?.message || 'Không thể thay đổi trạng thái túi mù', 'Lỗi', 'error');
     } finally {
       setTogglingBox(null);
     }

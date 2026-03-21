@@ -6,6 +6,7 @@ import Image from '@tiptap/extension-image';
 import TextAlign from '@tiptap/extension-text-align';
 import Underline from '@tiptap/extension-underline';
 import { blogService } from '../services';
+import { globalShowAlert } from '../contexts/PopupContext';
 
 import './MyCKEditor.css';
 
@@ -20,7 +21,7 @@ const MyCKEditor: React.FC<MyCKEditorProps> = ({ value, onChange, placeholder = 
 
   const handleImageUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) {
-      alert('Vui lòng chọn một tệp ảnh');
+      globalShowAlert('Vui lòng chọn một tệp ảnh', 'Lỗi', 'error');
       return;
     }
 
@@ -37,7 +38,6 @@ const MyCKEditor: React.FC<MyCKEditorProps> = ({ value, onChange, placeholder = 
       // backend returns plain map { "url": "..." }
       const imageUrl = response.result?.url || (response as any).url;
       console.log('Extracted image URL:', imageUrl);
-      h
       if (!imageUrl) {
         console.error('Response structure:', JSON.stringify(response));
         throw new Error('Server did not return image URL');
@@ -46,7 +46,7 @@ const MyCKEditor: React.FC<MyCKEditorProps> = ({ value, onChange, placeholder = 
       if (editor && imageUrl) {
         console.log('Inserting image into editor:', imageUrl);
         editor.chain().focus().setImage({ src: imageUrl }).run();
-        alert('Ảnh tải lên thành công!');
+        globalShowAlert('Ảnh tải lên thành công!', 'Thành công', 'success');
       }
     } catch (error: any) {
       console.error('Image upload error:', error);
@@ -61,7 +61,7 @@ const MyCKEditor: React.FC<MyCKEditorProps> = ({ value, onChange, placeholder = 
         errorMsg = error.message;
       }
       
-      alert(errorMsg);
+      globalShowAlert(errorMsg, 'Lỗi', 'error');
     }
   };
 

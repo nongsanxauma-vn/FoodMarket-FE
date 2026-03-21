@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet, TrendingUp, Download, Loader2, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import { walletService, WithdrawRequestResponse } from '../../services';
+import { globalShowAlert, globalShowConfirm } from '../../contexts/PopupContext';
 
 const AdminWallet: React.FC = () => {
   const [pendingRequests, setPendingRequests] = useState<WithdrawRequestResponse[]>([]);
@@ -36,15 +37,15 @@ const AdminWallet: React.FC = () => {
   }, []);
 
   const handleApprove = async (id: number) => {
-    if (!window.confirm(`Bạn có chắc muốn phê duyệt giải ngân yêu cầu #${id}?`)) return;
+    if (!await globalShowConfirm('Xác nhận', `Bạn có chắc muốn phê duyệt giải ngân yêu cầu #${id}?`)) return;
 
     try {
       setIsProcessing(true);
       await walletService.confirmWithdrawSuccess(id, 'Đã giải ngân thành công qua Admin');
-      alert(`Đã phê duyệt yêu cầu #${id}`);
+      globalShowAlert(`Đã phê duyệt yêu cầu #${id}`, 'Thành công', 'success');
       fetchData();
     } catch (err: any) {
-      alert(err?.data?.message || 'Có lỗi khi duyệt yêu cầu');
+      globalShowAlert(err?.data?.message || 'Có lỗi khi duyệt yêu cầu', 'Lỗi', 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -57,20 +58,20 @@ const AdminWallet: React.FC = () => {
 
   const submitReject = async () => {
     if (!rejectId || !rejectNote.trim()) {
-      alert('Vui lòng nhập lý do từ chối');
+      globalShowAlert('Vui lòng nhập lý do từ chối', 'Lỗi', 'error');
       return;
     }
 
     try {
       setIsProcessing(true);
       await walletService.rejectWithdraw(rejectId, rejectNote);
-      alert(`Đã từ chối yêu cầu #${rejectId}`);
+      globalShowAlert(`Đã từ chối yêu cầu #${rejectId}`, 'Thành công', 'success');
       setIsRejectModalOpen(false);
       setRejectNote('');
       setRejectId(null);
       fetchData();
     } catch (err: any) {
-      alert(err?.data?.message || 'Có lỗi khi từ chối yêu cầu');
+      globalShowAlert(err?.data?.message || 'Có lỗi khi từ chối yêu cầu', 'Lỗi', 'error');
     } finally {
       setIsProcessing(false);
     }

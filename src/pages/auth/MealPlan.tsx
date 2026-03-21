@@ -26,6 +26,7 @@ import { productService, ProductResponse } from '../../services/product.service'
 import { cartService } from '../../services/cart.service';
 import { useAuth } from '../../contexts/AuthContext';
 import { BuildPlanDetailRequest, BuildPlanResponse, PlanDayRequest, MealRequest, MealItemRequest } from '../../types';
+import { globalShowAlert, globalShowConfirm } from '../../contexts/PopupContext';
 
 // --- Types ---
 
@@ -201,10 +202,10 @@ export default function MealPlan() {
   };
 
   const handleDeleteAnyPlan = async (id: number) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa thực đơn này?")) return;
+    if (!await globalShowConfirm("Bạn có chắc chắn muốn xóa thực đơn này?", "Xác nhận xóa")) return;
     try {
       await buildPlanService.deletePlan(id);
-      alert("Đã xóa thực đơn thành công!");
+      globalShowAlert("Đã xóa thực đơn thành công!", "Thành công", "success");
       if (id === planId) {
         setPlanId(null);
         setPlanName('');
@@ -213,7 +214,7 @@ export default function MealPlan() {
       fetchSavedPlans();
     } catch (err) {
       console.error("Error deleting plan:", err);
-      alert("Không thể xóa thực đơn. Vui lòng thử lại.");
+      globalShowAlert("Không thể xóa thực đơn. Vui lòng thử lại.", "Lỗi", "error");
     }
   };
 
@@ -417,7 +418,7 @@ export default function MealPlan() {
 
   const saveToBackend = async () => {
     if (!user) {
-      alert("Vui lòng đăng nhập để lưu thực đơn");
+      globalShowAlert("Vui lòng đăng nhập để lưu thực đơn", "Yêu cầu đăng nhập", "warning");
       return;
     }
 
@@ -457,11 +458,11 @@ export default function MealPlan() {
       if (response.result) {
         setPlanId(response.result.id);
         fetchSavedPlans();
-        alert("Đã lưu thực đơn thành công!");
+        globalShowAlert("Đã lưu thực đơn thành công!", "Thành công", "success");
       }
     } catch (err) {
       console.error("Error saving plan:", err);
-      alert("Không thể lưu thực đơn. Vui lòng thử lại.");
+      globalShowAlert("Không thể lưu thực đơn. Vui lòng thử lại.", "Lỗi", "error");
     } finally {
       setIsSaving(false);
     }
@@ -470,11 +471,11 @@ export default function MealPlan() {
   const handleBuyPlan = async (id?: number) => {
     const targetId = id || planId;
     if (!targetId) {
-      alert("Vui lòng lưu thực đơn trước khi mua");
+      globalShowAlert("Vui lòng lưu thực đơn trước khi mua", "Nhắc nhở", "warning");
       return;
     }
 
-    if (!window.confirm("Hệ thống sẽ thêm tất cả nguyên liệu trong thực đơn này vào giỏ hàng và chuyển đến trang thanh toán. Bạn có muốn tiếp tục?")) {
+    if (!await globalShowConfirm("Hệ thống sẽ thêm tất cả nguyên liệu trong thực đơn này vào giỏ hàng và chuyển đến trang thanh toán. Bạn có muốn tiếp tục?", "Xác nhận mua")) {
       return;
     }
 
@@ -484,7 +485,7 @@ export default function MealPlan() {
       navigate('/checkout');
     } catch (err) {
       console.error("Error buying plan:", err);
-      alert("Không thể thực hiện mua. Vui lòng thử lại.");
+      globalShowAlert("Không thể thực hiện mua. Vui lòng thử lại.", "Lỗi", "error");
     } finally {
       setIsBuying(false);
     }
@@ -500,7 +501,7 @@ export default function MealPlan() {
       navigate('/checkout');
     } catch (err) {
       console.error("Error buying combo:", err);
-      alert("Không thể mua món ăn này. Vui lòng thử lại.");
+      globalShowAlert("Không thể mua món ăn này. Vui lòng thử lại.", "Lỗi", "error");
     } finally {
       setIsBuying(false);
     }

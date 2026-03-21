@@ -14,6 +14,7 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { productService, ProductResponse, cartService, reviewService, ReviewResponse } from '../../services';
+import { globalShowAlert } from '../../contexts/PopupContext';
 import ShopProducts from './ShopProducts';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -203,10 +204,10 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
                     setIsAdding(true);
                     await cartService.addToCart({ productId: Number(productId), quantity });
                     window.dispatchEvent(new Event('cart-updated'));
-                    alert(`Đã thêm ${quantity} ${product.unit} ${product.productName} vào giỏ hàng`);
+                    globalShowAlert(`Đã thêm ${quantity} ${product.unit} ${product.productName} vào giỏ hàng`, 'Thành công', 'success');
                   } catch (e) {
                     console.error('Failed to add to cart', e);
-                    alert('Không thể thêm vào giỏ hàng. Vui lòng thử lại.');
+                    globalShowAlert('Không thể thêm vào giỏ hàng. Vui lòng thử lại.', 'Lỗi', 'error');
                   } finally {
                     setIsAdding(false);
                   }
