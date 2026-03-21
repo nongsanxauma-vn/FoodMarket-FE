@@ -5,6 +5,7 @@
 
 import React, { useMemo } from 'react';
 import { SuggestionsPanelProps } from './chatbot.types';
+import styles from './ChatBot.module.css';
 
 // Role-based default suggestions
 const DEFAULT_SUGGESTIONS = {
@@ -99,7 +100,7 @@ function SuggestionChip({ suggestion, onClick, variant = 'default' }: Suggestion
       type="button"
       onClick={onClick}
       style={{ ...baseStyle, ...getVariantStyles() }}
-      className="chatbot-suggestion-chip"
+      className={styles['chatbot-suggestion-chip']}
       title={`Send: ${suggestion}`}
     >
       <span style={{
@@ -194,7 +195,7 @@ export function SuggestionsPanel({
 
   return (
     <div
-      className={`chatbot-suggestions-container ${!isExpanded ? 'is-collapsed' : ''}`}
+      className={`${styles['chatbot-suggestions-container']} ${!isExpanded ? styles['is-collapsed'] : ''}`}
       style={{
         background: 'var(--chatbot-glass-bg)',
         backdropFilter: 'var(--chatbot-blur)',
@@ -236,7 +237,7 @@ export function SuggestionsPanel({
           </div>
 
           <button
-            className={`chatbot-toggle-button ${!isExpanded ? 'is-collapsed' : ''}`}
+            className={`${styles['chatbot-toggle-button']} ${!isExpanded ? styles['is-collapsed'] : ''}`}
             aria-label={isExpanded ? "Thu gọn" : "Mở rộng"}
           >
             <svg
@@ -259,7 +260,7 @@ export function SuggestionsPanel({
       </div>
 
       {/* Expandable Content area */}
-      <div className="chatbot-suggestions-content" style={{ padding: '0 16px 16px 16px' }}>
+      <div className={styles['chatbot-suggestions-content']} style={{ padding: '0 16px 16px 16px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {Object.entries(groupedSuggestions).map(([key, groupSuggestions]) =>
             groupSuggestions.length > 0 && (

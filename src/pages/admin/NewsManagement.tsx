@@ -4,6 +4,7 @@ import { blogService, BlogResponse, BlogCreationRequest } from '../../services';
 import { BlogCategory, PageResponse } from '../../types';
 import MyCKEditor from '../../components/MyCKEditor';
 import Pagination, { PageInfo } from '../../components/ui/Pagination';
+import { globalShowAlert, globalShowConfirm } from '../../contexts/PopupContext';
 
 const NewsManagement: React.FC = () => {
    const [blogs, setBlogs] = useState<BlogResponse[]>([]);
@@ -102,7 +103,7 @@ const NewsManagement: React.FC = () => {
 
    const handleSaveBlog = async () => {
       if (!title || !content) {
-         alert('Vui lòng nhập đầy đủ tiêu đề và nội dung.');
+         globalShowAlert('Vui lòng nhập đầy đủ tiêu đề và nội dung.', 'Lỗi', 'error');
          return;
       }
 
@@ -118,38 +119,38 @@ const NewsManagement: React.FC = () => {
          if (isEditing && selectedBlog) {
             const response = await blogService.updateBlog(selectedBlog.id, request, selectedImage || undefined);
             if (response.result) {
-               alert('Cập nhật bài viết thành công!');
+               globalShowAlert('Cập nhật bài viết thành công!', 'Thành công', 'success');
                clearForm();
                fetchBlogs();
             }
          } else {
             const response = await blogService.createBlog(request as BlogCreationRequest, selectedImage || undefined);
             if (response.result) {
-               alert('Đăng bài viết thành công!');
+               globalShowAlert('Đăng bài viết thành công!', 'Thành công', 'success');
                clearForm();
                fetchBlogs();
             }
          }
       } catch (err) {
          console.error('Failed to save blog', err);
-         alert('Lưu bài viết thất bại. Vui lòng thử lại.');
+         globalShowAlert('Lưu bài viết thất bại. Vui lòng thử lại.', 'Lỗi', 'error');
       } finally {
          setSubmitting(false);
       }
    };
 
    const handleDeleteBlog = async (id: number) => {
-      if (!window.confirm('Bạn có chắc chắn muốn xóa bài viết này không?')) {
+      if (!await globalShowConfirm('Xác nhận', 'Bạn có chắc chắn muốn xóa bài viết này không?')) {
          return;
       }
 
       try {
          await blogService.deleteBlog(id);
          setBlogs(blogs.filter(b => b.id !== id));
-         alert('Đã xóa bài viết thành công.');
+         globalShowAlert('Đã xóa bài viết thành công.', 'Thành công', 'success');
       } catch (err) {
          console.error('Failed to delete blog', err);
-         alert('Xóa bài viết thất bại.');
+         globalShowAlert('Xóa bài viết thất bại.', 'Lỗi', 'error');
       }
    };
 
@@ -165,7 +166,7 @@ const NewsManagement: React.FC = () => {
          setBlogs(blogs.map(b => b.id === blog.id ? { ...b, status: newStatus } : b));
       } catch (err) {
          console.error('Failed to update blog status', err);
-         alert('Đổi trạng thái thất bại.');
+         globalShowAlert('Đổi trạng thái thất bại.', 'Lỗi', 'error');
       }
    };
 

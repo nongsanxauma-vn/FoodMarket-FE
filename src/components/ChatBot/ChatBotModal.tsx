@@ -15,7 +15,8 @@ import {
   useReducedMotion,
   useAriaLiveRegion
 } from './hooks/useAccessibility';
-import './ChatBot.css';
+import styles from './ChatBot.module.css';
+import { globalShowConfirm } from '../../contexts/PopupContext';
 
 interface ChatBotModalProps {
   title?: string;
@@ -93,7 +94,7 @@ export function ChatBotModal({
 
   return (
     <div
-      className={`chatbot-modal-overlay ${isOpen ? 'is-open' : ''} ${className}`}
+      className={`${styles['chatbot-modal-overlay']} ${isOpen ? styles['is-open'] : ''} ${className}`}
       onClick={handleBackdropClick}
       style={{
         opacity: prefersReducedMotion ? 1 : undefined,
@@ -102,7 +103,7 @@ export function ChatBotModal({
     >
       <div
         ref={containerRef as React.RefObject<HTMLDivElement>}
-        className={`chatbot-modal ${isOpen ? 'is-open' : ''} ${isHighContrast ? 'is-high-contrast' : ''}`}
+        className={`${styles['chatbot-modal']} ${isOpen ? styles['is-open'] : ''} ${isHighContrast ? styles['is-high-contrast'] : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="chatbot-title"
@@ -111,16 +112,16 @@ export function ChatBotModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="chatbot-modal-header">
-          <div className="chatbot-modal-title">
-            <div className="chatbot-avatar" aria-hidden="true">
+        <div className={styles['chatbot-modal-header']}>
+          <div className={styles['chatbot-modal-title']}>
+            <div className={styles['chatbot-avatar']} aria-hidden="true">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"></path>
                 <path d="M12 6a6 6 0 1 0 6 6 6 6 0 0 0-6-6zm0 10a4 4 0 1 1 4-4 4 4 0 0 1-4 4z"></path>
                 <circle cx="12" cy="12" r="2"></circle>
               </svg>
             </div>
-            <div className="chatbot-title-text">
+            <div className={styles['chatbot-title-text']}>
               <h2 id="chatbot-title">{title}</h2>
               <p id="chatbot-status">Sẵn sàng hỗ trợ bạn</p>
             </div>
@@ -132,12 +133,12 @@ export function ChatBotModal({
             {/* Nút xóa lịch sử — chỉ hiện khi có tin nhắn */}
             {messages.length > 0 && (
               <button
-                onClick={() => {
-                  if (window.confirm('Bạn có chắc muốn làm mới cuộc trò chuyện không?')) {
+                onClick={async () => {
+                  if (await globalShowConfirm('Xác nhận', 'Bạn có chắc muốn làm mới cuộc trò chuyện không?')) {
                     clearHistory();
                   }
                 }}
-                className="chatbot-close-button"
+                className={styles['chatbot-close-button']}
                 aria-label="Làm mới cuộc trò chuyện"
                 title="Làm mới cuộc trò chuyện"
                 disabled={isLoading}
@@ -164,7 +165,7 @@ export function ChatBotModal({
             {/* Nút đóng */}
             <button
               onClick={toggleChat}
-              className="chatbot-close-button"
+              className={styles['chatbot-close-button']}
               aria-label="Đóng chat"
             >
               <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -184,7 +185,7 @@ export function ChatBotModal({
 
         {/* Error Banner */}
         {error && (
-          <div className="chatbot-error-banner" role="alert">
+          <div className={styles['chatbot-error-banner']} role="alert">
             <div style={{ display: 'flex' }}>
               <div style={{ flexShrink: 0 }}>
                 <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
@@ -199,12 +200,12 @@ export function ChatBotModal({
         )}
 
         {/* Chat Content */}
-        <div className="chatbot-modal-content" role="main">
-          <div className="chatbot-messages-area" role="log" aria-label="Cuộc trò chuyện">
+        <div className={styles['chatbot-modal-content']} role="main">
+          <div className={styles['chatbot-messages-area']} role="log" aria-label="Cuộc trò chuyện">
 
             {messages.length === 0 ? (
-              <div className="chatbot-welcome text-center py-8">
-                <div className="chatbot-welcome-icon mx-auto mb-4">
+              <div className={`${styles['chatbot-welcome']} text-center py-8`}>
+                <div className={`${styles['chatbot-welcome-icon']} mx-auto mb-4`}>
                   <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>

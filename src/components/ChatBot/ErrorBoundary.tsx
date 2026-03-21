@@ -3,6 +3,7 @@
  */
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import styles from './ChatBot.module.css';
 
 // ===== TYPES =====
 interface Props {
@@ -116,11 +117,11 @@ function DefaultErrorFallback({
   };
 
   return (
-    <div className="chatbot-error-boundary">
-      <div className="error-container">
+    <div className={styles['chatbot-error-boundary']}>
+      <div className={styles['error-container']}>
 
         {/* Icon lỗi */}
-        <div className="error-icon">
+        <div className={styles['error-icon']}>
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" strokeWidth="2"
             strokeLinecap="round" strokeLinejoin="round"
@@ -131,40 +132,40 @@ function DefaultErrorFallback({
           </svg>
         </div>
 
-        <h3 className="error-title">Đã xảy ra lỗi</h3>
+        <h3 className={styles['error-title']}>Đã xảy ra lỗi</h3>
 
-        <p className="error-description">
+        <p className={styles['error-description']}>
           {error.message || 'Giao diện chat gặp lỗi. Bạn có thể thử lại hoặc làm mới trang.'}
         </p>
 
         {/* Cảnh báo hết lượt thử */}
         {retryCount >= maxRetries && (
-          <p className="error-max-retries">
+          <p className={styles['error-max-retries']}>
             Đã đạt số lần thử lại tối đa. Vui lòng làm mới trang hoặc liên hệ hỗ trợ.
           </p>
         )}
 
         {/* Các nút hành động */}
-        <div className="error-actions">
+        <div className={styles['error-actions']}>
           {retryCount < maxRetries && (
-            <button className="error-button error-button-primary" onClick={onRetry}>
+            <button className={`${styles['error-button']} ${styles['error-button-primary']}`} onClick={onRetry}>
               Thử lại ({maxRetries - retryCount} lần còn lại)
             </button>
           )}
 
-          <button className="error-button error-button-secondary" onClick={handleRefresh}>
+          <button className={`${styles['error-button']} ${styles['error-button-secondary']}`} onClick={handleRefresh}>
             Làm mới trang
           </button>
 
-          <button className="error-button error-button-secondary" onClick={handleContactSupport}>
+          <button className={`${styles['error-button']} ${styles['error-button-secondary']}`} onClick={handleContactSupport}>
             Liên hệ hỗ trợ
           </button>
         </div>
 
         {/* Mã lỗi */}
         {errorId && (
-          <div className="error-details">
-            <small className="error-id">Mã lỗi: {errorId}</small>
+          <div className={styles['error-details']}>
+            <small className={styles['error-id']}>Mã lỗi: {errorId}</small>
           </div>
         )}
       </div>

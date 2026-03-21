@@ -8,6 +8,7 @@ import { authService } from '../../services/auth.service';
 import { reviewService } from '../../services/review.service';
 import { Star, Camera, X, Loader2 } from 'lucide-react';
 import Pagination, { PageInfo } from '../../components/ui/Pagination';
+import { globalShowAlert, globalShowConfirm } from '../../contexts/PopupContext';
 
 const PAGE_SIZE = 10;
 
@@ -71,9 +72,9 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
     } catch (error: any) {
       console.error('Failed to fetch orders:', error);
       if (error.status === 401) {
-        alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        globalShowAlert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 'Yêu cầu đăng nhập', 'warning');
       } else {
-        alert('Không thể tải danh sách đơn hàng. Vui lòng thử lại.');
+        globalShowAlert('Không thể tải danh sách đơn hàng. Vui lòng thử lại.', 'Lỗi', 'error');
       }
     } finally {
       setLoading(false);
@@ -88,7 +89,7 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
 
       // Validate comment
       if (!comment.trim()) {
-        alert('Vui lòng nhập nhận xét của bạn');
+        globalShowAlert('Vui lòng nhập nhận xét của bạn', 'Nhắc nhở', 'warning');
         return;
       }
 
@@ -103,7 +104,7 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
       if (selectedItem.itemType === 'MYSTERY_BOX') {
         if (!selectedItem.mysteryBoxId) {
           console.error('Mystery box item missing mysteryBoxId:', selectedItem);
-          alert('Lỗi: Không tìm thấy ID hộp mù để đánh giá. Vui lòng liên hệ hỗ trợ.');
+          globalShowAlert('Lỗi: Không tìm thấy ID hộp mù để đánh giá. Vui lòng liên hệ hỗ trợ.', 'Lỗi hệ thống', 'error');
           return;
         }
         reviewData.mysteryBoxId = selectedItem.mysteryBoxId;
@@ -111,7 +112,7 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
       } else {
         if (!selectedItem.orderDetailId) {
           console.error('Product item missing orderDetailId:', selectedItem);
-          alert('Lỗi: Không tìm thấy ID chi tiết đơn hàng để đánh giá. Vui lòng liên hệ hỗ trợ.');
+          globalShowAlert('Lỗi: Không tìm thấy ID chi tiết đơn hàng để đánh giá. Vui lòng liên hệ hỗ trợ.', 'Lỗi hệ thống', 'error');
           return;
         }
         reviewData.orderDetailId = selectedItem.orderDetailId;
@@ -122,7 +123,7 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
       const res = await reviewService.createReview(reviewData, evidence || undefined);
 
       if (res.result) {
-        alert(`Cảm ơn bạn đã đánh giá ${selectedItem.itemType === 'MYSTERY_BOX' ? 'hộp mù' : 'sản phẩm'}!`);
+        globalShowAlert(`Cảm ơn bạn đã đánh giá ${selectedItem.itemType === 'MYSTERY_BOX' ? 'hộp mù' : 'sản phẩm'}!`, 'Thành công', 'success');
         setShowReviewModal(false);
         setSelectedItem(null);
         setRating(5);
@@ -147,25 +148,25 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
         errorMessage = 'Dữ liệu không hợp lệ. Vui lòng thử lại hoặc liên hệ hỗ trợ.';
       }
 
-      alert(errorMessage);
+      globalShowAlert(errorMessage, 'Lỗi', 'error');
     } finally {
       setSubmittingReview(false);
     }
   };
 
   const handleCancelOrder = async (orderId: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) return;
+    if (!await globalShowConfirm('Bạn có chắc chắn muốn hủy đơn hàng này không?', 'Xác nhận hủy đơn')) return;
 
     try {
       setLoading(true);
       const res = await orderService.updateOrder(orderId, { status: 'CANCELLED' });
       if (res.result) {
-        alert('Đã hủy đơn hàng thành công!');
+        globalShowAlert('Đã hủy đơn hàng thành công!', 'Thành công', 'success');
         fetchOrders(); // Refresh table
       }
     } catch (error: any) {
       console.error('Failed to cancel order:', error);
-      alert(error.message || 'Không thể hủy đơn hàng. Vui lòng thử lại sau.');
+      globalShowAlert(error.message || 'Không thể hủy đơn hàng. Vui lòng thử lại sau.', 'Lỗi', 'error');
     } finally {
       setLoading(false);
     }

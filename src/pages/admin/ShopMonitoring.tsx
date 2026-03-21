@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { AlertTriangle, Clock, Search, Filter, History, Lock, Bell, ChevronRight, Star, ShieldAlert, Loader2, AlertCircle } from 'lucide-react';
 import { userService, UserResponse } from '../../services';
 import Pagination, { PageInfo } from '../../components/ui/Pagination';
+import { globalShowAlert, globalShowConfirm } from '../../contexts/PopupContext';
 
 const PAGE_SIZE = 10;
 
@@ -43,12 +44,12 @@ const ShopMonitoring: React.FC = () => {
    }, [page]);
 
    const handleDeactivate = async (userId: number) => {
-      if (!window.confirm('Bạn có chắc muốn khóa tạm thời cửa hàng này?')) return;
+      if (!await globalShowConfirm('Xác nhận', 'Bạn có chắc muốn khóa tạm thời cửa hàng này?')) return;
       try {
          await userService.deactivateUser(userId);
          setShops(prev => prev.map(s => s.id === userId ? { ...s, status: 'DEACTIVATED' } : s));
       } catch (err: any) {
-         alert(err?.data?.message || 'Không thể khóa cửa hàng');
+         globalShowAlert(err?.data?.message || 'Không thể khóa cửa hàng', 'Lỗi', 'error');
       }
    };
 
@@ -57,7 +58,7 @@ const ShopMonitoring: React.FC = () => {
          await userService.activateUser(userId);
          setShops(prev => prev.map(s => s.id === userId ? { ...s, status: 'ACTIVE' } : s));
       } catch (err: any) {
-         alert(err?.data?.message || 'Không thể mở khóa cửa hàng');
+         globalShowAlert(err?.data?.message || 'Không thể mở khóa cửa hàng', 'Lỗi', 'error');
       }
    };
 

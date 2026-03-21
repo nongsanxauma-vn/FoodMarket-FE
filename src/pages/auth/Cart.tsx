@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ShoppingCart, Trash2, Plus, Minus, Info, ArrowRight, ArrowLeft, Loader2, Package, Gift, ChefHat } from 'lucide-react';
 import { cartService, CartResponse, CartItemResponse } from '../../services/cart.service';
+import { globalShowConfirm } from '../../contexts/PopupContext';
 
 interface CartProps {
   onProceedToCheckout: () => void;
@@ -94,7 +95,7 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
   };
 
   const handleClearCart = async () => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa tất cả sản phẩm khỏi giỏ hàng?')) return;
+    if (!await globalShowConfirm('Bạn có chắc chắn muốn xóa tất cả sản phẩm khỏi giỏ hàng?')) return;
     setLoading(true);
     try {
       await cartService.clearCart();
