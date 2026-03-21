@@ -36,12 +36,10 @@ const Sidebar: React.FC<SidebarProps> = ({ role, user, currentPath, onNavigate, 
   const farmerMenu = [
     { name: 'Tổng quan', icon: LayoutDashboard, id: 'overview' },
     { name: 'Sản phẩm', icon: Package, id: 'products' },
-    { name: 'Tạo Combo', icon: ChefHat, id: 'combo-builder' },
     { name: 'Đơn hàng', icon: ShoppingCart, id: 'orders' },
     { name: 'Đánh giá', icon: MessageSquare, id: 'reviews' },
     { name: 'Thông báo', icon: Bell, id: 'notifications' },
     { name: 'Tin nhắn', icon: Send, id: 'chat' },
-    { name: 'Blind Box Tool', icon: Gift, id: 'blind-box' },
     { name: 'Hồ sơ cá nhân', icon: UserCircle, id: 'profile' },
     { name: 'Ví tiền', icon: Wallet, id: 'wallet' },
   ];
@@ -95,34 +93,36 @@ const Sidebar: React.FC<SidebarProps> = ({ role, user, currentPath, onNavigate, 
         })}
       </nav>
 
-      {/* Footer Area - Logout is HERE */}
-      <div className="p-8 border-t border-gray-50 bg-white space-y-6">
-        <div className="bg-gray-50/80 rounded-3xl p-4 border border-gray-100 flex items-center gap-4 group">
+      {/* Footer Area - Compact User & Logout */}
+      <div className="p-6 border-t border-gray-50 bg-white mt-auto">
+        <div className="bg-gray-50/80 rounded-[20px] p-3 border border-gray-100 flex items-center gap-3 transition-all duration-300 hover:bg-gray-50 group/footer">
           <div className="relative shrink-0">
             <img
-              className="size-10 rounded-xl border-2 border-white shadow-sm object-cover bg-orange-100"
+              className="size-9 rounded-xl border-2 border-white shadow-sm object-cover bg-orange-100"
               src={user?.avatar || (role === AppRole.FARMER ? "https://picsum.photos/seed/farmer_ba/100/100" : "https://picsum.photos/seed/admin_avatar/100/100")}
               alt="User"
             />
-            <div className="absolute -bottom-1 -right-1 size-4 bg-primary rounded-full border-2 border-white flex items-center justify-center">
-              <CheckCircle className="size-2 text-white fill-current" />
+            <div className="absolute -bottom-0.5 -right-0.5 size-3 bg-primary rounded-full border-2 border-white flex items-center justify-center">
+              <CheckCircle className="size-1.5 text-white fill-current" />
             </div>
           </div>
-          <div className="flex flex-col min-w-0">
-            <p className="text-xs font-black text-gray-900 truncate uppercase tracking-tight">
+          <div className="flex flex-col min-w-0 flex-1">
+            <p className="text-[11px] font-black text-gray-900 truncate uppercase tracking-tight">
               {user?.name || (role === AppRole.FARMER ? 'Bác Ba Nông Dân' : 'Admin Tổng')}
             </p>
-            <p className="text-[8px] text-primary uppercase tracking-widest font-black">Trạng thái: Online</p>
+            <p className="text-[8px] text-primary uppercase tracking-widest font-black flex items-center gap-1">
+              <span className="size-1 bg-primary rounded-full animate-pulse" />
+              ONLINE
+            </p>
           </div>
+          <button
+            onClick={onLogout}
+            title="Đăng xuất"
+            className="size-8 rounded-lg flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300 shadow-sm hover:shadow-red-200"
+          >
+            <LogOut className="size-4" />
+          </button>
         </div>
-
-        <button
-          onClick={onLogout}
-          className="w-full py-4 px-6 text-xs font-black text-red-500 bg-red-50 border border-red-100 rounded-2xl hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-3 group shadow-sm shadow-red-100"
-        >
-          <LogOut className="size-4 transition-transform group-hover:-translate-x-1" />
-          <span>ĐĂNG XUẤT HỆ THỐNG</span>
-        </button>
       </div>
     </aside>
   );

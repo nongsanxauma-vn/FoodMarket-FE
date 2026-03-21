@@ -329,7 +329,14 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
           <h2 className="text-3xl font-black font-display text-gray-900">Quản Lý Sản Phẩm</h2>
           <p className="text-gray-400 font-medium text-sm mt-1">Cửa hàng của bạn đang có {products.length} sản phẩm, {combos.filter(c => c.type === 'CUSTOM').length} combo và {mysteryBoxes.length} hộp mù.</p>
         </div>
-        <button onClick={() => onNavigate('add-product')} className="px-6 py-3 bg-primary text-white rounded-2xl font-bold flex items-center gap-2 shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all">
+        <button 
+          onClick={() => {
+            if (activeTab === 'COMBO') onNavigate('combo-builder');
+            else if (activeTab === 'BLIND_BOX') onNavigate('mystery-box-editor');
+            else onNavigate('add-product');
+          }} 
+          className="px-6 py-3 bg-primary text-white rounded-2xl font-bold flex items-center gap-2 shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all"
+        >
           <Plus className="size-5" /> Thêm sản phẩm mới
         </button>
       </div>

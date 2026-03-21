@@ -206,15 +206,33 @@ class AuthService {
   /**
    * Cập nhật thông tin user hiện tại
    */
-  async updateMyInfo(userData: Partial<UserResponse>): Promise<ApiResponse<UserResponse>> {
+  async updateMyInfo(userData: Partial<UserResponse>, image?: File): Promise<ApiResponse<UserResponse>> {
     try {
+      // 1. Cập nhật thông tin text trước (JSON PUT)
       const response = await httpClient.put<UserResponse>('/users/me', userData);
+
+      // 2. Nếu có ảnh và update text thành công, cập nhật ảnh riêng (Multipart PATCH)
+      if (image && response.result) {
+        const formData = new FormData();
+        formData.append('logoUrl', image);
+        
+        try {
+          const imageResponse = await httpClient.patch<UserResponse>('/users/me/images', formData);
+          if (imageResponse.result) {
+            // Cập nhật lại thông tin user trong localStorage với ảnh mới
+            this.setUserInfo(imageResponse.result);
+            return imageResponse;
+          }
+        } catch (imgError) {
+          console.error('Update profile image error:', imgError);
+          // Vẫn trả về response của text update, nhưng có thể thông báo lỗi ảnh
+        }
+      }
 
       // Cập nhật thông tin user trong localStorage
       if (response.result) {
         this.setUserInfo(response.result);
       }
-
       return response;
     } catch (error) {
       console.error('Update my info error:', error);
