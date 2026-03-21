@@ -1,39 +1,77 @@
 import React, { useState, useEffect } from 'react';
-import { Newspaper, Plus, Search, Filter, Edit3, Trash2, Eye, Calendar, User, Clock, CheckCircle2, ChevronLeft, ChevronRight, RefreshCcw } from 'lucide-react';
+import { Newspaper, Plus, Search, Filter, Edit3, Trash2, Eye, Calendar, User, Clock, CheckCircle2, ChevronLeft, ChevronRight, RefreshCcw, AlertCircle } from 'lucide-react';
 import { blogService, BlogResponse, BlogCreationRequest } from '../../services';
+import { BlogCategory, PageResponse } from '../../types';
 import MyCKEditor from '../../components/MyCKEditor';
 import Pagination, { PageInfo } from '../../components/ui/Pagination';
-
-const PAGE_SIZE = 10;
 
 const NewsManagement: React.FC = () => {
    const [blogs, setBlogs] = useState<BlogResponse[]>([]);
    const [loading, setLoading] = useState(true);
    const [isAddingNew, setIsAddingNew] = useState(false);
    const [error, setError] = useState<string | null>(null);
+
+   // Pagination state
    const [page, setPage] = useState(0);
+   const [pageSize] = useState(10);
    const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
+
+   // Filter state
+   const [searchQuery, setSearchQuery] = useState('');
+   const [selectedFilterCategory, setSelectedFilterCategory] = useState('Tất cả danh mục');
 
    // Form state
    const [title, setTitle] = useState('');
    const [content, setContent] = useState('');
    const [status, setStatus] = useState('DRAFT');
+   const [category, setCategory] = useState(BlogCategory.SUC_KHOE);
    const [selectedImage, setSelectedImage] = useState<File | null>(null);
    const [imagePreview, setImagePreview] = useState<string | null>(null);
    const [submitting, setSubmitting] = useState(false);
 
    // View/Edit state
    const [isViewing, setIsViewing] = useState(false);
+   const [isEditing, setIsEditing] = useState(false);
    const [selectedBlog, setSelectedBlog] = useState<BlogResponse | null>(null);
+
+   const clearForm = () => {
+      setTitle('');
+      setContent('');
+      setCategory(BlogCategory.SUC_KHOE);
+      setStatus('DRAFT');
+      setSelectedImage(null);
+      setImagePreview(null);
+      setIsEditing(false);
+      setIsAddingNew(false);
+      setSelectedBlog(null);
+   };
+
+   const clearFilters = () => {
+
+      setSearchQuery('');
+      setSelectedFilterCategory('Tất cả danh mục');
+   };
 
    useEffect(() => {
       fetchBlogs();
    }, [page]);
 
+   // Filter blogs based on search and category
+   const filteredBlogs = blogs.filter(blog => {
+      const matchesSearch = searchQuery === '' || 
+         blog.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+         blog.content.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesCategory = selectedFilterCategory === 'Tất cả danh mục' || 
+         blog.category === selectedFilterCategory;
+      
+      return matchesSearch && matchesCategory;
+   });
+
    const fetchBlogs = async () => {
       try {
          setLoading(true);
-         const response = await blogService.getAllBlogsPaged(page, PAGE_SIZE);
+         const response = await blogService.getAllBlogsPaged(page, pageSize);
          if (response.result) {
             setBlogs(response.result.content);
             setPageInfo({
@@ -53,6 +91,7 @@ const NewsManagement: React.FC = () => {
       }
    };
 
+
    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files[0]) {
          const file = e.target.files[0];
@@ -61,7 +100,7 @@ const NewsManagement: React.FC = () => {
       }
    };
 
-   const handleCreateBlog = async () => {
+   const handleSaveBlog = async () => {
       if (!title || !content) {
          alert('Vui lòng nhập đầy đủ tiêu đề và nội dung.');
          return;
@@ -69,24 +108,31 @@ const NewsManagement: React.FC = () => {
 
       setSubmitting(true);
       try {
-         const request: BlogCreationRequest = {
+         const request: any = {
             title,
             content,
             status,
+            category,
          };
-         const response = await blogService.createBlog(request, selectedImage || undefined);
-         if (response.result) {
-            setIsAddingNew(false);
-            fetchBlogs();
-            // Reset form
-            setTitle('');
-            setContent('');
-            setSelectedImage(null);
-            setImagePreview(null);
+         
+         if (isEditing && selectedBlog) {
+            const response = await blogService.updateBlog(selectedBlog.id, request, selectedImage || undefined);
+            if (response.result) {
+               alert('Cập nhật bài viết thành công!');
+               clearForm();
+               fetchBlogs();
+            }
+         } else {
+            const response = await blogService.createBlog(request as BlogCreationRequest, selectedImage || undefined);
+            if (response.result) {
+               alert('Đăng bài viết thành công!');
+               clearForm();
+               fetchBlogs();
+            }
          }
       } catch (err) {
-         console.error('Failed to create blog', err);
-         alert('Đăng bài thất bại. Vui lòng thử lại.');
+         console.error('Failed to save blog', err);
+         alert('Lưu bài viết thất bại. Vui lòng thử lại.');
       } finally {
          setSubmitting(false);
       }
@@ -113,7 +159,8 @@ const NewsManagement: React.FC = () => {
          await blogService.updateBlog(blog.id, {
             title: blog.title,
             content: blog.content,
-            status: newStatus
+            status: newStatus,
+            category: blog.category as unknown as BlogCategory
          });
          setBlogs(blogs.map(b => b.id === blog.id ? { ...b, status: newStatus } : b));
       } catch (err) {
@@ -122,29 +169,54 @@ const NewsManagement: React.FC = () => {
       }
    };
 
+   const handleEditBlog = (blog: BlogResponse) => {
+      setSelectedBlog(blog);
+      setTitle(blog.title);
+      setContent(blog.content);
+      setCategory(blog.category as unknown as BlogCategory);
+      setStatus(blog.status);
+      setImagePreview(blog.pictureUrl);
+      setIsEditing(true);
+      setIsAddingNew(false);
+      setIsViewing(false);
+   };
+
    const handleViewBlog = (blog: BlogResponse) => {
       setSelectedBlog(blog);
       setIsViewing(true);
+      setIsAddingNew(false);
+      setIsEditing(false);
    };
 
-   if (isAddingNew) {
+
+   // Calculate statistics
+   const totalViews = blogs.reduce((sum, b) => sum + (b.views || 0), 0);
+   const newBlogsThisMonth = blogs.filter(b => {
+      const date = new Date(b.createAt);
+      const now = new Date();
+      return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+   }).length;
+
+   if (isAddingNew || isEditing) {
       return (
          <div className="flex flex-col gap-8 p-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
             <div className="flex items-center gap-6">
-               <button onClick={() => setIsAddingNew(false)} className="size-11 bg-white border border-gray-100 rounded-2xl flex items-center justify-center text-gray-400 hover:text-gray-900 transition-all shadow-sm">
+               <button onClick={clearForm} className="size-11 bg-white border border-gray-100 rounded-2xl flex items-center justify-center text-gray-400 hover:text-gray-900 transition-all shadow-sm">
                   <ChevronLeft className="size-5" />
                </button>
                <div>
-                  <h2 className="text-3xl font-black font-display text-gray-900 uppercase tracking-tight">Viết bài mới</h2>
-                  <p className="text-gray-400 font-medium text-sm mt-1">Sáng tạo nội dung hữu ích cho cộng đồng XẤU MÃ.</p>
+                  <h2 className="text-3xl font-black font-display text-gray-900 uppercase tracking-tight">{isEditing ? 'Cập nhật bài viết' : 'Viết bài mới'}</h2>
+                  <p className="text-gray-400 font-medium text-sm mt-1">
+                     {isEditing ? 'Chỉnh sửa nội dung bài viết của bạn.' : 'Sáng tạo nội dung hữu ích cho cộng đồng XẤU MÃ.'}
+                  </p>
                </div>
                <div className="flex gap-4 ml-auto">
                   <button
-                     onClick={handleCreateBlog}
+                     onClick={handleSaveBlog}
                      disabled={submitting}
                      className="px-8 py-3 bg-primary text-white rounded-2xl font-black flex items-center gap-2 shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all transform active:scale-95 disabled:bg-gray-300"
                   >
-                     {submitting ? 'Đang đăng...' : 'Đăng bài ngay'}
+                     {submitting ? 'Đang lưu...' : (isEditing ? 'Cập nhật ngay' : 'Đăng bài ngay')}
                   </button>
                </div>
             </div>
@@ -176,6 +248,19 @@ const NewsManagement: React.FC = () => {
                <div className="flex flex-col gap-8">
                   <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-10 space-y-8">
                      <h4 className="font-black text-gray-800 uppercase tracking-tight">Thiết lập xuất bản</h4>
+                     <div className="flex flex-col gap-3">
+                        <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Danh mục</label>
+                        <select
+                           value={category}
+                           onChange={(e) => setCategory(e.target.value as BlogCategory)}
+                           className="w-full px-6 py-4 bg-gray-50 border border-transparent rounded-2xl text-[10px] font-black text-gray-600 outline-none uppercase tracking-widest"
+                        >
+                           <option value={BlogCategory.SUC_KHOE}>{BlogCategory.SUC_KHOE}</option>
+                           <option value={BlogCategory.CAM_NANG}>{BlogCategory.CAM_NANG}</option>
+                           <option value={BlogCategory.NHA_NONG}>{BlogCategory.NHA_NONG}</option>
+                           <option value={BlogCategory.XU_HUONG}>{BlogCategory.XU_HUONG}</option>
+                        </select>
+                     </div>
                      <div className="flex flex-col gap-3">
                         <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Trạng thái</label>
                         <select
@@ -217,6 +302,7 @@ const NewsManagement: React.FC = () => {
       );
    }
 
+
    if (isViewing && selectedBlog) {
       return (
          <div className="flex flex-col gap-8 p-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
@@ -240,7 +326,7 @@ const NewsManagement: React.FC = () => {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-12">
                      <div className="max-w-4xl">
                         <div className="flex items-center gap-4 text-[10px] font-black text-white/80 uppercase tracking-widest mb-4">
-                           <span className="px-3 py-1 bg-primary text-white rounded-lg">Nhà nông</span>
+                           <span className="px-3 py-1 bg-primary text-white rounded-lg">{selectedBlog.category}</span>
                            <span>{new Date(selectedBlog.createAt).toLocaleDateString('vi-VN')}</span>
                            <span>Bởi: {selectedBlog.adminName}</span>
                         </div>
@@ -249,11 +335,7 @@ const NewsManagement: React.FC = () => {
                   </div>
                </div>
                <div className="p-12 md:p-20">
-                  <div className="prose prose-lg max-w-none">
-                     <p className="text-gray-600 font-medium leading-relaxed whitespace-pre-wrap">
-                        {selectedBlog.content}
-                     </p>
-                  </div>
+                  <div className="prose prose-lg max-w-none text-gray-600 font-medium leading-relaxed" dangerouslySetInnerHTML={{ __html: selectedBlog.content }} />
                </div>
             </div>
          </div>
@@ -272,21 +354,47 @@ const NewsManagement: React.FC = () => {
             </button>
          </div>
 
+         {error && (
+            <div className="bg-red-50 border border-red-100 text-red-600 px-6 py-4 rounded-2xl font-bold flex items-center gap-3">
+               <AlertCircle className="size-5" />
+               {error}
+            </div>
+         )}
+
+
          <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
             <div className="px-10 py-8 border-b border-gray-50 flex flex-wrap items-center justify-between gap-6">
                <div className="flex items-center gap-6 flex-1 max-w-2xl">
                   <div className="relative flex-1">
-                     <input type="text" placeholder="Tìm kiếm bài viết..." className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-transparent rounded-2xl text-sm font-medium outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all" />
+                     <input 
+                        type="text" 
+                        placeholder="Tìm kiếm bài viết..." 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-transparent rounded-2xl text-sm font-medium outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white transition-all" 
+                     />
                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-300" />
                   </div>
-                  <select className="px-6 py-3 bg-gray-50 border border-transparent rounded-2xl text-[10px] font-black text-gray-600 outline-none uppercase tracking-widest cursor-pointer">
+                  <select 
+                     value={selectedFilterCategory}
+                     onChange={(e) => setSelectedFilterCategory(e.target.value)}
+                     className="px-6 py-3 bg-gray-50 border border-transparent rounded-2xl text-[10px] font-black text-gray-600 outline-none uppercase tracking-widest cursor-pointer"
+                  >
                      <option>Tất cả danh mục</option>
-                     <option>Nhà nông</option>
-                     <option>Sức khỏe</option>
-                     <option>Cẩm nang</option>
+                     <option>{BlogCategory.SUC_KHOE}</option>
+                     <option>{BlogCategory.CAM_NANG}</option>
+                     <option>{BlogCategory.NHA_NONG}</option>
+                     <option>{BlogCategory.XU_HUONG}</option>
                   </select>
                </div>
                <div className="flex gap-4">
+                  <button 
+                     onClick={clearFilters}
+                     className="size-11 flex items-center justify-center bg-gray-50 rounded-2xl text-gray-400 hover:text-red-500 transition-colors"
+                     title="Xóa bộ lọc"
+                  >
+                     <RefreshCcw className="size-5" />
+                  </button>
                   <button className="size-11 flex items-center justify-center bg-gray-50 rounded-2xl text-gray-400 hover:text-primary transition-colors">
                      <Filter className="size-5" />
                   </button>
@@ -310,12 +418,14 @@ const NewsManagement: React.FC = () => {
                         <tr>
                            <td colSpan={6} className="px-10 py-20 text-center text-xs font-black text-gray-400 uppercase tracking-widest">Đang tải bài viết...</td>
                         </tr>
-                     ) : blogs.length === 0 ? (
+                     ) : filteredBlogs.length === 0 ? (
                         <tr>
-                           <td colSpan={6} className="px-10 py-20 text-center text-xs font-black text-gray-400 uppercase tracking-widest">Chưa có bài viết nào</td>
+                           <td colSpan={6} className="px-10 py-20 text-center text-xs font-black text-gray-400 uppercase tracking-widest">
+                              {blogs.length === 0 ? 'Chưa có bài viết nào' : 'Không tìm thấy bài viết phù hợp'}
+                           </td>
                         </tr>
                      ) : (
-                        blogs.map((art) => (
+                        filteredBlogs.map((art) => (
                            <tr key={art.id} className="hover:bg-gray-50/30 transition-colors group">
                               <td className="px-10 py-6">
                                  <div className="flex items-center gap-4">
@@ -328,24 +438,24 @@ const NewsManagement: React.FC = () => {
                                     </div>
                                  </div>
                               </td>
-                              <td className="px-6 py-6">
-                                 <span className="px-3 py-1 bg-green-50 text-primary text-[10px] font-black rounded-lg uppercase tracking-tight">
-                                    Nhà nông
+                              <td className="px-6 py-6 text-center">
+                                 <span className="inline-block px-3 py-1 bg-green-50 text-primary text-[10px] font-black rounded-lg uppercase tracking-tight whitespace-nowrap">
+                                    {art.category}
                                  </span>
                               </td>
                               <td className="px-6 py-6 text-center">
-                                 <div className="flex flex-col items-center">
-                                    <span className="text-xs font-bold text-gray-600">{art.adminName}</span>
+                                 <div className="flex flex-col items-center justify-center">
+                                    <span className="text-xs font-bold text-gray-600 whitespace-nowrap">{art.adminName}</span>
                                  </div>
                               </td>
                               <td className="px-6 py-6 text-center">
                                  <div className="flex items-center justify-center gap-1.5 text-gray-400">
                                     <Eye className="size-3" />
-                                    <span className="text-xs font-bold">0</span>
+                                    <span className="text-xs font-bold">{art.views || 0}</span>
                                  </div>
                               </td>
                               <td className="px-6 py-6 text-center">
-                                 <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${art.status === 'PUBLISHED' ? 'text-emerald-600 bg-emerald-50' : 'text-gray-400 bg-gray-50'}`}>
+                                 <span className={`inline-block px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest whitespace-nowrap ${art.status === 'PUBLISHED' ? 'text-emerald-600 bg-emerald-50' : 'text-gray-400 bg-gray-50'}`}>
                                     {art.status === 'PUBLISHED' ? 'Đã đăng' : 'Bản nháp'}
                                  </span>
                               </td>
@@ -359,12 +469,21 @@ const NewsManagement: React.FC = () => {
                                        <RefreshCcw className="size-4" />
                                     </button>
                                     <button
+                                       title="Chỉnh sửa"
+                                       onClick={() => handleEditBlog(art)}
+                                       className="size-9 bg-gray-50 text-blue-500 rounded-xl flex items-center justify-center hover:bg-blue-50 transition-colors"
+                                    >
+                                       <Edit3 className="size-4" />
+                                    </button>
+                                    <button
+                                       title="Xem chi tiết"
                                        onClick={() => handleViewBlog(art)}
                                        className="size-9 bg-gray-50 text-primary rounded-xl flex items-center justify-center hover:bg-primary/10 transition-colors"
                                     >
                                        <Eye className="size-4" />
                                     </button>
                                     <button
+                                       title="Xóa bài viết"
                                        onClick={() => handleDeleteBlog(art.id)}
                                        className="size-9 bg-gray-50 text-red-500 rounded-xl flex items-center justify-center hover:bg-red-50 transition-colors"
                                     >
@@ -372,6 +491,7 @@ const NewsManagement: React.FC = () => {
                                     </button>
                                  </div>
                               </td>
+
                            </tr>
                         ))
                      )}
@@ -379,9 +499,12 @@ const NewsManagement: React.FC = () => {
                </table>
             </div>
 
-            <div className="p-10 bg-white border-t border-gray-50">
-               {pageInfo && <Pagination pageInfo={pageInfo} onPageChange={setPage} />}
-            </div>
+            {pageInfo && (
+               <div className="p-10 bg-white border-t border-gray-50 flex items-center justify-between">
+                  <Pagination pageInfo={pageInfo} onPageChange={setPage} />
+               </div>
+            )}
+
          </div>
 
          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -415,14 +538,14 @@ const NewsManagement: React.FC = () => {
                <div className="space-y-4">
                   <div className="flex justify-between items-center">
                      <span className="text-xs font-bold text-gray-400 uppercase">Bài mới:</span>
-                     <span className="text-lg font-black text-primary">12</span>
+                     <span className="text-lg font-black text-primary">{newBlogsThisMonth}</span>
                   </div>
                   <div className="w-full h-1.5 bg-gray-100 rounded-full">
-                     <div className="w-[65%] h-full bg-primary rounded-full" />
+                     <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min((newBlogsThisMonth / 20) * 100, 100)}%` }} />
                   </div>
                   <div className="flex justify-between items-center">
                      <span className="text-xs font-bold text-gray-400 uppercase">Tổng views:</span>
-                     <span className="text-lg font-black text-gray-900">45,820</span>
+                     <span className="text-lg font-black text-gray-900">{totalViews.toLocaleString('vi-VN')}</span>
                   </div>
                </div>
                <div className="absolute -right-4 -bottom-4 size-24 bg-primary/5 rounded-full blur-2xl" />

@@ -50,13 +50,16 @@ class HttpClient {
         '/products',
         '/mystery-boxes',
         '/reviews',
-        '/blogs',
+        '/blogs/published',
         '/build-combos',
       ];
-      if (publicGetEndpoints.some(endpoint => url.includes(endpoint))) {
+      if (publicGetEndpoints.some(endpoint => url === endpoint || url.startsWith(`${endpoint}?`) || url.startsWith(`${endpoint}/paged`))) {
         return true;
       }
+      // Only the exact root /blogs (possibly with params) might be public if intended, 
+      // but usually published is the one for users.
     }
+
 
     // Các endpoint hoàn toàn public (bất kể GET/POST)
     const fullyPublicEndpoints = [
@@ -77,16 +80,15 @@ class HttpClient {
       'Content-Type': 'application/json',
     };
 
-    // Chỉ thêm token nếu không phải public endpoint
-    if (!this.isPublicEndpoint(method, url)) {
-      const token = this.getToken();
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
+    // Luôn gửi token nếu có, để backend có thể phân biệt người dùng (ví dụ: Admin xem được bản nháp)
+    const token = this.getToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
 
     return headers;
   }
+
 
   /**
    * Xử lý query parameters

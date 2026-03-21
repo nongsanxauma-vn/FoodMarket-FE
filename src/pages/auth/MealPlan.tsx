@@ -4,27 +4,36 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { 
-  Users, 
-  Utensils, 
-  Calendar, 
-  ShoppingCart, 
-  CheckCircle2, 
-  AlertCircle, 
-  Leaf, 
+import { useNavigate } from 'react-router-dom';
+import {
+  Users,
+  Utensils,
+  Calendar,
+  ShoppingCart,
+  CheckCircle2,
+  AlertCircle,
+  Leaf,
   ChevronRight,
   RefreshCw,
   Trash2,
-  Plus
+  Plus,
+  X,
+  List
 } from 'lucide-react';
+import { buildPlanService } from '../../services/buildPlan.service';
+import { comboService, BuildComboResponse } from '../../services/combo.service';
+import { productService, ProductResponse } from '../../services/product.service';
+import { cartService } from '../../services/cart.service';
+import { useAuth } from '../../contexts/AuthContext';
+import { BuildPlanDetailRequest, BuildPlanResponse, PlanDayRequest, MealRequest, MealItemRequest } from '../../types';
 
 // --- Types ---
 
-type MealType = 'Sáng' | 'Trưa' | 'Tối';
+type MealType = 'Sáng' | 'Trưa' | 'Tối' | 'Bữa phụ';
 type EatingStyle = 'Gia đình' | 'Giảm cân' | 'Ăn chay' | 'Bình dân';
 
 interface Ingredient {
-  id: string;
+  id: string; // Product ID
   name: string;
   unit: string;
   isUglyProduce?: boolean;
@@ -37,57 +46,28 @@ interface RecipeItem {
 }
 
 interface Dish {
-  id: string;
+  id: string; // Combo ID
   name: string;
   mealType: MealType;
   style: EatingStyle[];
   recipes: RecipeItem[];
   image?: string;
+  price?: number;
+}
+
+interface MealInstance {
+  id: string; // UI unique identifier
+  label: string; // Display name
+  type: MealType; // Category
+  dishes: Dish[];
 }
 
 interface MealPlanDay {
   day: number;
-  meals: Record<MealType, Dish>;
+  meals: MealInstance[];
 }
 
-// --- Mock Data ---
-
-const INGREDIENTS: Record<string, Ingredient> = {
-  'i1': { id: 'i1', name: 'Cà chua', unit: 'g', isUglyProduce: true, pricePerUnit: 0.02 },
-  'i2': { id: 'i2', name: 'Bí đỏ', unit: 'g', isUglyProduce: true, pricePerUnit: 0.015 },
-  'i3': { id: 'i3', name: 'Rau muống', unit: 'g', pricePerUnit: 0.01 },
-  'i4': { id: 'i4', name: 'Trứng gà', unit: 'quả', pricePerUnit: 3000 },
-  'i5': { id: 'i5', name: 'Thịt heo', unit: 'g', pricePerUnit: 0.15 },
-  'i6': { id: 'i6', name: 'Gạo', unit: 'g', pricePerUnit: 0.02 },
-  'i7': { id: 'i7', name: 'Bánh mì', unit: 'cái', pricePerUnit: 5000 },
-  'i8': { id: 'i8', name: 'Thịt gà', unit: 'g', pricePerUnit: 0.12 },
-  'i9': { id: 'i9', name: 'Cá lóc', unit: 'g', pricePerUnit: 0.18 },
-  'i10': { id: 'i10', name: 'Cải xanh', unit: 'g', pricePerUnit: 0.025 },
-  'i11': { id: 'i11', name: 'Mướp', unit: 'g', isUglyProduce: true, pricePerUnit: 0.012 },
-  'i12': { id: 'i12', name: 'Đậu phụ', unit: 'miếng', pricePerUnit: 3000 },
-  'i13': { id: 'i13', name: 'Cà rốt', unit: 'g', isUglyProduce: true, pricePerUnit: 0.018 },
-  'i14': { id: 'i14', name: 'Dưa leo', unit: 'g', isUglyProduce: true, pricePerUnit: 0.015 },
-};
-
-const DISHES: Dish[] = [
-  // Sáng
-  { id: 'd1', name: 'Bánh mì trứng', mealType: 'Sáng', style: ['Gia đình', 'Bình dân'], recipes: [{ ingredientId: 'i7', quantityPerPerson: 1 }, { ingredientId: 'i4', quantityPerPerson: 2 }] },
-  { id: 'd2', name: 'Cháo gà', mealType: 'Sáng', style: ['Gia đình', 'Bình dân'], recipes: [{ ingredientId: 'i6', quantityPerPerson: 50 }, { ingredientId: 'i8', quantityPerPerson: 100 }] },
-  { id: 'd3', name: 'Bún bò', mealType: 'Sáng', style: ['Gia đình', 'Bình dân'], recipes: [{ ingredientId: 'i5', quantityPerPerson: 100 }] },
-  { id: 'd4', name: 'Salad dưa leo cà rốt', mealType: 'Sáng', style: ['Giảm cân', 'Ăn chay'], recipes: [{ ingredientId: 'i14', quantityPerPerson: 100 }, { ingredientId: 'i13', quantityPerPerson: 50 }] },
-  
-  // Trưa
-  { id: 'd5', name: 'Thịt kho + Rau muống', mealType: 'Trưa', style: ['Gia đình', 'Bình dân'], recipes: [{ ingredientId: 'i5', quantityPerPerson: 150 }, { ingredientId: 'i3', quantityPerPerson: 100 }] },
-  { id: 'd6', name: 'Cá chiên + Rau luộc', mealType: 'Trưa', style: ['Gia đình', 'Bình dân'], recipes: [{ ingredientId: 'i9', quantityPerPerson: 200 }, { ingredientId: 'i10', quantityPerPerson: 100 }] },
-  { id: 'd7', name: 'Thịt xào cải', mealType: 'Trưa', style: ['Gia đình', 'Bình dân'], recipes: [{ ingredientId: 'i5', quantityPerPerson: 100 }, { ingredientId: 'i10', quantityPerPerson: 150 }] },
-  { id: 'd8', name: 'Đậu phụ sốt cà chua', mealType: 'Trưa', style: ['Ăn chay', 'Bình dân'], recipes: [{ ingredientId: 'i12', quantityPerPerson: 2 }, { ingredientId: 'i1', quantityPerPerson: 100 }] },
-  
-  // Tối
-  { id: 'd9', name: 'Canh bí đỏ', mealType: 'Tối', style: ['Gia đình', 'Bình dân'], recipes: [{ ingredientId: 'i2', quantityPerPerson: 200 }, { ingredientId: 'i5', quantityPerPerson: 50 }] },
-  { id: 'd10', name: 'Trứng sốt cà', mealType: 'Tối', style: ['Gia đình', 'Bình dân'], recipes: [{ ingredientId: 'i4', quantityPerPerson: 2 }, { ingredientId: 'i1', quantityPerPerson: 100 }] },
-  { id: 'd11', name: 'Canh mướp', mealType: 'Tối', style: ['Gia đình', 'Bình dân'], recipes: [{ ingredientId: 'i11', quantityPerPerson: 150 }, { ingredientId: 'i5', quantityPerPerson: 30 }] },
-  { id: 'd12', name: 'Súp cà rốt', mealType: 'Tối', style: ['Giảm cân', 'Ăn chay'], recipes: [{ ingredientId: 'i13', quantityPerPerson: 200 }] },
-];
+// --- End Of Types ---
 
 export default function MealPlan() {
   const [numPeople, setNumPeople] = useState<number>(2);
@@ -95,61 +75,489 @@ export default function MealPlan() {
   const [numDays, setNumDays] = useState<number>(3);
   const [mealPlan, setMealPlan] = useState<MealPlanDay[]>([]);
   const [isGenerated, setIsGenerated] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [planId, setPlanId] = useState<number | null>(null);
+  const [planName, setPlanName] = useState<string>('');
+  const [allCombos, setAllCombos] = useState<BuildComboResponse[]>([]);
+  const [allProducts, setAllProducts] = useState<ProductResponse[]>([]);
+  const [editingMeal, setEditingMeal] = useState<{ dayIndex: number, mealId: string } | null>(null);
+  const [isRenaming, setIsRenaming] = useState<{ dayIndex: number, mealId: string } | null>(null);
+  const [allPlans, setAllPlans] = useState<BuildPlanResponse[]>([]);
+  const [showPlansList, setShowPlansList] = useState(false);
+  const [isBuying, setIsBuying] = useState(false);
+  const [viewingDish, setViewingDish] = useState<Dish | null>(null);
 
-  // Generate initial plan on mount
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Map Backend MealType
+  const mapToBackendType = (type: MealType): string => {
+    switch (type) {
+      case 'Sáng': return 'BREAKFAST';
+      case 'Trưa': return 'LUNCH';
+      case 'Tối': return 'DINNER';
+      case 'Bữa phụ': return 'SNACK';
+      default: return 'LUNCH';
+    }
+  };
+
+  // Map From Backend MealType (Case-insensitive)
+  const mapFromBackendType = (type: string): MealType => {
+    const t = type?.toUpperCase();
+    if (t?.includes('SÁNG') || t?.includes('BREAKFAST') || t?.includes('MORNING')) return 'Sáng';
+    if (t?.includes('TRƯA') || t?.includes('LUNCH') || t?.includes('NOON')) return 'Trưa';
+    if (t?.includes('TỐI') || t?.includes('DINNER') || t?.includes('EVENING')) return 'Tối';
+    if (t?.includes('PHỤ') || t?.includes('SNACK')) return 'Bữa phụ';
+    return 'Trưa';
+  };
+
+  // Map Backend Eating Style
+  const mapToBackendStyle = (style: EatingStyle): string => {
+    switch (style) {
+      case 'Gia đình': return 'FAMILY';
+      case 'Giảm cân': return 'DIET';
+      case 'Ăn chay': return 'VEGAN';
+      case 'Bình dân': return 'ECONOMY';
+      default: return 'FAMILY';
+    }
+  };
+
+  // Map From Backend Eating Style (Case-insensitive)
+  const mapFromBackendStyle = (style: string): EatingStyle => {
+    const s = style?.toUpperCase();
+    switch (s) {
+      case 'FAMILY': return 'Gia đình';
+      case 'DIET': return 'Giảm cân';
+      case 'VEGAN': return 'Ăn chay';
+      case 'ECONOMY': return 'Bình dân';
+      default: return 'Gia đình';
+    }
+  };
+
+  // Convert Backend Combo to Frontend Dish
+  const mapComboToDish = (combo: BuildComboResponse): Dish => {
+    const mealType = mapFromBackendType(combo.mealType || 'LUNCH');
+    const style = mapFromBackendStyle(combo.type || 'FAMILY');
+
+    return {
+      id: combo.id?.toString() || '',
+      name: combo.comboName || 'Món ăn mới',
+      mealType: mealType,
+      style: [style],
+      price: combo.discountPrice,
+      image: (combo.items && combo.items[0]?.productName) ? `https://picsum.photos/seed/${combo.id}/200/200` : undefined, // Placeholder if no image
+      recipes: (combo.items || []).map(item => ({
+        ingredientId: item.productId?.toString() || '',
+        quantityPerPerson: item.quantity
+      }))
+    };
+  };
+
+  const dishes: Dish[] = useMemo(() => {
+    return allCombos.map(mapComboToDish);
+  }, [allCombos]);
+
+  // Fetch initial data
   React.useEffect(() => {
-    generatePlan();
-  }, []);
+    const loadInitialData = async () => {
+      try {
+        const [comboRes, productRes] = await Promise.all([
+          comboService.getAll(),
+          productService.getAll()
+        ]);
+
+        if (comboRes.result) setAllCombos(comboRes.result);
+        if (productRes.result) setAllProducts(productRes.result);
+
+        if (user) {
+          const planRes = await buildPlanService.getPlansByUser(parseInt(user.id));
+          if (planRes.result) {
+            setAllPlans(planRes.result);
+            if (planRes.result.length > 0) {
+              const lastPlan = planRes.result[planRes.result.length - 1];
+              loadPlanFromResponse(lastPlan, comboRes.result || []);
+              return;
+            }
+          }
+        }
+        if (comboRes.result && comboRes.result.length > 0) {
+          generatePlanWithCombos(comboRes.result);
+        }
+      } catch (err) {
+        console.error("Failed to load initial data:", err);
+      }
+    };
+    loadInitialData();
+  }, [user]);
+
+  const fetchSavedPlans = async () => {
+    if (!user) return;
+    try {
+      const res = await buildPlanService.getPlansByUser(parseInt(user.id));
+      if (res.result) setAllPlans(res.result);
+    } catch (err) {
+      console.error("Failed to fetch plans:", err);
+    }
+  };
+
+  const handleDeleteAnyPlan = async (id: number) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa thực đơn này?")) return;
+    try {
+      await buildPlanService.deletePlan(id);
+      alert("Đã xóa thực đơn thành công!");
+      if (id === planId) {
+        setPlanId(null);
+        setPlanName('');
+        generatePlan();
+      }
+      fetchSavedPlans();
+    } catch (err) {
+      console.error("Error deleting plan:", err);
+      alert("Không thể xóa thực đơn. Vui lòng thử lại.");
+    }
+  };
+
+  const loadPlanFromResponse = (response: BuildPlanResponse, combos: BuildComboResponse[]) => {
+    setPlanId(response.id);
+    setPlanName(response.planName);
+    setNumPeople(response.numberOfPeople);
+    setNumDays(response.numberOfDays);
+    setStyle(mapFromBackendStyle(response.mealType));
+
+    const currentDishes = combos.map(mapComboToDish);
+
+    const newPlan: MealPlanDay[] = response.days.map(day => {
+      // Group meals from backend
+      const mealInstances: MealInstance[] = day.meals.map((m, idx) => {
+        const frontendType = mapFromBackendType(m.mealType);
+
+        // Lấy tất cả comboId từ meal items
+        const dishIds = (m.items || []).map(i => i.combo?.id?.toString()).filter(id => id !== undefined);
+
+        // Tìm các món ăn tương ứng trong danh sách combo hiện có
+        const foundDishes = currentDishes.filter(d => dishIds.includes(d.id));
+
+        // Trường hợp không tìm thấy trong currentDishes nhưng có thông tin cơ bản trong item.combo
+        const finalDishes = (m.items || []).map(item => {
+          const comboIdStr = item.combo?.id?.toString();
+          const existing = foundDishes.find(d => d.id === comboIdStr);
+          if (existing) return existing;
+
+          if (item.combo?.comboName) {
+            return {
+              id: comboIdStr || Math.random().toString(),
+              name: item.combo.comboName,
+              mealType: frontendType,
+              style: [style],
+              price: item.combo.discountPrice || 0,
+              image: `https://picsum.photos/seed/${comboIdStr}/200/200`,
+              recipes: []
+            } as Dish;
+          }
+          return null;
+        }).filter((d): d is Dish => d !== null);
+
+        return {
+          id: `${day.id || day.dayIndex}-${idx}`,
+          label: frontendType,
+          type: frontendType,
+          dishes: finalDishes.length > 0 ? finalDishes : foundDishes
+        };
+      });
+
+      return {
+        day: day.dayIndex,
+        meals: mealInstances
+      };
+    });
+
+    setMealPlan(newPlan);
+    setIsGenerated(true);
+  };
 
   const generatePlan = () => {
+    if (!planName) {
+      setPlanName(`Thực đơn cho ${numPeople} người - ${numDays} ngày`);
+    }
+    generatePlanWithCombos(allCombos);
+  };
+
+  const generatePlanWithCombos = (combos: BuildComboResponse[]) => {
+    const currentDishes = combos.map(mapComboToDish);
     const newPlan: MealPlanDay[] = [];
     for (let i = 1; i <= numDays; i++) {
       const dayPlan: MealPlanDay = {
         day: i,
-        meals: {
-          'Sáng': getRandomDish('Sáng', style),
-          'Trưa': getRandomDish('Trưa', style),
-          'Tối': getRandomDish('Tối', style),
-        }
+        meals: [
+          createMealInstance('Sáng', 'Sáng', currentDishes),
+          createMealInstance('Trưa', 'Trưa', currentDishes),
+          createMealInstance('Tối', 'Tối', currentDishes),
+        ]
       };
       newPlan.push(dayPlan);
     }
     setMealPlan(newPlan);
     setIsGenerated(true);
+    setPlanId(null);
   };
 
-  const getRandomDish = (type: MealType, selectedStyle: EatingStyle): Dish => {
-    const filtered = DISHES.filter(d => d.mealType === type && d.style.includes(selectedStyle));
-    // Prioritize dishes with ugly produce
-    const withUgly = filtered.filter(d => d.recipes.some(r => INGREDIENTS[r.ingredientId].isUglyProduce));
-    
-    const pool = withUgly.length > 0 && Math.random() > 0.3 ? withUgly : filtered;
-    return pool[Math.floor(Math.random() * pool.length)] || filtered[0];
+  const createMealInstance = (label: string, type: MealType, comboList: Dish[]): MealInstance => {
+    const randomDish = getRandomDishFromList(type, style, comboList);
+    return {
+      id: Math.random().toString(36).substr(2, 9),
+      label,
+      type,
+      dishes: randomDish ? [randomDish] : []
+    };
+  };
+
+  const addMealToDay = (dayIndex: number) => {
+    setMealPlan(prev => prev.map(dp => {
+      if (dp.day === dayIndex) {
+        return {
+          ...dp,
+          meals: [...dp.meals, {
+            id: Math.random().toString(36).substr(2, 9),
+            label: 'Bữa phụ',
+            type: 'Bữa phụ',
+            dishes: []
+          }]
+        };
+      }
+      return dp;
+    }));
+  };
+
+  const removeMealFromDay = (dayIndex: number, mealId: string) => {
+    setMealPlan(prev => prev.map(dp => {
+      if (dp.day === dayIndex) {
+        return {
+          ...dp,
+          meals: dp.meals.filter(m => m.id !== mealId)
+        };
+      }
+      return dp;
+    }));
+  };
+
+  const renameMeal = (dayIndex: number, mealId: string, newLabel: string) => {
+    setMealPlan(prev => prev.map(dp => {
+      if (dp.day === dayIndex) {
+        return {
+          ...dp,
+          meals: dp.meals.map(m => m.id === mealId ? { ...m, label: newLabel } : m)
+        };
+      }
+      return dp;
+    }));
+    setIsRenaming(null);
+  };
+
+  // Adjust plan when numDays changes without full regeneration if already generated
+  React.useEffect(() => {
+    if (isGenerated && mealPlan.length > 0) {
+      if (mealPlan.length < numDays) {
+        const addedDays: MealPlanDay[] = [];
+        for (let i = mealPlan.length + 1; i <= numDays; i++) {
+          addedDays.push({
+            day: i,
+            meals: [
+              createMealInstance('Sáng', 'Sáng', dishes),
+              createMealInstance('Trưa', 'Trưa', dishes),
+              createMealInstance('Tối', 'Tối', dishes),
+            ]
+          });
+        }
+        setMealPlan([...mealPlan, ...addedDays]);
+      } else if (mealPlan.length > numDays) {
+        setMealPlan(mealPlan.slice(0, numDays));
+      }
+    }
+  }, [numDays]);
+
+  const handleManualSelection = (dish: Dish) => {
+    if (!editingMeal) return;
+
+    setMealPlan(prev => prev.map(dayPlan => {
+      if (dayPlan.day === editingMeal.dayIndex) {
+        return {
+          ...dayPlan,
+          meals: dayPlan.meals.map(meal => {
+            if (meal.id === editingMeal.mealId) {
+              return {
+                ...meal,
+                dishes: [...meal.dishes, dish]
+              };
+            }
+            return meal;
+          })
+        };
+      }
+      return dayPlan;
+    }));
+    setEditingMeal(null);
+  };
+
+  const removeDishFromMeal = (dayIndex: number, mealId: string, dishId: string) => {
+    setMealPlan(prev => prev.map(dp => {
+      if (dp.day === dayIndex) {
+        return {
+          ...dp,
+          meals: dp.meals.map(m => {
+            if (m.id === mealId) {
+              return { ...m, dishes: m.dishes.filter(d => d.id !== dishId) };
+            }
+            return m;
+          })
+        };
+      }
+      return dp;
+    }));
+  };
+
+  const saveToBackend = async () => {
+    if (!user) {
+      alert("Vui lòng đăng nhập để lưu thực đơn");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const totalBudget = shoppingList.reduce((acc, curr) => acc + (curr.quantity * curr.pricePerUnit), 0);
+
+      const request: BuildPlanDetailRequest = {
+        plan: {
+          planName: planName || `Thực đơn cho ${numPeople} người - ${numDays} ngày`,
+          numberOfPeople: numPeople,
+          numberOfDays: numDays,
+          mealType: mapToBackendStyle(style),
+          targetBudget: totalBudget
+        },
+        days: mealPlan.map(dp => ({
+          dayIndex: dp.day,
+          meals: dp.meals
+            .filter(m => m.dishes.length > 0)
+            .map(m => ({
+              mealType: mapToBackendType(m.type),
+              items: m.dishes.map(d => ({
+                comboId: parseInt(d.id),
+                quantity: 1
+              }))
+            }))
+        }))
+      };
+
+      let response;
+      if (planId) {
+        response = await buildPlanService.updatePlan(planId, request);
+      } else {
+        response = await buildPlanService.createPlan(request);
+      }
+
+      if (response.result) {
+        setPlanId(response.result.id);
+        fetchSavedPlans();
+        alert("Đã lưu thực đơn thành công!");
+      }
+    } catch (err) {
+      console.error("Error saving plan:", err);
+      alert("Không thể lưu thực đơn. Vui lòng thử lại.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleBuyPlan = async (id?: number) => {
+    const targetId = id || planId;
+    if (!targetId) {
+      alert("Vui lòng lưu thực đơn trước khi mua");
+      return;
+    }
+
+    if (!window.confirm("Hệ thống sẽ thêm tất cả nguyên liệu trong thực đơn này vào giỏ hàng và chuyển đến trang thanh toán. Bạn có muốn tiếp tục?")) {
+      return;
+    }
+
+    setIsBuying(true);
+    try {
+      await cartService.addPlanToCart(targetId);
+      navigate('/checkout');
+    } catch (err) {
+      console.error("Error buying plan:", err);
+      alert("Không thể thực hiện mua. Vui lòng thử lại.");
+    } finally {
+      setIsBuying(false);
+    }
+  };
+
+  const handleBuyCombo = async (comboId: string) => {
+    setIsBuying(true);
+    try {
+      await cartService.addToCart({
+        buildComboId: parseInt(comboId),
+        quantity: numPeople
+      });
+      navigate('/checkout');
+    } catch (err) {
+      console.error("Error buying combo:", err);
+      alert("Không thể mua món ăn này. Vui lòng thử lại.");
+    } finally {
+      setIsBuying(false);
+    }
+  };
+
+  const handleDeletePlan = async () => {
+    if (!planId) return;
+    handleDeleteAnyPlan(planId);
+  };
+
+  const getRandomDishFromList = (type: MealType, selectedStyle: EatingStyle, list: Dish[]): Dish | null => {
+    const filtered = list.filter(d => d.mealType === type);
+    // Try to match style if possible, but fallback to any dish of that type if none match style
+    const styleMatch = filtered.filter(d => d.style.includes(selectedStyle));
+    const pool = styleMatch.length > 0 ? styleMatch : filtered;
+
+    if (pool.length === 0) return null;
+    return pool[Math.floor(Math.random() * pool.length)] || pool[0];
+  };
+
+  const getProductInfo = (productId: string) => {
+    return allProducts.find(p => p.id.toString() === productId);
   };
 
   const shoppingList = useMemo(() => {
     const list: Record<string, number> = {};
     mealPlan.forEach(day => {
-      (Object.values(day.meals) as Dish[]).forEach(dish => {
-        dish.recipes.forEach(recipe => {
-          const totalQty = recipe.quantityPerPerson * numPeople;
-          list[recipe.ingredientId] = (list[recipe.ingredientId] || 0) + totalQty;
+      day.meals.forEach(meal => {
+        meal.dishes.forEach(dish => {
+          dish.recipes.forEach(recipe => {
+            const totalQty = recipe.quantityPerPerson * numPeople;
+            list[recipe.ingredientId] = (list[recipe.ingredientId] || 0) + totalQty;
+          });
         });
       });
     });
-    return Object.entries(list).map(([id, qty]) => ({
-      ...INGREDIENTS[id],
-      quantity: qty
-    }));
-  }, [mealPlan, numPeople]);
+
+    return Object.entries(list).map(([id, qty]) => {
+      const product = getProductInfo(id);
+      return {
+        id,
+        name: product?.productName || 'Nguyên liệu',
+        unit: product?.unit || 'g',
+        quantity: qty,
+        pricePerUnit: product?.sellingPrice || 0,
+        isUglyProduce: false // We can dynamically check if needed
+      };
+    });
+  }, [mealPlan, numPeople, allProducts]);
 
   return (
     <div className="min-h-screen bg-[#FDFCF8] text-[#2D2D2D] font-sans selection:bg-emerald-100">
-     
+
 
       <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
+
           {/* Left Column: Configuration */}
           <div className="lg:col-span-4 space-y-6">
             <section className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm">
@@ -157,26 +565,35 @@ export default function MealPlan() {
                 <Utensils size={20} className="text-emerald-600" />
                 Thiết lập thực đơn
               </h2>
-              
+
               <div className="space-y-6">
+                {/* Plan Name */}
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-stone-400 mb-2 block">Tên thực đơn</label>
+                  <input
+                    type="text"
+                    value={planName}
+                    onChange={(e) => setPlanName(e.target.value)}
+                    placeholder="Nhập tên thực đơn của bạn..."
+                    className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all text-sm"
+                  />
+                </div>
+
                 {/* Num People */}
                 <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-stone-400 mb-3 block">Số người ăn</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[1, 2, 4].map(n => (
-                      <button
-                        key={n}
-                        onClick={() => setNumPeople(n)}
-                        className={`py-2 rounded-xl border transition-all flex items-center justify-center gap-2 ${
-                          numPeople === n 
-                          ? 'bg-emerald-50 border-emerald-500 text-emerald-700 font-semibold' 
-                          : 'border-stone-200 hover:border-stone-300 text-stone-600'
-                        }`}
-                      >
-                        <Users size={16} />
-                        {n}
-                      </button>
-                    ))}
+                  <label className="text-xs font-bold uppercase tracking-wider text-stone-400 mb-2 block">Số người ăn</label>
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex-1">
+                      <Users size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" />
+                      <input
+                        type="number"
+                        min="1"
+                        max="50"
+                        value={numPeople}
+                        onChange={(e) => setNumPeople(parseInt(e.target.value) || 1)}
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-stone-200 focus:border-emerald-500 outline-none text-sm font-semibold"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -188,11 +605,10 @@ export default function MealPlan() {
                       <button
                         key={s}
                         onClick={() => setStyle(s as EatingStyle)}
-                        className={`py-2 px-3 rounded-xl border text-sm transition-all ${
-                          style === s 
-                          ? 'bg-emerald-50 border-emerald-500 text-emerald-700 font-semibold' 
+                        className={`py-2 px-3 rounded-xl border text-sm transition-all ${style === s
+                          ? 'bg-emerald-50 border-emerald-500 text-emerald-700 font-semibold'
                           : 'border-stone-200 hover:border-stone-300 text-stone-600'
-                        }`}
+                          }`}
                       >
                         {s}
                       </button>
@@ -202,32 +618,47 @@ export default function MealPlan() {
 
                 {/* Days */}
                 <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-stone-400 mb-3 block">Số ngày</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[3, 7].map(d => (
-                      <button
-                        key={d}
-                        onClick={() => setNumDays(d)}
-                        className={`py-2 rounded-xl border transition-all flex items-center justify-center gap-2 ${
-                          numDays === d 
-                          ? 'bg-emerald-50 border-emerald-500 text-emerald-700 font-semibold' 
-                          : 'border-stone-200 hover:border-stone-300 text-stone-600'
-                        }`}
-                      >
-                        <Calendar size={16} />
-                        {d} ngày
-                      </button>
-                    ))}
+                  <label className="text-xs font-bold uppercase tracking-wider text-stone-400 mb-2 block">Số ngày</label>
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex-1">
+                      <Calendar size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" />
+                      <input
+                        type="number"
+                        min="1"
+                        max="30"
+                        value={numDays}
+                        onChange={(e) => setNumDays(parseInt(e.target.value) || 1)}
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-stone-200 focus:border-emerald-500 outline-none text-sm font-semibold"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <button 
+                <button
                   onClick={generatePlan}
                   className="w-full bg-emerald-600 text-white py-4 rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 flex items-center justify-center gap-2 mt-4"
                 >
                   <RefreshCw size={20} />
-                  {isGenerated ? 'Tạo lại thực đơn' : 'Tạo thực đơn ngay'}
+                  {isGenerated ? 'Tự động tạo thực đơn' : 'Tạo thực đơn ngay'}
                 </button>
+
+                <button
+                  onClick={() => setShowPlansList(true)}
+                  className="w-full border border-stone-200 text-stone-600 py-4 rounded-xl font-bold hover:bg-stone-50 transition-all flex items-center justify-center gap-2 mt-2"
+                >
+                  <List size={20} />
+                  Thực đơn đã tạo
+                </button>
+
+                {planId && (
+                  <button
+                    onClick={handleDeletePlan}
+                    className="w-full border border-red-200 text-red-600 py-4 rounded-xl font-bold hover:bg-red-50 transition-all flex items-center justify-center gap-2 mt-2"
+                  >
+                    <Trash2 size={20} />
+                    Xóa thực đơn hiện tại
+                  </button>
+                )}
               </div>
             </section>
 
@@ -240,9 +671,9 @@ export default function MealPlan() {
                 </div>
                 <h3 className="text-xl font-bold mb-4">Nông sản "xấu mã"</h3>
                 <div className="space-y-3">
-                  {Object.values(INGREDIENTS).filter(i => i.isUglyProduce).map(i => (
-                    <div key={i.id} className="flex items-center justify-between text-sm border-b border-white/10 pb-2">
-                      <span className="text-stone-300">{i.name}</span>
+                  {allProducts.filter(p => p.sellingPrice < 10000).slice(0, 3).map(p => (
+                    <div key={p.id} className="flex items-center justify-between text-sm border-b border-white/10 pb-2">
+                      <span className="text-stone-300">{p.productName}</span>
                       <span className="text-emerald-400 font-medium">-30% giá</span>
                     </div>
                   ))}
@@ -258,134 +689,242 @@ export default function MealPlan() {
           {/* Right Column: Results */}
           <div className="lg:col-span-8 space-y-8">
             {!isGenerated ? (
-                <div 
-                  className="bg-white border-2 border-dashed border-stone-200 rounded-3xl p-12 flex flex-col items-center justify-center text-center space-y-4"
-                >
-                  <div className="w-20 h-20 bg-stone-50 rounded-full flex items-center justify-center text-stone-300">
-                    <Utensils size={40} />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-stone-800">Chưa có thực đơn</h3>
-                    <p className="text-stone-500 max-w-xs mx-auto mt-2">
-                      Hãy chọn các tùy chọn bên trái để chúng tôi gợi ý thực đơn thông minh cho bạn.
-                    </p>
-                  </div>
+              <div
+                className="bg-white border-2 border-dashed border-stone-200 rounded-3xl p-12 flex flex-col items-center justify-center text-center space-y-4"
+              >
+                <div className="w-20 h-20 bg-stone-50 rounded-full flex items-center justify-center text-stone-300">
+                  <Utensils size={40} />
                 </div>
-              ) : (
-                <div 
-                  className="space-y-8"
-                >
-                  {/* Meal Plan Grid */}
-                  <section>
-                    <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-2xl font-bold tracking-tight">Thực đơn của bạn</h2>
-                      <span className="text-sm text-stone-500 bg-stone-100 px-3 py-1 rounded-full font-medium">
-                        {numDays} ngày • {style}
-                      </span>
+                <div>
+                  <h3 className="text-xl font-bold text-stone-800">Chưa có thực đơn</h3>
+                  <p className="text-stone-500 max-w-xs mx-auto mt-2">
+                    Hãy chọn các tùy chọn bên trái để chúng tôi gợi ý thực đơn thông minh cho bạn.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div
+                className="space-y-8"
+              >
+                {/* Meal Plan Grid */}
+                <section>
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="space-y-1">
+                      <h2 className="text-2xl font-bold tracking-tight">{planName || 'Thực đơn của bạn'}</h2>
+                      <p className="text-sm text-stone-500">Kế hoạch ăn uống thông minh</p>
                     </div>
-                    
-                    <div className="space-y-4">
-                      {mealPlan.map((dayPlan) => (
-                        <div 
-                          key={dayPlan.day}
-                          className="bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
-                        >
-                          <div className="bg-stone-50 px-6 py-3 border-b border-stone-200 flex items-center justify-between">
-                            <span className="font-bold text-stone-800">Ngày {dayPlan.day}</span>
+                    <span className="text-sm text-stone-500 bg-stone-100 px-3 py-1 rounded-full font-medium">
+                      {numDays} ngày • {numPeople} người • {style}
+                    </span>
+                  </div>
+
+                  <div className="space-y-4">
+                    {mealPlan.map((dayPlan) => (
+                      <div
+                        key={dayPlan.day}
+                        className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all space-y-0"
+                      >
+                        <div className="bg-stone-50 px-8 py-5 border-b border-stone-200 flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <span className="font-bold text-stone-800 text-lg">Ngày {dayPlan.day}</span>
                             <div className="flex gap-1">
-                              {(Object.values(dayPlan.meals) as Dish[]).some(d => d.recipes.some(r => INGREDIENTS[r.ingredientId].isUglyProduce)) && (
-                                <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded uppercase tracking-wider">Ưu tiên nông sản xanh</span>
+                              {dayPlan.meals.some(m => m.dishes.some(d => d.price && d.price)) && (
+                                <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full uppercase tracking-wider">Ưu tiên nông sản xanh</span>
                               )}
                             </div>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-stone-100">
-                            {(Object.entries(dayPlan.meals) as [MealType, Dish][]).map(([type, dish]) => (
-                              <div key={type} className="p-6 space-y-2">
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-stone-400">{type}</span>
-                                <h4 className="font-bold text-stone-800 leading-tight">{dish.name}</h4>
-                                <div className="flex flex-wrap gap-1 mt-2">
-                                  {dish.recipes.map(r => (
-                                    <span key={r.ingredientId} className={`text-[10px] px-1.5 py-0.5 rounded ${INGREDIENTS[r.ingredientId].isUglyProduce ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-stone-50 text-stone-500'}`}>
-                                      {INGREDIENTS[r.ingredientId].name}
-                                    </span>
-                                  ))}
+                          <button
+                            onClick={() => addMealToDay(dayPlan.day)}
+                            className="flex items-center gap-2 text-xs font-bold text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl hover:bg-emerald-100 transition-colors"
+                          >
+                            <Plus size={14} /> Thêm bữa ăn
+                          </button>
+                        </div>
+
+                        <div className="p-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+                          {dayPlan.meals.map((meal) => (
+                            <div
+                              key={meal.id}
+                              className="bg-[#FDFCF8] border border-stone-100 rounded-2xl p-4 flex flex-col group relative hover:border-emerald-200 transition-all"
+                            >
+                              <div className="flex items-center justify-between mb-3">
+                                {isRenaming?.mealId === meal.id ? (
+                                  <input
+                                    autoFocus
+                                    className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 bg-white border-b border-emerald-500 outline-none w-24"
+                                    defaultValue={meal.label}
+                                    onBlur={(e) => renameMeal(dayPlan.day, meal.id, e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && renameMeal(dayPlan.day, meal.id, (e.target as HTMLInputElement).value)}
+                                  />
+                                ) : (
+                                  <span
+                                    onClick={() => setIsRenaming({ dayIndex: dayPlan.day, mealId: meal.id })}
+                                    className="text-[10px] font-bold uppercase tracking-widest text-stone-400 cursor-pointer hover:text-emerald-600 transition-colors"
+                                  >
+                                    {meal.label}
+                                  </span>
+                                )}
+                                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                                  <button
+                                    onClick={() => setEditingMeal({ dayIndex: dayPlan.day, mealId: meal.id })}
+                                    className="p-1.5 hover:bg-emerald-50 text-emerald-600 rounded-lg"
+                                  >
+                                    <Plus size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => removeMealFromDay(dayPlan.day, meal.id)}
+                                    className="p-1.5 hover:bg-red-50 text-red-500 rounded-lg"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
                                 </div>
                               </div>
-                            ))}
+
+                              <div className="space-y-2 flex-1">
+                                {meal.dishes.length > 0 ? (
+                                  meal.dishes.map((dish, dIdx) => (
+                                    <div
+                                      key={`${dish.id}-${dIdx}`}
+                                      className="bg-white border border-stone-50 rounded-xl p-3 shadow-sm relative group/dish cursor-pointer hover:border-emerald-500 transition-all"
+                                      onClick={() => setViewingDish(dish)}
+                                    >
+                                      <h4 className="font-bold text-stone-800 text-xs leading-tight">{dish.name}</h4>
+                                      <p className="text-[10px] text-stone-400 mt-1">{dish.price?.toLocaleString()}đ</p>
+
+                                      <div className="absolute -top-2 -right-2 flex gap-1 opacity-0 group-hover/dish:opacity-100 transition-opacity">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleBuyCombo(dish.id);
+                                          }}
+                                          className="bg-emerald-600 text-white p-1.5 rounded-full shadow-lg hover:bg-emerald-700 transition-colors"
+                                          title="Mua ngay món này"
+                                        >
+                                          <ShoppingCart size={10} />
+                                        </button>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            removeDishFromMeal(dayPlan.day, meal.id, dish.id);
+                                          }}
+                                          className="bg-red-500 text-white p-1.5 rounded-full shadow-lg hover:bg-red-600 transition-colors"
+                                          title="Xóa khỏi thực đơn"
+                                        >
+                                          <X size={10} />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div
+                                    onClick={() => setEditingMeal({ dayIndex: dayPlan.day, mealId: meal.id })}
+                                    className="flex items-center justify-center border-2 border-dashed border-stone-100 rounded-xl h-20 text-stone-300 hover:text-emerald-500 hover:border-emerald-200 cursor-pointer transition-all"
+                                  >
+                                    <Plus size={20} />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                {/* Shopping List */}
+                <section className="bg-emerald-900 text-white rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+                  <div className="relative z-10">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                          <ShoppingCart size={28} className="text-emerald-400" />
+                        </div>
+                        <div>
+                          <h2 className="text-2xl font-bold">Giỏ hàng nguyên liệu</h2>
+                          <p className="text-emerald-300/80 text-sm">Tổng hợp từ thực đơn {numDays} ngày</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <button
+                          onClick={saveToBackend}
+                          disabled={isSaving}
+                          className="bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold px-8 py-4 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 group disabled:opacity-50"
+                        >
+                          {isSaving ? (
+                            <RefreshCw size={18} className="animate-spin" />
+                          ) : (
+                            <CheckCircle2 size={18} />
+                          )}
+                          Lưu thực đơn
+                        </button>
+
+                        {planId && (
+                          <button
+                            onClick={() => handleBuyPlan()}
+                            disabled={isBuying}
+                            className="bg-white hover:bg-stone-50 text-emerald-900 font-bold px-8 py-4 rounded-2xl transition-all shadow-lg border-2 border-emerald-500 flex items-center justify-center gap-2 group disabled:opacity-50"
+                          >
+                            {isBuying ? (
+                              <RefreshCw size={18} className="animate-spin" />
+                            ) : (
+                              <ShoppingCart size={18} />
+                            )}
+                            Mua tất cả
+                            <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {shoppingList.map((item) => (
+                        <div
+                          key={item.id}
+                          className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${item.isUglyProduce
+                            ? 'bg-emerald-800/40 border-emerald-500/30'
+                            : 'bg-white/5 border-white/10'
+                            }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-2 h-2 rounded-full ${item.isUglyProduce ? 'bg-emerald-400' : 'bg-white/30'}`}></div>
+                            <div>
+                              <p className="font-bold">{item.name}</p>
+                              {item.isUglyProduce && (
+                                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Nông sản xấu mã</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-mono text-lg font-bold">
+                              {item.quantity >= 1000 ? (item.quantity / 1000).toFixed(1) : item.quantity}
+                              <span className="text-xs ml-1 opacity-60 font-sans">{item.quantity >= 1000 ? 'kg' : item.unit}</span>
+                            </p>
                           </div>
                         </div>
                       ))}
                     </div>
-                  </section>
 
-                  {/* Shopping List */}
-                  <section className="bg-emerald-900 text-white rounded-3xl p-8 shadow-2xl relative overflow-hidden">
-                    <div className="relative z-10">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-                        <div className="flex items-center gap-4">
-                          <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                            <ShoppingCart size={28} className="text-emerald-400" />
-                          </div>
-                          <div>
-                            <h2 className="text-2xl font-bold">Giỏ hàng nguyên liệu</h2>
-                            <p className="text-emerald-300/80 text-sm">Tổng hợp từ thực đơn {numDays} ngày</p>
-                          </div>
-                        </div>
-                        <button className="bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold px-8 py-4 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 group">
-                          Mua tất cả nguyên liệu
-                          <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                        </button>
+                    <div className="mt-8 pt-8 border-t border-white/10 flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-emerald-300 text-sm">
+                        <CheckCircle2 size={16} />
+                        <span>Đã tối ưu hóa theo lượng người ăn ({numPeople} người)</span>
                       </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {shoppingList.map((item) => (
-                          <div 
-                            key={item.id} 
-                            className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
-                              item.isUglyProduce 
-                              ? 'bg-emerald-800/40 border-emerald-500/30' 
-                              : 'bg-white/5 border-white/10'
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className={`w-2 h-2 rounded-full ${item.isUglyProduce ? 'bg-emerald-400' : 'bg-white/30'}`}></div>
-                              <div>
-                                <p className="font-bold">{item.name}</p>
-                                {item.isUglyProduce && (
-                                  <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Nông sản xấu mã</span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-mono text-lg font-bold">
-                                {item.quantity >= 1000 ? (item.quantity / 1000).toFixed(1) : item.quantity}
-                                <span className="text-xs ml-1 opacity-60 font-sans">{item.quantity >= 1000 ? 'kg' : item.unit}</span>
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="mt-8 pt-8 border-t border-white/10 flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-emerald-300 text-sm">
-                          <CheckCircle2 size={16} />
-                          <span>Đã tối ưu hóa theo lượng người ăn ({numPeople} người)</span>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs text-emerald-300/60 uppercase tracking-widest font-bold">Ước tính</p>
-                          <p className="text-2xl font-bold">
-                            {Math.round(shoppingList.reduce((acc, curr) => acc + (curr.quantity * curr.pricePerUnit), 0)).toLocaleString()}đ
-                          </p>
-                        </div>
+                      <div className="text-right">
+                        <p className="text-xs text-emerald-300/60 uppercase tracking-widest font-bold">Ước tính</p>
+                        <p className="text-2xl font-bold">
+                          {Math.round(shoppingList.reduce((acc, curr) => acc + (curr.quantity * curr.pricePerUnit), 0)).toLocaleString()}đ
+                        </p>
                       </div>
                     </div>
-                    {/* Decorative elements */}
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
-                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -ml-32 -mb-32"></div>
-                  </section>
-                </div>
-              )}
-            </div>
+                  </div>
+                  {/* Decorative elements */}
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
+                  <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -ml-32 -mb-32"></div>
+                </section>
+              </div>
+            )}
+          </div>
         </div>
       </main>
 
@@ -422,6 +961,259 @@ export default function MealPlan() {
           © 2026 EcoMeal Planner. Phát triển vì một tương lai bền vững.
         </div>
       </footer>
+
+      {/* Manual Selection Modal */}
+      {editingMeal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm"
+            onClick={() => setEditingMeal(null)}
+          ></div>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden relative z-10 flex flex-col">
+            <div className="p-6 border-b border-stone-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold">Chọn món ăn</h3>
+                <p className="text-sm text-stone-500">
+                  Ngày {editingMeal.dayIndex} • {mealPlan.find(dp => dp.day === editingMeal.dayIndex)?.meals.find(m => m.id === editingMeal.mealId)?.label}
+                </p>
+              </div>
+              <button
+                onClick={() => setEditingMeal(null)}
+                className="p-2 hover:bg-stone-100 rounded-full transition-colors"
+              >
+                <X size={20} className="text-stone-400" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {(() => {
+                const currentMeal = mealPlan.find(dp => dp.day === editingMeal.dayIndex)?.meals.find(m => m.id === editingMeal.mealId);
+                const filteredDishes = currentMeal ? dishes.filter(d => d.mealType === currentMeal.type) : dishes;
+
+                if (filteredDishes.length === 0) return (
+                  <div className="col-span-2 py-12 text-center text-stone-500">
+                    Không tìm thấy món ăn phù hợp.
+                  </div>
+                );
+
+                return (
+                  <>
+                    {filteredDishes.map(dish => (
+                      <button
+                        key={dish.id}
+                        onClick={() => handleManualSelection(dish)}
+                        className="flex flex-col text-left border border-stone-100 rounded-2xl p-4 hover:border-emerald-500 hover:bg-emerald-50/20 transition-all group"
+                      >
+                        <div className="aspect-video w-full bg-stone-100 rounded-xl mb-3 overflow-hidden">
+                          {dish.image ? (
+                            <img src={dish.image} alt={dish.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-stone-300">
+                              <Utensils size={32} />
+                            </div>
+                          )}
+                        </div>
+                        <h4 className="font-bold text-stone-800 group-hover:text-emerald-700">{dish.name}</h4>
+                        <p className="text-xs text-stone-500 mt-1 line-clamp-2">{dish.price?.toLocaleString()}đ</p>
+                        <div className="flex flex-wrap gap-1 mt-3">
+                          {dish.recipes.slice(0, 2).map(r => (
+                            <span key={r.ingredientId} className="text-[10px] bg-white border border-stone-100 px-1.5 py-0.5 rounded text-stone-500">
+                              {getProductInfo(r.ingredientId)?.productName || '...'}
+                            </span>
+                          ))}
+                        </div>
+                      </button>
+                    ))}
+                  </>
+                );
+              })()}
+            </div>
+
+            <div className="p-6 border-t border-stone-100 bg-stone-50 flex justify-end">
+              <button
+                onClick={() => setEditingMeal(null)}
+                className="px-6 py-2 rounded-xl font-bold text-stone-500 hover:text-stone-700 transition-colors"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Saved Plans List Modal */}
+      {showPlansList && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm"
+            onClick={() => setShowPlansList(false)}
+          ></div>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden relative z-10 flex flex-col font-sans">
+            <div className="p-8 border-b border-stone-100 flex items-center justify-between bg-emerald-50/50">
+              <div>
+                <h3 className="text-2xl font-bold text-stone-800">Thực đơn của tôi</h3>
+                <p className="text-sm text-stone-500">Xem và quản lý các thực đơn bạn đã tạo</p>
+              </div>
+              <button
+                onClick={() => setShowPlansList(false)}
+                className="p-2 hover:bg-white rounded-full transition-colors shadow-sm"
+              >
+                <X size={24} className="text-stone-400" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto p-8 bg-[#FDFCF8]">
+              {allPlans.length === 0 ? (
+                <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-stone-100">
+                  <div className="w-20 h-20 bg-stone-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Calendar size={40} className="text-stone-200" />
+                  </div>
+                  <h4 className="text-lg font-bold text-stone-800">Chưa có thực đơn nào</h4>
+                  <p className="text-stone-500 mt-2">Hãy tạo thực đơn đầu tiên của bạn ngay!</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {allPlans.map(plan => (
+                    <div
+                      key={plan.id}
+                      className="border border-stone-200 rounded-2xl p-6 hover:border-emerald-500 hover:shadow-xl hover:shadow-emerald-900/5 transition-all group relative bg-white flex flex-col"
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="space-y-1">
+                          <h4 className="font-bold text-stone-800 group-hover:text-emerald-700 transition-colors text-lg leading-tight">
+                            {plan.planName}
+                          </h4>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteAnyPlan(plan.id);
+                          }}
+                          className="p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 mt-auto mb-6">
+                        <span className="text-[10px] bg-stone-100 px-3 py-1 rounded-full font-bold text-stone-600 uppercase tracking-wider">
+                          {plan.numberOfPeople} người
+                        </span>
+                        <span className="text-[10px] bg-stone-100 px-3 py-1 rounded-full font-bold text-stone-600 uppercase tracking-wider">
+                          {plan.numberOfDays} ngày
+                        </span>
+                        <span className="text-[10px] bg-emerald-100 px-3 py-1 rounded-full font-bold text-emerald-700 uppercase tracking-wider">
+                          {mapFromBackendStyle(plan.mealType)}
+                        </span>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          loadPlanFromResponse(plan, allCombos);
+                          setShowPlansList(false);
+                        }}
+                        className="w-full py-3.5 bg-stone-50 hover:bg-emerald-600 hover:text-white text-stone-700 rounded-xl font-bold text-sm transition-all shadow-sm flex items-center justify-center gap-2"
+                      >
+                        Mở thực đơn
+                        <ChevronRight size={16} />
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleBuyPlan(plan.id);
+                        }}
+                        className="w-full mt-2 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm transition-all shadow-sm flex items-center justify-center gap-2"
+                      >
+                        <ShoppingCart size={16} />
+                        Mua ngay
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dish Details Modal */}
+      {viewingDish && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm"
+            onClick={() => setViewingDish(null)}
+          ></div>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden relative z-10 flex flex-col font-sans animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-stone-100 flex items-center justify-between bg-white">
+              <div>
+                <h3 className="text-xl font-bold text-stone-800">{viewingDish.name}</h3>
+                <p className="text-xs text-stone-500 font-bold uppercase tracking-widest mt-1">Thành phần nguyên liệu</p>
+              </div>
+              <button
+                onClick={() => setViewingDish(null)}
+                className="p-2 hover:bg-stone-100 rounded-full transition-colors"
+              >
+                <X size={20} className="text-stone-400" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="bg-stone-50 rounded-2xl p-4">
+                <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-3">Định lượng cho {numPeople} người</p>
+                <div className="space-y-3">
+                  {viewingDish.recipes.length > 0 ? (
+                    viewingDish.recipes.map((item, idx) => {
+                      const product = getProductInfo(item.ingredientId);
+                      const totalQty = item.quantityPerPerson * numPeople;
+                      return (
+                        <div key={idx} className="flex items-center justify-between border-b border-stone-200 pb-2 last:border-0 last:pb-0">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-emerald-600 border border-stone-200">
+                              <Leaf size={14} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-stone-800">{product?.productName || 'Đang tải...'}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-mono font-bold text-emerald-700">
+                              {totalQty >= 1000 ? (totalQty / 1000).toFixed(1) : totalQty}
+                              <span className="text-[10px] ml-1 font-sans text-stone-400">{totalQty >= 1000 ? 'kg' : (product?.unit || 'g')}</span>
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-4 text-stone-400 italic text-sm">
+                      Dữ liệu thành phần đang được cập nhật...
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    handleBuyCombo(viewingDish.id);
+                    setViewingDish(null);
+                  }}
+                  className="flex-1 py-3.5 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 flex items-center justify-center gap-2"
+                >
+                  <ShoppingCart size={18} />
+                  Mua nguyên liệu
+                </button>
+                <button
+                  onClick={() => setViewingDish(null)}
+                  className="flex-1 py-3.5 bg-stone-100 text-stone-600 rounded-xl font-bold text-sm hover:bg-stone-200 transition-all flex items-center justify-center"
+                >
+                  Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

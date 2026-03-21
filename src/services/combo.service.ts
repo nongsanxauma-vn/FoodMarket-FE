@@ -32,6 +32,7 @@ export interface BuildComboResponse {
     description: string;
     type: string;
     region?: Region;
+    mealType?: string; // BREAKFAST, LUNCH, DINNER
     shopOwnerId: number;
     items: ProductComboResponse[];
 }

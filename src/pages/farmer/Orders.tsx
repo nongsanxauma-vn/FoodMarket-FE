@@ -273,7 +273,10 @@ const Orders: React.FC<OrdersProps> = ({ onPrepareOrder }) => {
                           <CheckCircle2 className="size-5" /> Chuẩn bị hàng
                         </button>
                         <div className="grid grid-cols-2 gap-3">
-                          <button className="py-3 border border-gray-100 text-gray-600 font-bold text-xs rounded-2xl flex items-center justify-center gap-2 hover:bg-gray-50 transition-all">
+                          <button 
+                            onClick={() => navigate(`/chat?userId=${order.buyerId}&userName=${order.recipientName}`)}
+                            className="py-3 border border-gray-100 text-gray-600 font-bold text-xs rounded-2xl flex items-center justify-center gap-2 hover:bg-gray-50 transition-all font-display uppercase tracking-tight"
+                          >
                             <Truck className="size-4" /> Liên hệ KH
                           </button>
                           <button disabled={isProcessing} onClick={() => handleOpenCancelModal(order.id)}
