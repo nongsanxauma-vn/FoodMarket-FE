@@ -1,297 +1,294 @@
 import React from 'react';
-import { MessageBubbleProps, ChatAction } from './types';
+import { useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
+import { ChatMessage, ProductSuggestion, MessageBubbleProps } from './chatbot.types';
 
-/**
- * MessageBubble Component
- * User and AI message bubbles with different styles, timestamps, and status indicators
- */
-export const MessageBubble: React.FC<MessageBubbleProps> = ({
-  message,
-  onRetry,
-  onActionClick
-}) => {
-  const isUser = message.sender === 'user';
-  const isSystem = message.type === 'system';
+// ===== MARKDOWN COMPONENTS =====
+const markdownComponents = {
+  p: ({ children }: any) => (
+    <p style={{ margin: '2px 0', lineHeight: '1.6' }}>{children}</p>
+  ),
+  ul: ({ children }: any) => (
+    <ul style={{ paddingLeft: '16px', margin: '4px 0' }}>{children}</ul>
+  ),
+  ol: ({ children }: any) => (
+    <ol style={{ paddingLeft: '16px', margin: '4px 0' }}>{children}</ol>
+  ),
+  li: ({ children }: any) => (
+    <li style={{ margin: '2px 0', lineHeight: '1.6' }}>{children}</li>
+  ),
+  strong: ({ children }: any) => (
+    <strong style={{ fontWeight: 700 }}>{children}</strong>
+  ),
+  h1: ({ children }: any) => (
+    <h1 style={{ fontSize: '15px', fontWeight: 700, margin: '8px 0 4px' }}>{children}</h1>
+  ),
+  h2: ({ children }: any) => (
+    <h2 style={{ fontSize: '14px', fontWeight: 700, margin: '6px 0 3px' }}>{children}</h2>
+  ),
+  h3: ({ children }: any) => (
+    <h3 style={{ fontSize: '13px', fontWeight: 700, margin: '4px 0 2px' }}>{children}</h3>
+  ),
+};
 
-  // Debug log
-  console.log('[MessageBubble] Rendering message:', {
-    id: message.id,
-    content: message.content,
-    sender: message.sender,
-    contentLength: message.content?.length,
-    hasContent: !!message.content
-  });
+// ===== MATCH LOGIC =====
+const isMatch = (productName: string, line: string): boolean => {
+  const name = productName.toLowerCase().trim();
+  const text = line.toLowerCase().trim();
+  if (text.includes(name)) return true;
+  const mainWords = name.split(' ').filter(w => w.length >= 3);
+  return mainWords.length > 0 && mainWords.every(word => text.includes(word));
+};
 
-  // Format timestamp
-  const formatTime = (timestamp: Date) => {
-    return new Intl.DateTimeFormat('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    }).format(timestamp);
-  };
+// ===== PRODUCT CARD INLINE =====
+interface InlineProductCardProps {
+  product: ProductSuggestion;
+  onClick: () => void;
+}
 
-  // Get status icon
-  const getStatusIcon = () => {
-    switch (message.status) {
-      case 'sending':
-        return '⏳';
-      case 'sent':
-        return '✓';
-      case 'delivered':
-        return '✓✓';
-      case 'failed':
-        return '❌';
-      default:
-        return '';
-    }
-  };
-
-  // Handle action button click
-  const handleActionClick = (action: ChatAction) => {
-    if (onActionClick) {
-      onActionClick(action);
-    }
-  };
-
-  // Handle retry click
-  const handleRetry = () => {
-    if (onRetry && message.status === 'failed') {
-      onRetry(message.id);
-    }
-  };
-
-  // Get action button style based on action type
-  const getActionButtonStyle = (actionType: string) => {
-    const baseStyle = {
-      padding: '6px 12px',
-      fontSize: '12px',
-      border: 'none',
-      borderRadius: '16px',
+const InlineProductCard: React.FC<InlineProductCardProps> = ({ product, onClick }) => (
+  <div
+    onClick={onClick}
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '10px',
+      backgroundColor: '#fff',
+      border: '1px solid #e8f5e9',
+      borderRadius: '10px',
+      padding: '8px 12px',
+      marginTop: '6px',
       cursor: 'pointer',
-      margin: '2px',
-      fontWeight: '500' as const
-    };
+      boxShadow: '0 1px 4px rgba(76,175,80,0.08)',
+      transition: 'all 0.15s ease',
+      width: '100%'
+    }}
+    onMouseEnter={e => {
+      const el = e.currentTarget as HTMLDivElement;
+      el.style.boxShadow = '0 4px 12px rgba(76,175,80,0.2)';
+      el.style.borderColor = '#4CAF50';
+      el.style.transform = 'translateY(-1px)';
+    }}
+    onMouseLeave={e => {
+      const el = e.currentTarget as HTMLDivElement;
+      el.style.boxShadow = '0 1px 4px rgba(76,175,80,0.08)';
+      el.style.borderColor = '#e8f5e9';
+      el.style.transform = 'translateY(0)';
+    }}
+  >
+    {/* Ảnh sản phẩm */}
+    <div style={{
+      width: '44px',
+      height: '44px',
+      borderRadius: '8px',
+      overflow: 'hidden',
+      flexShrink: 0,
+      backgroundColor: '#f5f5f5',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}>
+      {product.imageUrl ? (
+        <img
+          src={product.imageUrl}
+          alt={product.name}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      ) : (
+        <span style={{ fontSize: '22px' }}>🥬</span>
+      )}
+    </div>
 
-    switch (actionType) {
-      case 'view_product':
-        return { ...baseStyle, backgroundColor: '#28a745', color: 'white' };
-      case 'add_to_cart':
-        return { ...baseStyle, backgroundColor: '#ffc107', color: '#333' };
-      case 'track_order':
-        return { ...baseStyle, backgroundColor: '#17a2b8', color: 'white' };
-      case 'contact_support':
-        return { ...baseStyle, backgroundColor: '#6c757d', color: 'white' };
-      default:
-        return { ...baseStyle, backgroundColor: '#007bff', color: 'white' };
-    }
-  };
+    {/* Thông tin sản phẩm */}
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <p style={{
+        margin: 0,
+        fontSize: '13px',
+        fontWeight: 600,
+        color: '#222',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
+      }}>
+        {product.name}
+      </p>
+      {product.category && (
+        <p style={{
+          margin: '1px 0 0',
+          fontSize: '11px',
+          color: '#999'
+        }}>
+          {product.category}
+        </p>
+      )}
+      <p style={{
+        margin: '2px 0 0',
+        fontSize: '13px',
+        fontWeight: 700,
+        color: '#E53935'
+      }}>
+        {product.price.toLocaleString('vi-VN')}đ
+      </p>
+    </div>
 
-  // System message style
-  if (isSystem) {
+    {/* Nút xem */}
+    <div style={{
+      backgroundColor: '#4CAF50',
+      color: '#fff',
+      padding: '6px 12px',
+      borderRadius: '20px',
+      fontSize: '11px',
+      fontWeight: 600,
+      flexShrink: 0,
+      whiteSpace: 'nowrap'
+    }}>
+      Xem →
+    </div>
+  </div>
+);
+
+// ===== RENDER CONTENT WITH INLINE PRODUCTS =====
+const renderContentWithProducts = (
+  content: string,
+  products: ProductSuggestion[],
+  navigate: (path: string) => void
+) => {
+  if (!products || products.length === 0) {
     return (
-      <div 
-        className="message-bubble system"
-        style={{
-          width: '100%',
-          textAlign: 'center',
-          padding: '8px 16px',
-          fontSize: '12px',
-          color: 'var(--chatbot-text-muted)',
-          margin: '12px 0',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}
-      >
-        <span style={{ flex: 1, height: '1px', background: 'var(--chatbot-border)' }}></span>
-        <span>{message.content}</span>
-        <span style={{ flex: 1, height: '1px', background: 'var(--chatbot-border)' }}></span>
-      </div>
+      <ReactMarkdown components={markdownComponents}>
+        {content}
+      </ReactMarkdown>
     );
   }
 
+  // Tách dòng
+  const lines = content.split('\n');
+
+  // Nhóm các dòng liên tiếp thành các block
+  // Mỗi block gồm: dòng text + các sản phẩm match
+  const blocks: { text: string; matchedProducts: ProductSuggestion[] }[] = [];
+
+  lines.forEach(line => {
+    const matched = products.filter(p => isMatch(p.name, line));
+    blocks.push({ text: line, matchedProducts: matched });
+  });
+
   return (
-    <div 
-      className={`message-bubble-wrapper ${isUser ? 'is-user' : 'is-ai'}`}
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: isUser ? 'flex-end' : 'flex-start',
-        margin: '12px 0',
-        width: '100%',
-        animation: 'chatbot-slide-up 0.4s ease-out'
-      }}
-    >
-      {/* Sender Info - Small Avatar or Label */}
+    <div>
+      {blocks.map((block, index) => (
+        <div key={index}>
+          {/* Render dòng text */}
+          {block.text.trim() && (
+            <ReactMarkdown components={markdownComponents}>
+              {block.text}
+            </ReactMarkdown>
+          )}
+
+          {/* Render product cards ngay sau dòng có match */}
+          {block.matchedProducts.length > 0 && (
+            <div style={{ marginBottom: '6px' }}>
+              {block.matchedProducts.map(product => (
+                <InlineProductCard
+                  key={product.id}
+                  product={product}
+                  onClick={() => navigate(`/product/${product.id}`)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ===== MESSAGE BUBBLE =====
+export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
+  const navigate = useNavigate();
+  const isUser = message.sender === 'user';
+
+  const formatTime = (date: Date) =>
+    date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: isUser ? 'flex-end' : 'flex-start',
+      margin: '8px 0'
+    }}>
+
+      {/* Nhãn người gửi */}
       {!isUser && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', marginLeft: '4px' }}>
-          <div style={{ 
-            width: '24px', 
-            height: '24px', 
-            background: 'linear-gradient(135deg, var(--chatbot-primary), var(--chatbot-primary-hover))',
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          marginBottom: '4px',
+          marginLeft: '2px'
+        }}>
+          <div style={{
+            width: '22px',
+            height: '22px',
             borderRadius: '50%',
+            backgroundColor: '#4CAF50',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'white',
-            fontSize: '10px'
+            fontSize: '11px',
+            color: '#fff',
+            fontWeight: 700
           }}>
             AI
           </div>
-          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--chatbot-text)' }}>Assistant</span>
+          <span style={{ fontSize: '11px', color: '#888', fontWeight: 500 }}>
+            Trợ lý AI
+          </span>
         </div>
       )}
 
-      {/* Message content */}
-      <div
-        className="message-content-bubble"
-        style={{
-          maxWidth: '85%',
-          padding: '12px 18px',
-          borderRadius: isUser ? '20px 20px 4px 20px' : '4px 20px 20px 20px',
-          background: isUser 
-            ? 'var(--chatbot-primary)' 
-            : 'var(--chatbot-surface)',
-          color: isUser ? 'white' : 'var(--chatbot-text)',
-          boxShadow: isUser 
-            ? '0 4px 12px var(--chatbot-primary-light)' 
-            : 'var(--chatbot-shadow)',
-          border: '1px solid var(--chatbot-border)',
-          wordWrap: 'break-word',
-          position: 'relative',
-          whiteSpace: 'pre-line',
-          fontSize: '14px',
-          lineHeight: '1.5'
-        }}
-      >
-        {message.content || '[Empty content - Debug: ' + JSON.stringify(message).substring(0, 100) + ']'}
-
-        {/* Actions for AI messages */}
-        {!isUser && message.metadata?.actions && Array.isArray(message.metadata.actions) && (
-          <div 
-            style={{
-              marginTop: '16px',
-              display: 'flex',
-              gap: '8px',
-              flexWrap: 'wrap',
-              paddingTop: '12px',
-              borderTop: '1px solid var(--chatbot-border)'
-            }}
-          >
-            {message.metadata.actions.map((action: ChatAction, index: number) => (
-              <button
-                key={index}
-                onClick={() => handleActionClick(action)}
-                className="chatbot-action-button"
-                style={{
-                  ...getActionButtonStyle(action.type),
-                  transition: 'all 0.2s ease',
-                  boxShadow: 'var(--chatbot-shadow-sm)'
-                }}
-              >
-                {action.label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Legacy action handling for backward compatibility */}
-        {!isUser && message.metadata?.actionType && !message.metadata?.actions && (
-          <div 
-            style={{
-              marginTop: '8px',
-              display: 'flex',
-              gap: '8px',
-              flexWrap: 'wrap'
-            }}
-          >
-            {message.metadata.actionType === 'product' && (
-              <>
-                <button
-                  onClick={() => handleActionClick({
-                    type: 'view_product',
-                    label: 'View Product',
-                    data: { productId: message.metadata?.productId }
-                  })}
-                  style={getActionButtonStyle('view_product')}
-                >
-                  View Product
-                </button>
-                <button
-                  onClick={() => handleActionClick({
-                    type: 'add_to_cart',
-                    label: 'Add to Cart',
-                    data: { productId: message.metadata?.productId }
-                  })}
-                  style={getActionButtonStyle('add_to_cart')}
-                >
-                  Add to Cart
-                </button>
-              </>
-            )}
-            {message.metadata.actionType === 'order' && (
-              <>
-                <button
-                  onClick={() => handleActionClick({
-                    type: 'track_order',
-                    label: 'Track Order',
-                    data: { orderId: message.metadata?.orderId }
-                  })}
-                  style={getActionButtonStyle('track_order')}
-                >
-                  Track Order
-                </button>
-                <button
-                  onClick={() => handleActionClick({
-                    type: 'contact_support',
-                    label: 'Contact Support',
-                    data: { orderId: message.metadata?.orderId }
-                  })}
-                  style={getActionButtonStyle('contact_support')}
-                >
-                  Contact Support
-                </button>
-              </>
-            )}
-          </div>
-        )}
+      {/* Bubble chính */}
+      <div style={{
+        maxWidth: '88%',
+        padding: '10px 14px',
+        borderRadius: isUser ? '18px 18px 4px 18px' : '4px 18px 18px 18px',
+        backgroundColor: isUser ? '#4CAF50' : '#fff',
+        color: isUser ? '#fff' : '#222',
+        fontSize: '14px',
+        lineHeight: '1.6',
+        wordBreak: 'break-word',
+        boxShadow: isUser
+          ? '0 2px 8px rgba(76,175,80,0.25)'
+          : '0 1px 4px rgba(0,0,0,0.08)',
+        border: isUser ? 'none' : '1px solid #f0f0f0'
+      }}>
+        {isUser
+          ? message.content
+          : renderContentWithProducts(
+              message.content,
+              message.suggestedProducts ?? [],
+              navigate
+            )
+        }
       </div>
 
-      {/* Timestamp and status */}
-      <div 
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          fontSize: '12px',
-          color: '#666',
-          marginTop: '4px',
-          flexDirection: isUser ? 'row-reverse' : 'row'
-        }}
-      >
+      {/* Thời gian + trạng thái */}
+      <div style={{
+        fontSize: '11px',
+        color: '#bbb',
+        marginTop: '3px',
+        display: 'flex',
+        gap: '4px',
+        alignItems: 'center',
+        marginLeft: isUser ? 0 : '4px'
+      }}>
         <span>{formatTime(message.timestamp)}</span>
         {isUser && (
-          <span className="status-icon">
-            {getStatusIcon()}
+          <span>
+            {message.status === 'sending' && '⏳'}
+            {message.status === 'sent' && '✓✓'}
+            {message.status === 'error' && '❌'}
           </span>
-        )}
-        {message.status === 'failed' && onRetry && (
-          <button
-            onClick={handleRetry}
-            style={{
-              fontSize: '12px',
-              color: '#dc3545',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              textDecoration: 'underline',
-              padding: '0',
-              marginLeft: '4px'
-            }}
-          >
-            Retry
-          </button>
         )}
       </div>
     </div>

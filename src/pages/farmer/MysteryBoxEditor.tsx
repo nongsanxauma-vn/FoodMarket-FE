@@ -5,6 +5,7 @@ import {
   Sparkles, Gift, ImagePlus, Loader2, AlertCircle, Eye, EyeOff
 } from 'lucide-react';
 import { productService, mysteryBoxService, authService, ProductResponse, ProductMysteryRequest } from '../../services/index';
+import { globalShowAlert } from '../../contexts/PopupContext';
 
 interface SelectedProduct {
   productId: number;
@@ -135,14 +136,14 @@ const MysteryBoxEditor: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   }, [selectedProducts, availableProducts]);
 
   const handleSave = async () => {
-    if (!boxType.trim()) { alert('Vui lòng nhập tên hộp mù.'); return; }
-    if (!price || Number(price) <= 0) { alert('Vui lòng nhập giá hợp lệ.'); return; }
-    if (!totalQuantity || Number(totalQuantity) < 1) { alert('Vui lòng nhập số lượng túi bán ra.'); return; }
-    if (selectedProducts.length === 0) { alert('Vui lòng chọn ít nhất một sản phẩm.'); return; }
+    if (!boxType.trim()) { globalShowAlert('Vui lòng nhập tên hộp mù.', 'Nhắc nhở', 'warning'); return; }
+    if (!price || Number(price) <= 0) { globalShowAlert('Vui lòng nhập giá hợp lệ.', 'Nhắc nhở', 'warning'); return; }
+    if (!totalQuantity || Number(totalQuantity) < 1) { globalShowAlert('Vui lòng nhập số lượng túi bán ra.', 'Nhắc nhở', 'warning'); return; }
+    if (selectedProducts.length === 0) { globalShowAlert('Vui lòng chọn ít nhất một sản phẩm.', 'Nhắc nhở', 'warning'); return; }
     const priceNum = Number(price);
     const qtyNum = Number(totalQuantity);
     if (priceNum > totalProductsPrice) {
-      alert(`Giá bán (${priceNum.toLocaleString('vi-VN')}đ) không được lớn hơn tổng giá trị sản phẩm (${totalProductsPrice.toLocaleString('vi-VN')}đ). Túi mù nên rẻ hơn hoặc bằng giá lẻ.`);
+      globalShowAlert(`Giá bán (${priceNum.toLocaleString('vi-VN')}đ) không được lớn hơn tổng giá trị sản phẩm (${totalProductsPrice.toLocaleString('vi-VN')}đ). Túi mù nên rẻ hơn hoặc bằng giá lẻ.`, 'Cảnh báo', 'warning');
       return;
     }
     setIsSaving(true);

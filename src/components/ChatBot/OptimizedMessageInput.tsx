@@ -30,7 +30,7 @@ const OptimizedMessageInput: React.FC<OptimizedMessageInputProps> = memo(({
   onTyping,
   onSuggestionRequest,
   disabled = false,
-  placeholder = 'Type your message...',
+  placeholder = 'Nhập tin nhắn..',
   maxLength = MAX_LENGTH,
   className = '',
   style = {}
@@ -197,7 +197,7 @@ const OptimizedMessageInput: React.FC<OptimizedMessageInputProps> = memo(({
               color: remainingChars < 20 ? '#ff4444' : '#666'
             }}
           >
-            {remainingChars} characters remaining
+            {remainingChars} ký tự còn lại
           </div>
         )}
       </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Edit3, EyeOff, Eye, Trash2, CheckCircle, Clock, AlertCircle, Loader2, X, Sparkles, ChefHat } from 'lucide-react';
 import { productService, comboService, mysteryBoxService, authService, ProductResponse, ProductCreationRequest, BuildComboResponse, MysteryBox } from '../../services';
 import Pagination, { PageInfo } from '../../components/ui/Pagination';
+import { globalShowAlert, globalShowConfirm } from '../../contexts/PopupContext';
 
 const PAGE_SIZE = 10;
 
@@ -156,9 +157,12 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductResponse | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<number | ''>('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [togglingBox, setTogglingBox] = useState<number | null>(null);
+  
   const [page, setPage] = useState(0);
-  const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
   const [shopId, setShopId] = useState<number | null>(null);
 
   const fetchData = async () => {
@@ -169,20 +173,12 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
       if (id) {
         setShopId(Number(id));
         const [productsRes, combosRes, mysteryRes] = await Promise.all([
-          productService.getByShopIdPaged(Number(id), page, PAGE_SIZE).catch(() => ({ result: null })),
+          productService.getByShopId(Number(id)).catch(() => ({ result: [] })),
           comboService.getByShop(Number(id)).catch(() => ({ result: [] })),
           mysteryBoxService.getMyBoxes().catch(() => ({ result: [] }))
         ]);
         if (productsRes.result) {
-          setProducts(productsRes.result.content);
-          setPageInfo({
-            page: productsRes.result.page,
-            size: productsRes.result.size,
-            totalElements: productsRes.result.totalElements,
-            totalPages: productsRes.result.totalPages,
-            first: productsRes.result.first,
-            last: productsRes.result.last,
-          });
+          setProducts(productsRes.result);
         }
         if (combosRes.result) setCombos(combosRes.result);
         if (mysteryRes.result) setMysteryBoxes(mysteryRes.result);
@@ -197,47 +193,47 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
 
   useEffect(() => {
     fetchData();
-  }, [page]);
+  }, []); // Only fetch once initially or when forced
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm(`Bạn có chắc muốn xóa sản phẩm ID #${id}? Hành động này không thể hoàn tác.`)) return;
+    if (!await globalShowConfirm(`Bạn có chắc muốn xóa sản phẩm ID #${id}? Hành động này không thể hoàn tác.`)) return;
 
     try {
       setIsDeleting(true);
       await productService.deleteProduct(id);
-      alert('Đã xóa thành công!');
+      globalShowAlert('Đã xóa thành công!', 'Thành công', 'success');
       fetchData();
     } catch (err: any) {
-      alert(err?.data?.message || 'Có lỗi khi xóa sản phẩm');
+      globalShowAlert(err?.data?.message || 'Có lỗi khi xóa sản phẩm', 'Lỗi', 'error');
     } finally {
       setIsDeleting(false);
     }
   };
 
   const handleDeleteCombo = async (id: number) => {
-    if (!window.confirm(`Bạn có chắc muốn xóa combo/hộp mù ID #${id}? Hành động này không thể hoàn tác.`)) return;
+    if (!await globalShowConfirm(`Bạn có chắc muốn xóa combo/hộp mù ID #${id}? Hành động này không thể hoàn tác.`)) return;
 
     try {
       setIsDeleting(true);
       await comboService.delete(id);
-      alert('Đã xóa thành công!');
+      globalShowAlert('Đã xóa thành công!', 'Thành công', 'success');
       fetchData();
     } catch (err: any) {
-      alert(err?.data?.message || 'Có lỗi khi xóa combo/hộp mù');
+      globalShowAlert(err?.data?.message || 'Có lỗi khi xóa combo/hộp mù', 'Lỗi', 'error');
     } finally {
       setIsDeleting(false);
     }
   };
 
   const handleDeleteMysteryBox = async (id: number) => {
-    if (!window.confirm(`Bạn có chắc muốn xóa hộp mù ID #${id}?`)) return;
+    if (!await globalShowConfirm(`Bạn có chắc muốn xóa hộp mù ID #${id}?`)) return;
     try {
       setIsDeleting(true);
       await mysteryBoxService.deleteMysteryBox(id);
-      alert('Đã xóa thành công!');
+      globalShowAlert('Đã xóa thành công!', 'Thành công', 'success');
       fetchData();
     } catch (err: any) {
-      alert(err?.data?.message || 'Có lỗi khi xóa hộp mù');
+      globalShowAlert(err?.data?.message || 'Có lỗi khi xóa hộp mù', 'Lỗi', 'error');
     } finally {
       setIsDeleting(false);
     }
@@ -253,7 +249,7 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
       await mysteryBoxService.toggleActive(box.id);
       fetchData();
     } catch (err: any) {
-      alert(err?.data?.message || 'Không thể thay đổi trạng thái túi mù');
+      globalShowAlert(err?.data?.message || 'Không thể thay đổi trạng thái túi mù', 'Lỗi', 'error');
     } finally {
       setTogglingBox(null);
     }
@@ -267,6 +263,55 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
       </div>
     );
   }
+
+  // Filter Logic
+  const filteredProducts = products.filter(p => {
+    const matchSearch = p.productName.toLowerCase().includes(searchQuery.toLowerCase()) || p.id.toString().includes(searchQuery);
+    const matchCategory = categoryFilter === '' || p.categoryId === categoryFilter;
+    let matchStatus = true;
+    if (statusFilter === 'IN_STOCK') matchStatus = p.stockQuantity > 0;
+    if (statusFilter === 'OUT_OF_STOCK') matchStatus = p.stockQuantity <= 0;
+    return matchSearch && matchCategory && matchStatus;
+  });
+
+  const filteredCombos = combos.filter(c => c.type === 'CUSTOM').filter(c => {
+    const matchSearch = c.comboName.toLowerCase().includes(searchQuery.toLowerCase()) || c.id.toString().includes(searchQuery);
+    return matchSearch;
+  });
+
+  const filteredBoxes = mysteryBoxes.filter(b => {
+    const matchSearch = b.boxType.toLowerCase().includes(searchQuery.toLowerCase()) || b.id.toString().includes(searchQuery);
+    let matchStatus = true;
+    if (statusFilter === 'ACTIVE') matchStatus = Boolean(b.isActive && b.isActive !== 0);
+    if (statusFilter === 'INACTIVE') matchStatus = !b.isActive || b.isActive === 0;
+    return matchSearch && matchStatus;
+  });
+
+  // Calculate generic derived state based on activeTab
+  let displayItems: any[] = [];
+  if (activeTab === 'NONG_SAN') displayItems = filteredProducts;
+  else if (activeTab === 'COMBO') displayItems = filteredCombos;
+  else if (activeTab === 'BLIND_BOX') displayItems = filteredBoxes;
+
+  const totalElements = displayItems.length;
+  const totalPages = Math.ceil(totalElements / PAGE_SIZE) || 1;
+  const currentPageData = displayItems.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  const pageInfo: PageInfo = {
+    page,
+    size: PAGE_SIZE,
+    totalElements,
+    totalPages,
+    first: page === 0,
+    last: page >= totalPages - 1,
+  };
+
+  const CATEGORY_MAP = [
+    { id: 1, name: 'Rau củ' },
+    { id: 2, name: 'Trái cây' },
+    { id: 3, name: 'Thịt cá' },
+    { id: 4, name: 'Khác' },
+  ];
 
   return (
     <div className="flex flex-col gap-8 p-8 animate-in fade-in duration-500 relative">
@@ -292,19 +337,19 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
       {/* Tabs */}
       <div className="flex bg-white rounded-2xl p-1 border border-gray-100 shadow-sm w-fit">
         <button
-          onClick={() => setActiveTab('NONG_SAN')}
+          onClick={() => { setActiveTab('NONG_SAN'); setPage(0); setCategoryFilter(''); setStatusFilter(''); }}
           className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all ${activeTab === 'NONG_SAN' ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
         >
           NÔNG SẢN ({products.length})
         </button>
         <button
-          onClick={() => setActiveTab('COMBO')}
+          onClick={() => { setActiveTab('COMBO'); setPage(0); setCategoryFilter(''); setStatusFilter(''); }}
           className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all ${activeTab === 'COMBO' ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
         >
           TÚI COMBO ({combos.filter(c => c.type === 'CUSTOM').length})
         </button>
         <button
-          onClick={() => setActiveTab('BLIND_BOX')}
+          onClick={() => { setActiveTab('BLIND_BOX'); setPage(0); setCategoryFilter(''); setStatusFilter(''); }}
           className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all ${activeTab === 'BLIND_BOX' ? 'bg-purple-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
         >
           HỘP MÙ ({mysteryBoxes.length})
@@ -322,14 +367,53 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
         <div className="p-6 border-b border-gray-50 flex flex-wrap items-center gap-4">
           <div className="relative flex-1 min-w-[300px]">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
-            <input type="text" placeholder="Tìm kiếm tên sản phẩm..." className="w-full pl-11 pr-4 py-3 bg-gray-50 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/10 transition-all" />
+            <input 
+              type="text" 
+              placeholder="Tìm kiếm tên sản phẩm hoặc ID..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-11 pr-4 py-3 bg-gray-50 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/10 transition-all" 
+            />
           </div>
-          <select className="px-6 py-3 bg-gray-50 border border-transparent rounded-2xl text-xs font-bold text-gray-600 outline-none">
-            <option>Tất cả danh mục</option>
-          </select>
-          <select className="px-6 py-3 bg-gray-50 border border-transparent rounded-2xl text-xs font-bold text-gray-600 outline-none">
-            <option>Trạng thái</option>
-          </select>
+          
+          {activeTab === 'NONG_SAN' && (
+            <select 
+              value={categoryFilter} 
+              onChange={(e) => { 
+                const val = e.target.value;
+                setCategoryFilter(val ? Number(val) : ''); 
+                setPage(0); 
+              }}
+              className="px-6 py-3 bg-gray-50 border border-gray-100 focus:border-primary/20 rounded-2xl text-xs font-bold text-gray-600 outline-none cursor-pointer"
+            >
+              <option value="">Tất cả danh mục</option>
+              {CATEGORY_MAP.map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+          )}
+
+          {activeTab !== 'COMBO' && (
+            <select 
+              value={statusFilter} 
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
+              className="px-6 py-3 bg-gray-50 border border-gray-100 focus:border-primary/20 rounded-2xl text-xs font-bold text-gray-600 outline-none cursor-pointer"
+            >
+              <option value="">Tất cả trạng thái</option>
+              {activeTab === 'NONG_SAN' && (
+                <>
+                  <option value="IN_STOCK">Đang bán (Còn hàng)</option>
+                  <option value="OUT_OF_STOCK">Hết hàng</option>
+                </>
+              )}
+              {activeTab === 'BLIND_BOX' && (
+                <>
+                  <option value="ACTIVE">Đang Mở</option>
+                  <option value="INACTIVE">Đã Ẩn</option>
+                </>
+              )}
+            </select>
+          )}
           <button className="size-11 flex items-center justify-center bg-gray-50 rounded-2xl text-gray-500 hover:bg-gray-100 transition-colors">
             <Filter className="size-5" />
           </button>
@@ -348,12 +432,12 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {activeTab === 'NONG_SAN' && products.length === 0 && (
+              {activeTab === 'NONG_SAN' && filteredProducts.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-10 py-10 text-center text-gray-400 font-bold">Bạn chưa có sản phẩm nào. Hãy thêm sản phẩm mới!</td>
+                  <td colSpan={6} className="px-10 py-10 text-center text-gray-400 font-bold">Không tìm thấy sản phẩm nào. {products.length === 0 && 'Hãy thêm sản phẩm mới!'}</td>
                 </tr>
               )}
-              {activeTab === 'NONG_SAN' && products.map((p) => {
+              {activeTab === 'NONG_SAN' && currentPageData.map((p) => {
                 const isOut = p.stockQuantity <= 0;
                 return (
                   <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
@@ -408,7 +492,7 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
               })}
 
               {/* Combo Rows */}
-              {activeTab === 'COMBO' && combos.filter(c => c.type === 'CUSTOM').map((c) => (
+              {activeTab === 'COMBO' && currentPageData.map((c) => (
                 <tr key={c.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-4">
@@ -440,12 +524,12 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
                   </td>
                 </tr>
               ))}
-              {activeTab === 'COMBO' && combos.filter(c => c.type === 'CUSTOM').length === 0 && (
-                <tr><td colSpan={4} className="px-10 py-10 text-center text-gray-400 font-bold">Không có dữ liệu cho loại Combo này.</td></tr>
+              {activeTab === 'COMBO' && filteredCombos.length === 0 && (
+                <tr><td colSpan={4} className="px-10 py-10 text-center text-gray-400 font-bold">Không tìm thấy Combo nào.</td></tr>
               )}
 
               {/* Mystery Box Rows */}
-              {activeTab === 'BLIND_BOX' && mysteryBoxes.map((box) => (
+              {activeTab === 'BLIND_BOX' && currentPageData.map((box) => (
                 <tr key={box.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-4">
@@ -491,8 +575,8 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
                   </td>
                 </tr>
               ))}
-              {activeTab === 'BLIND_BOX' && mysteryBoxes.length === 0 && (
-                <tr><td colSpan={4} className="px-10 py-10 text-center text-gray-400 font-bold">Không có dữ liệu cho loại Hộp mù này.</td></tr>
+              {activeTab === 'BLIND_BOX' && filteredBoxes.length === 0 && (
+                <tr><td colSpan={4} className="px-10 py-10 text-center text-gray-400 font-bold">Không tìm thấy Hộp mù nào.</td></tr>
               )}
             </tbody>
           </table>
@@ -500,10 +584,10 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
 
         <div className="p-6 bg-white border-t border-gray-50 flex items-center justify-between">
           <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">
-            Hiển thị {activeTab === 'NONG_SAN' ? products.length : activeTab === 'COMBO' ? combos.filter(c => c.type === 'CUSTOM').length : mysteryBoxes.length} mục
+            Hiển thị {currentPageData.length} mục trên tổng số {totalElements} mục
           </p>
         </div>
-        {activeTab === 'NONG_SAN' && pageInfo && (
+        {totalElements > 0 && (
           <Pagination pageInfo={pageInfo} onPageChange={setPage} className="px-6" />
         )}
       </div>

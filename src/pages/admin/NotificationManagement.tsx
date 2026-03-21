@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Send, Users, User, Sprout, Truck, History, CheckCircle2, Clock, Trash2, ShieldAlert, AlertCircle } from 'lucide-react';
 import { notificationService, NotificationItem } from '../../services';
+import { globalShowAlert } from '../../contexts/PopupContext';
 
 type TargetOption = 'all' | 'buyer' | 'farmer' | 'shipper';
 
@@ -54,7 +55,7 @@ const NotificationManagement: React.FC = () => {
       setMessage('');
       const response = await notificationService.getAllNotifications();
       setHistory(response.result || []);
-      alert('Thông báo đã được gửi thành công!');
+      globalShowAlert('Thông báo đã được gửi thành công!', 'Thành công', 'success');
     } catch (err) {
       console.error('Failed to send notification', err);
       setError('Gửi thông báo thất bại. Vui lòng kiểm tra lại quyền Admin hoặc thử lại sau.');

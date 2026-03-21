@@ -4,6 +4,7 @@ import { blogService, BlogResponse, BlogCreationRequest } from '../../services';
 import { BlogCategory, PageResponse } from '../../types';
 import MyCKEditor from '../../components/MyCKEditor';
 import Pagination, { PageInfo } from '../../components/ui/Pagination';
+import { globalShowAlert, globalShowConfirm } from '../../contexts/PopupContext';
 
 const NewsManagement: React.FC = () => {
    const [blogs, setBlogs] = useState<BlogResponse[]>([]);
@@ -102,7 +103,7 @@ const NewsManagement: React.FC = () => {
 
    const handleSaveBlog = async () => {
       if (!title || !content) {
-         alert('Vui lòng nhập đầy đủ tiêu đề và nội dung.');
+         globalShowAlert('Vui lòng nhập đầy đủ tiêu đề và nội dung.', 'Lỗi', 'error');
          return;
       }
 
@@ -118,38 +119,38 @@ const NewsManagement: React.FC = () => {
          if (isEditing && selectedBlog) {
             const response = await blogService.updateBlog(selectedBlog.id, request, selectedImage || undefined);
             if (response.result) {
-               alert('Cập nhật bài viết thành công!');
+               globalShowAlert('Cập nhật bài viết thành công!', 'Thành công', 'success');
                clearForm();
                fetchBlogs();
             }
          } else {
             const response = await blogService.createBlog(request as BlogCreationRequest, selectedImage || undefined);
             if (response.result) {
-               alert('Đăng bài viết thành công!');
+               globalShowAlert('Đăng bài viết thành công!', 'Thành công', 'success');
                clearForm();
                fetchBlogs();
             }
          }
       } catch (err) {
          console.error('Failed to save blog', err);
-         alert('Lưu bài viết thất bại. Vui lòng thử lại.');
+         globalShowAlert('Lưu bài viết thất bại. Vui lòng thử lại.', 'Lỗi', 'error');
       } finally {
          setSubmitting(false);
       }
    };
 
    const handleDeleteBlog = async (id: number) => {
-      if (!window.confirm('Bạn có chắc chắn muốn xóa bài viết này không?')) {
+      if (!await globalShowConfirm('Xác nhận', 'Bạn có chắc chắn muốn xóa bài viết này không?')) {
          return;
       }
 
       try {
          await blogService.deleteBlog(id);
          setBlogs(blogs.filter(b => b.id !== id));
-         alert('Đã xóa bài viết thành công.');
+         globalShowAlert('Đã xóa bài viết thành công.', 'Thành công', 'success');
       } catch (err) {
          console.error('Failed to delete blog', err);
-         alert('Xóa bài viết thất bại.');
+         globalShowAlert('Xóa bài viết thất bại.', 'Lỗi', 'error');
       }
    };
 
@@ -165,7 +166,7 @@ const NewsManagement: React.FC = () => {
          setBlogs(blogs.map(b => b.id === blog.id ? { ...b, status: newStatus } : b));
       } catch (err) {
          console.error('Failed to update blog status', err);
-         alert('Đổi trạng thái thất bại.');
+         globalShowAlert('Đổi trạng thái thất bại.', 'Lỗi', 'error');
       }
    };
 
@@ -188,6 +189,14 @@ const NewsManagement: React.FC = () => {
       setIsEditing(false);
    };
 
+
+   // Calculate statistics
+   const totalViews = blogs.reduce((sum, b) => sum + (b.views || 0), 0);
+   const newBlogsThisMonth = blogs.filter(b => {
+      const date = new Date(b.createAt);
+      const now = new Date();
+      return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+   }).length;
 
    if (isAddingNew || isEditing) {
       return (
@@ -430,24 +439,24 @@ const NewsManagement: React.FC = () => {
                                     </div>
                                  </div>
                               </td>
-                              <td className="px-6 py-6">
-                                 <span className="px-3 py-1 bg-green-50 text-primary text-[10px] font-black rounded-lg uppercase tracking-tight">
+                              <td className="px-6 py-6 text-center">
+                                 <span className="inline-block px-3 py-1 bg-green-50 text-primary text-[10px] font-black rounded-lg uppercase tracking-tight whitespace-nowrap">
                                     {art.category}
                                  </span>
                               </td>
                               <td className="px-6 py-6 text-center">
-                                 <div className="flex flex-col items-center">
-                                    <span className="text-xs font-bold text-gray-600">{art.adminName}</span>
+                                 <div className="flex flex-col items-center justify-center">
+                                    <span className="text-xs font-bold text-gray-600 whitespace-nowrap">{art.adminName}</span>
                                  </div>
                               </td>
                               <td className="px-6 py-6 text-center">
                                  <div className="flex items-center justify-center gap-1.5 text-gray-400">
                                     <Eye className="size-3" />
-                                    <span className="text-xs font-bold">0</span>
+                                    <span className="text-xs font-bold">{art.views || 0}</span>
                                  </div>
                               </td>
                               <td className="px-6 py-6 text-center">
-                                 <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${art.status === 'PUBLISHED' ? 'text-emerald-600 bg-emerald-50' : 'text-gray-400 bg-gray-50'}`}>
+                                 <span className={`inline-block px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest whitespace-nowrap ${art.status === 'PUBLISHED' ? 'text-emerald-600 bg-emerald-50' : 'text-gray-400 bg-gray-50'}`}>
                                     {art.status === 'PUBLISHED' ? 'Đã đăng' : 'Bản nháp'}
                                  </span>
                               </td>
@@ -530,14 +539,14 @@ const NewsManagement: React.FC = () => {
                <div className="space-y-4">
                   <div className="flex justify-between items-center">
                      <span className="text-xs font-bold text-gray-400 uppercase">Bài mới:</span>
-                     <span className="text-lg font-black text-primary">12</span>
+                     <span className="text-lg font-black text-primary">{newBlogsThisMonth}</span>
                   </div>
                   <div className="w-full h-1.5 bg-gray-100 rounded-full">
-                     <div className="w-[65%] h-full bg-primary rounded-full" />
+                     <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min((newBlogsThisMonth / 20) * 100, 100)}%` }} />
                   </div>
                   <div className="flex justify-between items-center">
                      <span className="text-xs font-bold text-gray-400 uppercase">Tổng views:</span>
-                     <span className="text-lg font-black text-gray-900">45,820</span>
+                     <span className="text-lg font-black text-gray-900">{totalViews.toLocaleString('vi-VN')}</span>
                   </div>
                </div>
                <div className="absolute -right-4 -bottom-4 size-24 bg-primary/5 rounded-full blur-2xl" />

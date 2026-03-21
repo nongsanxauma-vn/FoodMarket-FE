@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { useChatBotContext } from './ChatBotContext';
-import './ChatBot.css';
+import styles from './ChatBot.module.css';
 
 interface ChatBotButtonProps {
   unreadCount?: number;
@@ -14,13 +14,14 @@ interface ChatBotButtonProps {
 
 export function ChatBotButton({ unreadCount = 0, className = '' }: ChatBotButtonProps) {
   const { isOpen, toggleChat } = useChatBotContext();
+  if (isOpen) return null;
 
   return (
     <button
       onClick={toggleChat}
       className={`
-        chatbot-button
-        ${isOpen ? 'is-open' : ''}
+        ${styles['chatbot-button']}
+        ${isOpen ? styles['is-open'] : ''}
         ${className}
       `}
       aria-label={isOpen ? 'Close chat' : 'Open chat'}
@@ -28,7 +29,7 @@ export function ChatBotButton({ unreadCount = 0, className = '' }: ChatBotButton
     >
       {/* Chat Icon */}
       <svg
-        className="chatbot-button-icon"
+        className={styles['chatbot-button-icon']}
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -56,7 +57,7 @@ export function ChatBotButton({ unreadCount = 0, className = '' }: ChatBotButton
       {/* Notification Badge */}
       {unreadCount > 0 && !isOpen && (
         <span
-          className="chatbot-notification-badge"
+          className={styles['chatbot-notification-badge']}
           aria-label={`${unreadCount} unread messages`}
         >
           {unreadCount > 99 ? '99+' : unreadCount}
@@ -64,7 +65,7 @@ export function ChatBotButton({ unreadCount = 0, className = '' }: ChatBotButton
       )}
 
       {/* Screen Reader Text */}
-      <span className="chatbot-sr-only">
+      <span className={styles['chatbot-sr-only']}>
         {isOpen ? 'Close AI Assistant' : 'Open AI Assistant'}
       </span>
     </button>

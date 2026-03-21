@@ -16,6 +16,7 @@ import {
   Star,
 } from 'lucide-react';
 import { mysteryBoxService, MysteryBox, cartService, reviewService, ReviewResponse } from '../../services';
+import { globalShowAlert } from '../../contexts/PopupContext';
 import { useAuth } from '../../contexts/AuthContext';
 import ShopProducts from '../Product/ShopProducts';
 
@@ -91,10 +92,10 @@ const MysteryBoxDetail: React.FC<MysteryBoxDetailProps> = ({
       // Dùng chung cartService, truyền mysteryBoxId thay productId
       await cartService.addToCart({ mysteryBoxId: Number(boxId), quantity });
       window.dispatchEvent(new Event('cart-updated'));
-      alert(`Đã thêm ${quantity} túi mù "${box?.boxType}" vào giỏ hàng`);
+      globalShowAlert(`Đã thêm ${quantity} túi mù "${box?.boxType}" vào giỏ hàng`, 'Thành công', 'success');
     } catch (e) {
       console.error('Failed to add mystery box to cart', e);
-      alert('Không thể thêm vào giỏ hàng. Vui lòng thử lại.');
+      globalShowAlert('Không thể thêm vào giỏ hàng. Vui lòng thử lại.', 'Lỗi', 'error');
     } finally {
       setIsAdding(false);
     }

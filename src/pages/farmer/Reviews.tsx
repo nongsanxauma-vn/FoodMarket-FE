@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Star, Search, MessageSquare, CheckCircle, Clock, AlertCircle, Loader2, Filter, Reply, CornerDownRight } from 'lucide-react';
 import { reviewService, productService, authService, ReviewResponse, ProductResponse } from '../../services';
 import Pagination, { PageInfo } from '../../components/ui/Pagination';
+import { globalShowAlert } from '../../contexts/PopupContext';
 
 const PAGE_SIZE = 10;
 
@@ -65,12 +66,12 @@ const Reviews: React.FC = () => {
     try {
       setIsSubmitting(true);
       await reviewService.replyReview(reviewId, { replyFromShop: replyText });
-      alert('Đã gửi phản hồi thành công!');
+      globalShowAlert('Đã gửi phản hồi thành công!', 'Thành công', 'success');
       setReplyingTo(null);
       setReplyText('');
       fetchData();
     } catch (err: any) {
-      alert(err?.data?.message || 'Có lỗi khi phản hồi đánh giá');
+      globalShowAlert(err?.data?.message || 'Có lỗi khi phản hồi đánh giá', 'Lỗi', 'error');
     } finally {
       setIsSubmitting(false);
     }

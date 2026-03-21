@@ -5,13 +5,11 @@
 
 import { useCallback } from 'react';
 import { useChatBotContext } from '../ChatBotContext';
-import { UseSuggestionsReturn } from '../types';
-
 /**
  * Suggestions management hook
  * Provides functionality for managing chat suggestions
  */
-export function useSuggestions(): UseSuggestionsReturn {
+export function useSuggestions() {
   const context = useChatBotContext();
 
   // Set suggestions (replace current suggestions)

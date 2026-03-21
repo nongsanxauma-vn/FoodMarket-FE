@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { AlertTriangle, Clock, Search, Filter, History, Lock, Bell, ChevronRight, Star, ShieldAlert, Loader2, AlertCircle } from 'lucide-react';
 import { userService, UserResponse } from '../../services';
 import Pagination, { PageInfo } from '../../components/ui/Pagination';
+import { globalShowAlert, globalShowConfirm } from '../../contexts/PopupContext';
 
 const PAGE_SIZE = 10;
 
@@ -43,12 +44,12 @@ const ShopMonitoring: React.FC = () => {
    }, [page]);
 
    const handleDeactivate = async (userId: number) => {
-      if (!window.confirm('Bạn có chắc muốn khóa tạm thời cửa hàng này?')) return;
+      if (!await globalShowConfirm('Xác nhận', 'Bạn có chắc muốn khóa tạm thời cửa hàng này?')) return;
       try {
          await userService.deactivateUser(userId);
          setShops(prev => prev.map(s => s.id === userId ? { ...s, status: 'DEACTIVATED' } : s));
       } catch (err: any) {
-         alert(err?.data?.message || 'Không thể khóa cửa hàng');
+         globalShowAlert(err?.data?.message || 'Không thể khóa cửa hàng', 'Lỗi', 'error');
       }
    };
 
@@ -57,7 +58,7 @@ const ShopMonitoring: React.FC = () => {
          await userService.activateUser(userId);
          setShops(prev => prev.map(s => s.id === userId ? { ...s, status: 'ACTIVE' } : s));
       } catch (err: any) {
-         alert(err?.data?.message || 'Không thể mở khóa cửa hàng');
+         globalShowAlert(err?.data?.message || 'Không thể mở khóa cửa hàng', 'Lỗi', 'error');
       }
    };
 
@@ -173,7 +174,12 @@ const ShopMonitoring: React.FC = () => {
                               <span className={`px-3 py-1 rounded-lg text-[10px] font-black ${shop.status === 'ACTIVE' ? 'bg-green-50 text-green-600' :
                                  shop.status === 'DEACTIVATED' || shop.status === 'INACTIVE' ? 'bg-red-50 text-red-500' :
                                     'bg-orange-50 text-orange-500'
-                                 }`}>{shop.status || 'N/A'}</span>
+                                 }`}>
+                                 {shop.status === 'ACTIVE' ? 'Hoạt động' :
+                                  shop.status === 'DEACTIVATED' ? 'Đã khóa' :
+                                  shop.status === 'INACTIVE' ? 'Tạm ngưng' :
+                                  shop.status || 'N/A'}
+                              </span>
                            </td>
                            <td className="px-10 py-6 text-right">
                               <div className="flex items-center justify-end gap-3">
