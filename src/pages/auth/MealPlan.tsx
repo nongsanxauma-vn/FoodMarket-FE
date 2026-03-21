@@ -18,10 +18,13 @@ import {
   Trash2,
   Plus,
   X,
-  List
+  List,
+  ChevronDown,
+  ChevronUp,
+  Store
 } from 'lucide-react';
 import { buildPlanService } from '../../services/buildPlan.service';
-import { comboService, BuildComboResponse } from '../../services/combo.service';
+import { comboService, BuildComboResponse, ShopComboCountResponse } from '../../services/combo.service';
 import { productService, ProductResponse } from '../../services/product.service';
 import { cartService } from '../../services/cart.service';
 import { useAuth } from '../../contexts/AuthContext';
@@ -54,6 +57,7 @@ interface Dish {
   recipes: RecipeItem[];
   image?: string;
   price?: number;
+  shopOwnerId?: number;
 }
 
 interface MealInstance {
@@ -87,6 +91,9 @@ export default function MealPlan() {
   const [showPlansList, setShowPlansList] = useState(false);
   const [isBuying, setIsBuying] = useState(false);
   const [viewingDish, setViewingDish] = useState<Dish | null>(null);
+  const [allShops, setAllShops] = useState<ShopComboCountResponse[]>([]);
+  const [lockedShopId, setLockedShopId] = useState<number | null>(null);
+  const [expandedShops, setExpandedShops] = useState<Record<number, boolean>>({});
 
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -150,7 +157,8 @@ export default function MealPlan() {
       recipes: (combo.items || []).map(item => ({
         ingredientId: item.productId?.toString() || '',
         quantityPerPerson: item.quantity
-      }))
+      })),
+      shopOwnerId: combo.shopOwnerId
     };
   };
 
@@ -162,13 +170,15 @@ export default function MealPlan() {
   React.useEffect(() => {
     const loadInitialData = async () => {
       try {
-        const [comboRes, productRes] = await Promise.all([
+        const [comboRes, productRes, shopRes] = await Promise.all([
           comboService.getAll(),
-          productService.getAll()
+          productService.getAll(),
+          comboService.getShopsByComboCount()
         ]);
 
         if (comboRes.result) setAllCombos(comboRes.result);
         if (productRes.result) setAllProducts(productRes.result);
+        if (shopRes.result) setAllShops(shopRes.result);
 
         if (user) {
           const planRes = await buildPlanService.getPlansByUser(parseInt(user.id));
@@ -182,6 +192,10 @@ export default function MealPlan() {
           }
         }
         if (comboRes.result && comboRes.result.length > 0) {
+          // Default to the first shop (the one with most combos)
+          if (shopRes.result && shopRes.result.length > 0) {
+            setLockedShopId(shopRes.result[0].shopId);
+          }
           generatePlanWithCombos(comboRes.result);
         }
       } catch (err) {
@@ -272,6 +286,7 @@ export default function MealPlan() {
       };
     });
 
+    setLockedShopId(response.days[0]?.meals[0]?.items[0]?.combo?.shopOwnerId || null);
     setMealPlan(newPlan);
     setIsGenerated(true);
   };
@@ -283,8 +298,19 @@ export default function MealPlan() {
     generatePlanWithCombos(allCombos);
   };
 
-  const generatePlanWithCombos = (combos: BuildComboResponse[]) => {
-    const currentDishes = combos.map(mapComboToDish);
+  const generatePlanWithCombos = (combos: BuildComboResponse[], shopIdOverride?: number) => {
+    // Determine target shop
+    let currentLockedId = (shopIdOverride !== undefined) ? shopIdOverride : lockedShopId;
+    if (!currentLockedId && allShops.length > 0) {
+      currentLockedId = allShops[0].shopId;
+      setLockedShopId(currentLockedId);
+    }
+
+    const targetCombos = currentLockedId
+      ? combos.filter(c => c.shopOwnerId === currentLockedId)
+      : combos;
+
+    const currentDishes = targetCombos.map(mapComboToDish);
     const newPlan: MealPlanDay[] = [];
     for (let i = 1; i <= numDays; i++) {
       const dayPlan: MealPlanDay = {
@@ -376,15 +402,39 @@ export default function MealPlan() {
     }
   }, [numDays]);
 
-  const handleManualSelection = (dish: Dish) => {
-    if (!editingMeal) return;
+  const handleSelectShop = async (shopId: number) => {
+    if (mealPlan.length > 0 && lockedShopId !== shopId) {
+      if (!await globalShowConfirm(
+        "Việc chọn cửa hàng mới sẽ đặt lại toàn bộ thực đơn hiện tại của bạn. Bạn có muốn tiếp tục?",
+        "Thay đổi cửa hàng"
+      )) return;
+    }
+    setLockedShopId(shopId);
+    generatePlanWithCombos(allCombos, shopId);
+  };
+
+  const addDishToMeal = async (dayIndex: number, mealId: string, dish: Dish) => {
+    if (lockedShopId && dish.shopOwnerId !== lockedShopId) {
+      if (!await globalShowConfirm(
+        "Món ăn này thuộc cửa hàng khác. Việc chọn món này sẽ đặt lại thực đơn hiện tại của bạn. Bạn có muốn tiếp tục?",
+        "Thay đổi cửa hàng"
+      )) return;
+
+      setLockedShopId(dish.shopOwnerId || null);
+      setMealPlan(prev => prev.map(dp => ({
+        ...dp,
+        meals: dp.meals.map(m => ({ ...m, dishes: [] }))
+      })));
+    } else if (!lockedShopId) {
+      setLockedShopId(dish.shopOwnerId || null);
+    }
 
     setMealPlan(prev => prev.map(dayPlan => {
-      if (dayPlan.day === editingMeal.dayIndex) {
+      if (dayPlan.day === dayIndex) {
         return {
           ...dayPlan,
           meals: dayPlan.meals.map(meal => {
-            if (meal.id === editingMeal.mealId) {
+            if (meal.id === mealId) {
               return {
                 ...meal,
                 dishes: [...meal.dishes, dish]
@@ -396,7 +446,73 @@ export default function MealPlan() {
       }
       return dayPlan;
     }));
+  };
+
+  const swapDays = (dayIndex1: number, dayIndex2: number) => {
+    if (dayIndex1 === dayIndex2) return;
+    setMealPlan(prev => {
+      const newPlan = [...prev];
+      const idx1 = newPlan.findIndex(d => d.day === dayIndex1);
+      const idx2 = newPlan.findIndex(d => d.day === dayIndex2);
+      if (idx1 !== -1 && idx2 !== -1) {
+        const meals1 = newPlan[idx1].meals;
+        const meals2 = newPlan[idx2].meals;
+        
+        newPlan[idx1] = { ...newPlan[idx1], meals: meals2 };
+        newPlan[idx2] = { ...newPlan[idx2], meals: meals1 };
+      }
+      return newPlan;
+    });
+  };
+
+  const moveDishBetweenMeals = (source: { day: number, mealId: string, dishId: string }, target: { day: number, mealId: string }) => {
+    if (source.day === target.day && source.mealId === target.mealId) return;
+
+    setMealPlan(prev => {
+      // Find the dish to move
+      const sourceDay = prev.find(d => d.day === source.day);
+      const sourceMeal = sourceDay?.meals.find(m => m.id === source.mealId);
+      const sourceDish = sourceMeal?.dishes.find(d => d.id === source.dishId);
+
+      if (!sourceDish) return prev;
+
+      return prev.map(dp => {
+        let updatedMeals = [...dp.meals];
+
+        // Remove from source
+        if (dp.day === source.day) {
+          updatedMeals = updatedMeals.map(m =>
+            m.id === source.mealId
+              ? { ...m, dishes: m.dishes.filter(d => d.id !== source.dishId) }
+              : m
+          );
+        }
+
+        // Add to target
+        if (dp.day === target.day) {
+          updatedMeals = updatedMeals.map(m =>
+            m.id === target.mealId
+              ? { ...m, dishes: [...m.dishes, sourceDish] }
+              : m
+          );
+        }
+
+        return { ...dp, meals: updatedMeals };
+      });
+    });
+  };
+
+  const handleManualSelection = async (dish: Dish) => {
+    if (!editingMeal) return;
+    await addDishToMeal(editingMeal.dayIndex, editingMeal.mealId, dish);
     setEditingMeal(null);
+  };
+
+  const toggleShop = (shopId: number) => {
+    setExpandedShops(prev => ({
+      ...prev,
+      [shopId]: !prev[shopId]
+    }));
   };
 
   const removeDishFromMeal = (dayIndex: number, mealId: string, dishId: string) => {
@@ -560,7 +676,7 @@ export default function MealPlan() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
           {/* Left Column: Configuration */}
-          <div className="lg:col-span-4 space-y-6">
+          <div className="lg:col-span-3 space-y-6">
             <section className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm">
               <h2 className="text-lg font-semibold mb-6 flex items-center gap-2">
                 <Utensils size={20} className="text-emerald-600" />
@@ -687,8 +803,8 @@ export default function MealPlan() {
             </section>
           </div>
 
-          {/* Right Column: Results */}
-          <div className="lg:col-span-8 space-y-8">
+          {/* Middle Column: Results */}
+          <div className="lg:col-span-6 space-y-8">
             {!isGenerated ? (
               <div
                 className="bg-white border-2 border-dashed border-stone-200 rounded-3xl p-12 flex flex-col items-center justify-center text-center space-y-4"
@@ -725,9 +841,35 @@ export default function MealPlan() {
                         key={dayPlan.day}
                         className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all space-y-0"
                       >
-                        <div className="bg-stone-50 px-8 py-5 border-b border-stone-200 flex items-center justify-between">
+                        <div
+                          className="bg-stone-50 px-8 py-5 border-b border-stone-200 flex items-center justify-between cursor-move"
+                          draggable
+                          onDragStart={(e) => {
+                            const dragData = { type: 'DAY', dayIndex: dayPlan.day };
+                            console.log("[DragStart Day]", dragData);
+                            e.dataTransfer.setData('text', JSON.stringify(dragData));
+                          }}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            try {
+                              const rawData = e.dataTransfer.getData('text');
+                              console.log("[Drop Day] RawData:", rawData);
+                              if (!rawData) return;
+                              const data = JSON.parse(rawData);
+                              if (data.type === 'DAY') {
+                                swapDays(data.dayIndex, dayPlan.day);
+                              }
+                            } catch (err) {
+                              console.error("Day drop error:", err);
+                            }
+                          }}
+                        >
                           <div className="flex items-center gap-4">
                             <span className="font-bold text-stone-800 text-lg">Ngày {dayPlan.day}</span>
+                            <div className="flex gap-1 text-stone-300">
+                              <List size={14} />
+                            </div>
                             <div className="flex gap-1">
                               {dayPlan.meals.some(m => m.dishes.some(d => d.price && d.price)) && (
                                 <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full uppercase tracking-wider">Ưu tiên nông sản xanh</span>
@@ -746,7 +888,28 @@ export default function MealPlan() {
                           {dayPlan.meals.map((meal) => (
                             <div
                               key={meal.id}
-                              className="bg-[#FDFCF8] border border-stone-100 rounded-2xl p-4 flex flex-col group relative hover:border-emerald-200 transition-all"
+                              onDragOver={(e) => e.preventDefault()}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                try {
+                                  const rawData = e.dataTransfer.getData('text');
+                                  console.log("[Drop Meal] RawData:", rawData);
+                                  if (!rawData) return;
+                                  const data = JSON.parse(rawData);
+                                  console.log("[Drop Meal] Parsed Data:", data);
+                                  
+                                  if (data.type === 'DISH_EXT') {
+                                    addDishToMeal(dayPlan.day, meal.id, data.dish);
+                                  } else if (data.type === 'DISH_INT') {
+                                    moveDishBetweenMeals(data.source, { day: dayPlan.day, mealId: meal.id });
+                                  } else if (data.type === 'DAY') {
+                                    swapDays(data.dayIndex, dayPlan.day);
+                                  }
+                                } catch (err) {
+                                  console.error("Meal drop error:", err);
+                                }
+                              }}
+                              className="bg-[#FDFCF8] border border-stone-100 rounded-2xl p-4 flex flex-col group relative hover:border-emerald-200 transition-all min-h-[120px]"
                             >
                               <div className="flex items-center justify-between mb-3">
                                 {isRenaming?.mealId === meal.id ? (
@@ -786,6 +949,16 @@ export default function MealPlan() {
                                   meal.dishes.map((dish, dIdx) => (
                                     <div
                                       key={`${dish.id}-${dIdx}`}
+                                      draggable
+                                      onDragStart={(e) => {
+                                        e.stopPropagation();
+                                        const dragData = {
+                                          type: 'DISH_INT',
+                                          source: { day: dayPlan.day, mealId: meal.id, dishId: dish.id }
+                                        };
+                                        console.log("[DragStart DishInt]", dragData);
+                                        e.dataTransfer.setData('text', JSON.stringify(dragData));
+                                      }}
                                       className="bg-white border border-stone-50 rounded-xl p-3 shadow-sm relative group/dish cursor-pointer hover:border-emerald-500 transition-all"
                                       onClick={() => setViewingDish(dish)}
                                     >
@@ -926,6 +1099,120 @@ export default function MealPlan() {
               </div>
             )}
           </div>
+
+          {/* Right Column: Shop List */}
+          <div className="lg:col-span-3 space-y-6">
+            <section className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm sticky top-8">
+              <h2 className="text-lg font-semibold mb-6 flex items-center gap-2">
+                <Store size={20} className="text-emerald-600" />
+                Cửa hàng đề xuất
+              </h2>
+
+              <div className="space-y-3">
+                {allShops.map(shop => {
+                  const isLocked = lockedShopId === shop.shopId;
+                  const isExpanded = expandedShops[shop.shopId];
+                  const shopCombos = allCombos.filter(c => c.shopOwnerId === shop.shopId);
+
+                  return (
+                    <div
+                      key={shop.shopId}
+                      className={`border rounded-2xl transition-all overflow-hidden ${isLocked ? 'border-emerald-500 bg-emerald-50/10' : 'border-stone-100'
+                        }`}
+                    >
+                      <div
+                        onClick={() => toggleShop(shop.shopId)}
+                        className="p-4 flex items-center justify-between cursor-pointer hover:bg-stone-50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-stone-100 overflow-hidden flex-shrink-0">
+                            {shop.logoUrl ? (
+                              <img src={shop.logoUrl} alt={shop.shopName} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-stone-300">
+                                <Store size={20} />
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-bold text-stone-800 line-clamp-1">{shop.shopName || 'Cửa hàng'}</h3>
+                            <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">{shop.comboCount} Combo</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {!isLocked && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSelectShop(shop.shopId);
+                                }}
+                                className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-2 py-1 rounded transition-colors"
+                            >
+                                Chọn
+                            </button>
+                          )}
+                          {isLocked && <CheckCircle2 size={16} className="text-emerald-500" />}
+                          {isExpanded ? <ChevronUp size={16} className="text-stone-400" /> : <ChevronDown size={16} className="text-stone-400" />}
+                        </div>
+                      </div>
+
+                      {isExpanded && (
+                        <div className="p-3 pt-0 space-y-2 bg-stone-50/50">
+                          {shopCombos.map(combo => (
+                            <div
+                              key={combo.id}
+                              draggable
+                              onDragStart={(e) => {
+                                const dragData = {
+                                  type: 'DISH_EXT',
+                                  dish: mapComboToDish(combo)
+                                };
+                                console.log("[DragStart DishExt]", dragData);
+                                e.dataTransfer.setData('text', JSON.stringify(dragData));
+                              }}
+                              className="bg-white p-3 rounded-xl border border-stone-100 shadow-sm hover:border-emerald-400 transition-all cursor-grab active:cursor-grabbing group"
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <h4 className="text-xs font-bold text-stone-700 leading-tight group-hover:text-emerald-600">{combo.comboName}</h4>
+                                <span className="text-[10px] font-bold text-emerald-600 whitespace-nowrap">{combo.discountPrice.toLocaleString()}đ</span>
+                              </div>
+                              <p className="text-[9px] text-stone-400 mt-1 line-clamp-2">{combo.description}</p>
+                              <div className="flex items-center justify-between mt-3">
+                                <div className="flex gap-1">
+                                  <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-stone-100 text-stone-500 uppercase font-bold tracking-tighter">
+                                    {mapFromBackendType(combo.mealType || 'LUNCH')}
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    // If no meal is being edited, just set global warning or do nothing
+                                    globalShowAlert("Kéo món ăn vào ô bữa ăn trong ngày để thêm!", "Hướng dẫn", "info");
+                                  }}
+                                  className="p-1 hover:bg-emerald-50 text-emerald-600 rounded-lg group-hover:scale-110 transition-transform"
+                                >
+                                  <Plus size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {lockedShopId && (
+                <div className="mt-8 p-4 rounded-xl bg-orange-50 border border-orange-100">
+                  <p className="text-[10px] text-orange-600 flex items-start gap-2 leading-relaxed">
+                    <AlertCircle size={14} className="shrink-0" />
+                    <span>Thực đơn đang được khóa cho <b>{allShops.find(s => s.shopId === lockedShopId)?.shopName}</b>. Bạn chỉ có thể chọn món từ shop này.</span>
+                  </p>
+                </div>
+              )}
+            </section>
+          </div>
         </div>
       </main>
 
@@ -989,7 +1276,12 @@ export default function MealPlan() {
             <div className="overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
               {(() => {
                 const currentMeal = mealPlan.find(dp => dp.day === editingMeal.dayIndex)?.meals.find(m => m.id === editingMeal.mealId);
-                const filteredDishes = currentMeal ? dishes.filter(d => d.mealType === currentMeal.type) : dishes;
+                let filteredDishes = currentMeal ? dishes.filter(d => d.mealType === currentMeal.type) : dishes;
+
+                // Shop lock enforcement
+                if (lockedShopId) {
+                  filteredDishes = filteredDishes.filter(d => d.shopOwnerId === lockedShopId);
+                }
 
                 if (filteredDishes.length === 0) return (
                   <div className="col-span-2 py-12 text-center text-stone-500">

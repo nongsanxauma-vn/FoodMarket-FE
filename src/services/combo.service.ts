@@ -37,11 +37,23 @@ export interface BuildComboResponse {
     items: ProductComboResponse[];
 }
 
+export interface ShopComboCountResponse {
+    shopId: number;
+    shopName: string;
+    logoUrl: string;
+    comboCount: number;
+}
+
 class ComboService {
     private readonly baseUrl = '/build-combos';
 
     async getAll(): Promise<ApiResponse<BuildComboResponse[]>> {
         const response = await httpClient.get<BuildComboResponse[]>(this.baseUrl);
+        return response;
+    }
+
+    async getShopsByComboCount(): Promise<ApiResponse<ShopComboCountResponse[]>> {
+        const response = await httpClient.get<ShopComboCountResponse[]>(`${this.baseUrl}/shops`);
         return response;
     }
 
