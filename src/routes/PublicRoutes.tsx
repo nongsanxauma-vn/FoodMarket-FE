@@ -1,5 +1,6 @@
 import { Route, Navigate, useNavigate } from 'react-router-dom';
 import BuyerHome from '../pages/BuyerHome';
+import SearchResults from '../pages/SearchResults';
 import ProductDetail from '../pages/Product/ProductDetail';
 import MysteryBoxDetail from '../pages/MysteryBox/MysteryBoxDetail';
 import ComboDetail from '../pages/Combo/ComboDetail';
@@ -39,6 +40,7 @@ const PublicRoutes = () => {
     return (
         <>
             <Route path="/" element={renderRoot()} />
+            <Route path="/search" element={<SearchResults onSelectProduct={handleSelectProduct} />} />
             <Route path="/meal-plan" element={<MealPlan />} />
             <Route path="/product/:productId" element={<ProductDetail />} />
             <Route path="/mystery-box/:boxId" element={<MysteryBoxDetail />} />

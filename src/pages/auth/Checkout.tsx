@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { MapPin, CreditCard, ChevronRight, Lock, Loader2, ShieldCheck, Wallet, ChevronLeft, AlertCircle, Package, X, Gift, Truck } from 'lucide-react';
 import { orderService, paymentService, authService, cartService, CartResponse } from '../../services';
 import { httpClient } from '../../services/http.client';
@@ -24,6 +25,9 @@ interface CheckoutProps {
 }
 
 const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
+   const location = useLocation();
+   const { selectedKeys } = (location.state as { selectedKeys?: string[] }) || {};
+
    const [isProcessing, setIsProcessing] = useState(false);
    const [paymentMethod, setPaymentMethod] = useState<'COD' | 'PAYOS'>('PAYOS');
    const [cartData, setCartData] = useState<CartResponse | null>(null);
@@ -64,12 +68,37 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
             }
 
             if (cartRes.result) {
-               setCartData(cartRes.result);
-               if (!cartRes.result.items || cartRes.result.items.length === 0) {
-                  setError('Giỏ hàng trống!');
+               let items = cartRes.result.items || [];
+
+               // ✅ Lọc các sản phẩm đã được chọn từ Giỏ hàng
+               if (selectedKeys && selectedKeys.length > 0) {
+                  items = items.filter(item => {
+                     const type = item.itemType || '';
+                     let id: any = null;
+                     if (type === 'MYSTERY_BOX') id = item.mysteryBoxId || (item as any).id;
+                     else if (type === 'BUILD_COMBO') id = item.buildComboId || (item as any).id || (item as any).comboId;
+                     else id = item.productId || (item as any).id;
+                     
+                     const key = type === 'MYSTERY_BOX' ? `b-${id}` :
+                                 type === 'BUILD_COMBO' ? `c-${id}` :
+                                 `p-${id}`;
+                     return selectedKeys.includes(key);
+                  });
+               }
+
+               const filteredTotalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+               setCartData({
+                  ...cartRes.result,
+                  items: items,
+                  totalAmount: filteredTotalAmount
+               });
+
+               if (items.length === 0) {
+                  setError('Không có sản phẩm nào được chọn để thanh toán!');
                } else {
-                  // ✅ Lấy shopId từ item đầu tiên trong cart
-                  const firstItem = cartRes.result.items[0];
+                  // ✅ Lấy shopId từ item đầu tiên trong danh sách đã lọc
+                  const firstItem = items[0];
                   if (firstItem.shopOwnerId) {
                      setShopId(firstItem.shopOwnerId);
                   }

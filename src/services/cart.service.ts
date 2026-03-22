@@ -44,7 +44,7 @@ export const cartService = {
     },
 
     updateComboQuantity: async (buildComboId: number, quantity: number): Promise<ApiResponse<CartResponse>> => {
-        return await api.put<CartResponse>(`/cart/combo/quantity?buildComboId=${buildComboId}&quantity=${quantity}`);
+        return await api.put<CartResponse>(`/cart/build-combo/quantity?buildComboId=${buildComboId}&quantity=${quantity}`);
     },
 
     removeItem: async (productId: number): Promise<ApiResponse<string>> => {

@@ -21,7 +21,7 @@ const ProtectedRoutes = () => {
         <>
             <Route path="/cart" element={
                 <ProtectedRoute>
-                    <Cart onProceedToCheckout={() => navigate('/checkout')} onBackToShopping={() => navigate('/')} />
+                    <Cart onProceedToCheckout={(keys) => navigate('/checkout', { state: { selectedKeys: keys } })} onBackToShopping={() => navigate('/')} />
                 </ProtectedRoute>
             } />
             <Route path="/checkout" element={
