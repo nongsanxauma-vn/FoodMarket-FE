@@ -1,10 +1,11 @@
 /**
  * SuggestionsPanel Component
- * Display suggested questions as clickable chips with context-aware suggestions
+ * Display Gợi ý câu hỏi as clickable chips with context-aware suggestions
  */
 
 import React, { useMemo } from 'react';
-import { SuggestionsPanelProps } from './types';
+import { SuggestionsPanelProps } from './chatbot.types';
+import styles from './ChatBot.module.css';
 
 // Role-based default suggestions
 const DEFAULT_SUGGESTIONS = {
@@ -95,22 +96,22 @@ function SuggestionChip({ suggestion, onClick, variant = 'default' }: Suggestion
   };
 
   return (
-      <button
-        type="button"
-        onClick={onClick}
-        style={{ ...baseStyle, ...getVariantStyles() }}
-        className="chatbot-suggestion-chip"
-        title={`Send: ${suggestion}`}
-      >
-        <span style={{ 
-          maxWidth: '200px', 
-          overflow: 'hidden', 
-          textOverflow: 'ellipsis', 
-          whiteSpace: 'nowrap',
-          fontWeight: 500
-        }}>
-          {suggestion}
-        </span>
+    <button
+      type="button"
+      onClick={onClick}
+      style={{ ...baseStyle, ...getVariantStyles() }}
+      className={styles['chatbot-suggestion-chip']}
+      title={`Send: ${suggestion}`}
+    >
+      <span style={{
+        maxWidth: '200px',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        fontWeight: 500
+      }}>
+        {suggestion}
+      </span>
       <svg
         width="12"
         height="12"
@@ -129,34 +130,48 @@ function SuggestionChip({ suggestion, onClick, variant = 'default' }: Suggestion
     </button>
   );
 }
-export function SuggestionsPanel({ 
-  suggestions, 
-  onSelectSuggestion, 
-  isVisible = true 
-}: SuggestionsPanelProps) {
-  const [isExpanded, setIsExpanded] = React.useState(true);
-  
+export function SuggestionsPanel({
+  suggestions,
+  onSelectSuggestion,
+  isVisible = true,
+  hasHistory = false
+}: SuggestionsPanelProps & { hasHistory?: boolean }) {
+  const [isExpanded, setIsExpanded] = React.useState(!hasHistory);
+  const hasUserToggledRef = React.useRef(false);
+  // ✅ Chỉ auto set state lần đầu, sau đó không động vào nữa
+  React.useEffect(() => {
+    if (!hasUserToggledRef.current) {
+      setIsExpanded(!hasHistory);
+    }
+  }, []); // ← chạy 1 lần duy nhất khi mount, không phụ thuộc hasHistory hay suggestions
+
+  const handleToggle = () => {
+    hasUserToggledRef.current = true; // đánh dấu user đã tự toggle
+    setIsExpanded(prev => !prev);
+  };
+
+
   // Determine suggestion variants based on content
   const getSuggestionVariant = useMemo(() => {
     return (suggestion: string): 'default' | 'primary' | 'secondary' => {
       const lowerSuggestion = suggestion.toLowerCase();
-      
+
       // Primary for product/order related
-      if (lowerSuggestion.includes('product') || 
-          lowerSuggestion.includes('order') || 
-          lowerSuggestion.includes('track') ||
-          lowerSuggestion.includes('cart')) {
+      if (lowerSuggestion.includes('product') ||
+        lowerSuggestion.includes('order') ||
+        lowerSuggestion.includes('track') ||
+        lowerSuggestion.includes('cart')) {
         return 'primary';
       }
-      
+
       // Secondary for help/support related
-      if (lowerSuggestion.includes('help') || 
-          lowerSuggestion.includes('support') || 
-          lowerSuggestion.includes('contact') ||
-          lowerSuggestion.includes('how')) {
+      if (lowerSuggestion.includes('help') ||
+        lowerSuggestion.includes('support') ||
+        lowerSuggestion.includes('contact') ||
+        lowerSuggestion.includes('how')) {
         return 'secondary';
       }
-      
+
       return 'default';
     };
   }, []);
@@ -179,8 +194,8 @@ export function SuggestionsPanel({
   }
 
   return (
-    <div 
-      className={`chatbot-suggestions-container ${!isExpanded ? 'is-collapsed' : ''}`}
+    <div
+      className={`${styles['chatbot-suggestions-container']} ${!isExpanded ? styles['is-collapsed'] : ''}`}
       style={{
         background: 'var(--chatbot-glass-bg)',
         backdropFilter: 'var(--chatbot-blur)',
@@ -188,19 +203,19 @@ export function SuggestionsPanel({
       }}
     >
       {/* Header Container */}
-      <div 
-        style={{ 
+      <div
+        style={{
           padding: '12px 16px',
-          display: 'flex', 
-          alignItems: 'center', 
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'space-between',
           cursor: 'pointer'
         }}
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={handleToggle}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--chatbot-text)', margin: 0 }}>
-            Suggested questions
+            Gợi ý câu hỏi
           </h3>
           <span style={{ fontSize: '10px', color: 'var(--chatbot-text-muted)', background: 'var(--chatbot-primary-light)', padding: '2px 6px', borderRadius: '10px' }}>
             {suggestions.length}
@@ -216,16 +231,28 @@ export function SuggestionsPanel({
               viewBox="0 0 24 24"
               style={{ marginRight: '4px' }}
             >
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
             </svg>
-            Quick actions
+            Thao tác nhanh
           </div>
-          
-          <button 
-            className={`chatbot-toggle-button ${!isExpanded ? 'is-collapsed' : ''}`}
-            aria-label={isExpanded ? "Collapse" : "Expand"}
+
+          <button
+            className={`${styles['chatbot-toggle-button']} ${!isExpanded ? styles['is-collapsed'] : ''}`}
+            aria-label={isExpanded ? "Thu gọn" : "Mở rộng"}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform 0.3s' }}>
+            <svg
+              width="14" height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{
+                transition: 'transform 0.3s',
+                transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' // ← xoay đúng
+              }}
+            >
               <polyline points="18 15 12 9 6 15"></polyline>
             </svg>
           </button>
@@ -233,16 +260,20 @@ export function SuggestionsPanel({
       </div>
 
       {/* Expandable Content area */}
-      <div className="chatbot-suggestions-content" style={{ padding: '0 16px 16px 16px' }}>
+      <div className={styles['chatbot-suggestions-content']} style={{ padding: '0 16px 16px 16px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {Object.entries(groupedSuggestions).map(([key, groupSuggestions]) => 
+          {Object.entries(groupedSuggestions).map(([key, groupSuggestions]) =>
             groupSuggestions.length > 0 && (
               <div key={key} style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {groupSuggestions.map((suggestion, index) => (
                   <SuggestionChip
                     key={`${key}-${index}`}
                     suggestion={suggestion}
-                    onClick={() => onSelectSuggestion(suggestion)}
+                    onClick={() => {
+                      hasUserToggledRef.current = true;  // ← đánh dấu
+                      setIsExpanded(false);               // ← đóng tab
+                      onSelectSuggestion(suggestion);     // ← gửi tin nhắn
+                    }}
                     variant={key as any}
                   />
                 ))}
@@ -253,7 +284,7 @@ export function SuggestionsPanel({
 
         {/* Footer hint */}
         <div style={{ marginTop: '12px', fontSize: '11px', color: 'var(--chatbot-text-muted)', textAlign: 'center', opacity: 0.8 }}>
-          Click any suggestion to send it as a message
+          Nhấn vào gợi ý để gửi tin nhắn
         </div>
       </div>
     </div>

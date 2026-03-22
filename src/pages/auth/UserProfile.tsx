@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Camera, ShieldCheck, Mail, Phone, MapPin, Save, User, CheckCircle2, Package, Wallet, ShoppingCart, Loader2, ArrowRight, UserCircle } from 'lucide-react';
 import { authService, UserResponse } from '../../services';
 import { useNavigate } from 'react-router-dom';
@@ -11,6 +11,9 @@ const UserProfile: React.FC = () => {
     const [phoneNumber, setPhoneNumber] = useState('');
     const [email, setEmail] = useState('');
     const [address, setAddress] = useState('');
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -51,7 +54,7 @@ const UserProfile: React.FC = () => {
                 fullName,
                 phoneNumber,
                 address,
-            });
+            }, avatarFile || undefined);
             if (response.result) {
                 setUser(response.result);
                 setSuccess('Lưu thay đổi thành công.');
@@ -63,6 +66,19 @@ const UserProfile: React.FC = () => {
         } finally {
             setSaving(false);
         }
+    };
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setAvatarFile(file);
+            const previewUrl = URL.createObjectURL(file);
+            setAvatarPreview(previewUrl);
+        }
+    };
+
+    const triggerFileInput = () => {
+        fileInputRef.current?.click();
     };
 
     const formatDate = (dateStr?: string) => {
@@ -125,14 +141,24 @@ const UserProfile: React.FC = () => {
                         <div className="relative group mb-6">
                             <div className="size-32 rounded-3xl overflow-hidden border-4 border-white shadow-2xl bg-gradient-to-br from-green-50 to-blue-50">
                                 <img
-                                    src={`https://ui-avatars.com/api/?name=${encodeURIComponent(fullName || 'User')}&background=5DBE61&color=fff&size=200&bold=true`}
+                                    src={avatarPreview || user?.logoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName || 'User')}&background=5DBE61&color=fff&size=200&bold=true`}
                                     className="w-full h-full object-cover"
                                     alt="Avatar"
                                 />
                             </div>
-                            <button className="absolute -bottom-2 -right-2 size-10 bg-white text-primary rounded-xl shadow-xl flex items-center justify-center hover:scale-110 hover:text-white hover:bg-primary transition-all">
+                            <button
+                                onClick={triggerFileInput}
+                                className="absolute -bottom-2 -right-2 size-10 bg-white text-primary rounded-xl shadow-xl flex items-center justify-center hover:scale-110 hover:text-white hover:bg-primary transition-all"
+                            >
                                 <Camera className="size-5" />
                             </button>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleImageChange}
+                                accept="image/*"
+                                className="hidden"
+                            />
                         </div>
 
                         <h2 className="text-2xl font-black text-gray-900 mb-1">{fullName || 'Người dùng'}</h2>
@@ -175,16 +201,6 @@ const UserProfile: React.FC = () => {
                                         <ShoppingCart className="size-5" />
                                     </div>
                                     <span className="font-bold text-sm">Giỏ hàng</span>
-                                </div>
-                                <ArrowRight className="size-4 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
-                            </button>
-
-                            <button className="group flex items-center justify-between p-4 bg-white/10 hover:bg-white/20 rounded-2xl transition-all">
-                                <div className="flex items-center gap-3">
-                                    <div className="size-10 bg-white/10 rounded-xl flex items-center justify-center">
-                                        <Wallet className="size-5" />
-                                    </div>
-                                    <span className="font-bold text-sm">Ví của tôi</span>
                                 </div>
                                 <ArrowRight className="size-4 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
                             </button>

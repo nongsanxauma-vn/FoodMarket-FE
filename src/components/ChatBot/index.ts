@@ -40,4 +40,4 @@ export { PerformanceMonitor, measureRenderTime, debounce, throttle, estimateMemo
 export { ARIA_ROLES, ARIA_LABELS, KEYBOARD_SHORTCUTS, isFocusable, getFocusableElements, trapFocus, announceToScreenReader, prefersReducedMotion, isHighContrastMode, getAccessibleColors, validateAriaAttributes, generateAccessibleId, createAccessibleDescription, AccessibilityTester } from './utils/accessibilityUtils';
 
 // Types
-export type * from './types';
+export type * from './chatbot.types';

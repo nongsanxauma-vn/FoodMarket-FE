@@ -5,6 +5,7 @@ import {
   AlertCircle, ChefHat, Tag, MapPin, MessageSquare, Star,
 } from 'lucide-react';
 import { comboService, BuildComboResponse, cartService, reviewService, ReviewResponse } from '../../services';
+import { globalShowAlert } from '../../contexts/PopupContext';
 import { useAuth } from '../../contexts/AuthContext';
 import ShopProducts from '../Product/ShopProducts';
 
@@ -55,9 +56,9 @@ const ComboDetail: React.FC = () => {
       setIsAdding(true);
       await cartService.addToCart({ buildComboId: combo.id, quantity });
       window.dispatchEvent(new Event('cart-updated'));
-      alert(`Đã thêm combo "${combo.comboName}" vào giỏ hàng!`);
+      globalShowAlert(`Đã thêm combo "${combo.comboName}" vào giỏ hàng!`, 'Thành công', 'success');
     } catch {
-      alert('Không thể thêm vào giỏ hàng. Vui lòng thử lại.');
+      globalShowAlert('Không thể thêm vào giỏ hàng. Vui lòng thử lại.', 'Lỗi', 'error');
     } finally {
       setIsAdding(false);
     }

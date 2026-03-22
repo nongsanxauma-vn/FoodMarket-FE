@@ -21,6 +21,7 @@ import {
   Tag,
 } from 'lucide-react';
 import { productService, ProductResponse, userService, UserResponse, cartService, reviewService, ReviewResponse, mysteryBoxService, MysteryBox, comboService, BuildComboResponse } from '../../services';
+import { globalShowAlert } from '../../contexts/PopupContext';
 
 interface ShopProductsProps {
   shopId: number;
@@ -92,9 +93,9 @@ const ShopProducts: React.FC<ShopProductsProps> = ({
     setAddingToCart(productId);
     try {
       await cartService.addToCart({ productId, quantity: 1 });
-      alert('Đã thêm vào giỏ hàng!');
+      globalShowAlert('Đã thêm vào giỏ hàng!', 'Thành công', 'success');
     } catch (error) {
-      alert('Không thể thêm vào giỏ hàng. Vui lòng thử lại.');
+      globalShowAlert('Không thể thêm vào giỏ hàng. Vui lòng thử lại.', 'Lỗi', 'error');
     } finally {
       setAddingToCart(null);
     }
@@ -106,9 +107,9 @@ const ShopProducts: React.FC<ShopProductsProps> = ({
     try {
       await cartService.addToCart({ mysteryBoxId: boxId, quantity: 1 });
       window.dispatchEvent(new Event('cart-updated'));
-      alert('Đã thêm túi mù vào giỏ hàng!');
+      globalShowAlert('Đã thêm túi mù vào giỏ hàng!', 'Thành công', 'success');
     } catch (error) {
-      alert('Không thể thêm vào giỏ hàng. Vui lòng thử lại.');
+      globalShowAlert('Không thể thêm vào giỏ hàng. Vui lòng thử lại.', 'Lỗi', 'error');
     } finally {
       setAddingBoxToCart(null);
     }
@@ -120,12 +121,17 @@ const ShopProducts: React.FC<ShopProductsProps> = ({
     try {
       await cartService.addToCart({ buildComboId: combo.id, quantity: 1 });
       window.dispatchEvent(new Event('cart-updated'));
-      alert(`Đã thêm combo "${combo.comboName}" vào giỏ hàng!`);
+      globalShowAlert(`Đã thêm combo "${combo.comboName}" vào giỏ hàng!`, 'Thành công', 'success');
     } catch {
-      alert('Không thể thêm combo vào giỏ hàng. Vui lòng thử lại.');
+      globalShowAlert('Không thể thêm combo vào giỏ hàng. Vui lòng thử lại.', 'Lỗi', 'error');
     } finally {
       setAddingComboToCart(null);
     }
+  };
+
+  const handleChatNow = () => {
+    if (!isAuthenticated) { onOpenLogin(); return; }
+    navigate(`/chat?userId=${shopId}&userName=${encodeURIComponent(shopName)}`);
   };
 
   // Filter and sort products
@@ -290,7 +296,10 @@ const ShopProducts: React.FC<ShopProductsProps> = ({
 
               {/* Actions */}
               <div className="flex gap-2">
-                <button className="px-4 py-2 bg-primary text-white font-bold text-xs rounded-xl hover:bg-primary-dark transition-colors flex items-center gap-2 shadow-lg shadow-primary/20">
+                <button 
+                  onClick={handleChatNow}
+                  className="px-4 py-2 bg-primary text-white font-bold text-xs rounded-xl hover:bg-primary-dark transition-colors flex items-center gap-2 shadow-lg shadow-primary/20"
+                >
                   <MessageCircle className="size-3.5" />
                   Chat ngay
                 </button>

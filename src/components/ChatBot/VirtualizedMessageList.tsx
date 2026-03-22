@@ -1,10 +1,9 @@
 /**
  * Virtualized Message List Component
- * Optimized for handling large numbers of messages with virtual scrolling
  */
 
 import React, { useRef, useEffect, useCallback, memo } from 'react';
-import { ChatMessage } from './types';
+import { ChatMessage } from './chatbot.types';
 import { useVirtualScrolling, useAutoScroll } from './hooks/useVirtualScrolling';
 import { useMessageMemoryManagement } from './hooks/useMemoryManagement';
 import { MessageBubble } from './MessageBubble';
@@ -20,12 +19,9 @@ export interface VirtualizedMessageListProps {
   containerHeight?: number;
 }
 
-const ITEM_HEIGHT = 100; // Recalibrated for better scroll control
+const ITEM_HEIGHT = 100;
 const CONTAINER_HEIGHT = 500;
 
-/**
- * Virtualized message list component with performance optimizations
- */
 const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = memo(({
   messages: rawMessages,
   isLoading = false,
@@ -40,7 +36,6 @@ const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = memo(({
   const scrollElementRef = useRef<HTMLDivElement>(null);
   const [actualContainerHeight, setActualContainerHeight] = React.useState(containerHeight || CONTAINER_HEIGHT);
 
-  // Measure container height for responsiveness
   useEffect(() => {
     if (containerHeight) {
       setActualContainerHeight(containerHeight);
@@ -61,43 +56,29 @@ const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = memo(({
     return () => observer.disconnect();
   }, [containerHeight]);
 
-  // Memory management for large conversations
   const { messages, memoryUsage } = useMessageMemoryManagement(rawMessages, {
     maxMessages: 1000,
     enableAutoCleanup: true
   });
 
-  // Virtual scrolling for performance
-  const {
-    visibleItems,
-    totalHeight,
-    offsetY,
-    onScroll
-  } = useVirtualScrolling({
+  const { onScroll } = useVirtualScrolling({
     itemHeight,
     containerHeight: actualContainerHeight,
     totalItems: messages.length,
     overscan: 5
   });
 
-  // Auto-scroll to bottom for new messages
   const scrollToBottom = useAutoScroll(messages.length, autoScroll);
-  
-  // Track previous message count to prevent unnecessary scrolls
   const prevMessageCountRef = useRef(messages.length);
 
-  // Handle scroll events
-  const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
-    const target = event.target as HTMLDivElement;
-    onScroll(target.scrollTop);
-
-    // Load more messages when scrolled to top
-    if (target.scrollTop === 0 && onLoadMore) {
-      onLoadMore();
+  // ✅ Scroll xuống cuối khi component mount lần đầu
+  useEffect(() => {
+    if (scrollElementRef.current && messages.length > 0) {
+      scrollElementRef.current.scrollTop = scrollElementRef.current.scrollHeight;
     }
-  }, [onScroll, onLoadMore]);
+  }, []); // chỉ chạy 1 lần khi mount
 
-  // Auto-scroll when new messages arrive (only when count increases)
+  // ✅ Scroll xuống khi có tin nhắn mới
   useEffect(() => {
     if (autoScroll && scrollElementRef.current && messages.length > prevMessageCountRef.current) {
       scrollToBottom(scrollElementRef.current);
@@ -107,7 +88,14 @@ const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = memo(({
     }
   }, [messages.length, autoScroll, scrollToBottom]);
 
-  // Log memory usage in development
+  const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLDivElement;
+    onScroll(target.scrollTop);
+    if (target.scrollTop === 0 && onLoadMore) {
+      onLoadMore();
+    }
+  }, [onScroll, onLoadMore]);
+
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       console.log('ChatBot Memory Usage:', memoryUsage);
@@ -135,64 +123,39 @@ const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = memo(({
           overflowX: 'hidden'
         }}
       >
-        {/* Render all messages without virtualization to prevent scroll issues */}
         <div style={{ padding: '12px 16px' }}>
           {messages.map((message) => (
-            <div
-              key={message.id}
-              style={{
-                marginBottom: '12px'
-              }}
-            >
+            <div key={message.id} style={{ marginBottom: '12px' }}>
               <MessageBubble message={message} />
             </div>
           ))}
         </div>
 
-        {/* Loading indicator */}
-        {isLoading && (
-          <div
-            style={{
-              padding: '16px',
-              textAlign: 'center',
-              color: '#666'
-            }}
-          >
-            Loading more messages...
-          </div>
-        )}
-
-        {/* Empty state */}
         {messages.length === 0 && !isLoading && (
-          <div
-            style={{
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#666',
-              fontStyle: 'italic'
-            }}
-          >
-            Start a conversation with our AI assistant!
+          <div style={{
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#666',
+            fontStyle: 'italic'
+          }}>
+            Hãy bắt đầu trò chuyện với trợ lý AI!
           </div>
         )}
       </div>
 
-      {/* Development memory usage indicator */}
       {process.env.NODE_ENV === 'development' && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            background: 'rgba(0,0,0,0.7)',
-            color: 'white',
-            padding: '4px 8px',
-            fontSize: '10px',
-            borderRadius: '0 0 0 4px'
-          }}
-        >
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          background: 'rgba(0,0,0,0.7)',
+          color: 'white',
+          padding: '4px 8px',
+          fontSize: '10px',
+          borderRadius: '0 0 0 4px'
+        }}>
           {memoryUsage.messageCount} msgs, {memoryUsage.estimatedKB}KB
         </div>
       )}

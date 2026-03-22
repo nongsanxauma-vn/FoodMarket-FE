@@ -3,7 +3,7 @@
  * Helper functions for localStorage management
  */
 
-import { ChatMessage, ChatContext } from '../types';
+import { ChatMessage } from '../chatbot.types';
 
 const STORAGE_PREFIX = 'chatbot_';
 
@@ -51,36 +51,6 @@ export function loadChatMessages(): ChatMessage[] {
   }
 }
 
-/**
- * Save chat context to localStorage
- */
-export function saveChatContext(context: ChatContext): void {
-  try {
-    const key = getStorageKey('context');
-    localStorage.setItem(key, JSON.stringify(context));
-  } catch (error) {
-    console.error('Failed to save chat context:', error);
-  }
-}
-
-/**
- * Load chat context from localStorage
- */
-export function loadChatContext(): ChatContext | null {
-  try {
-    const key = getStorageKey('context');
-    const stored = localStorage.getItem(key);
-    
-    if (!stored) {
-      return null;
-    }
-    
-    return JSON.parse(stored);
-  } catch (error) {
-    console.error('Failed to load chat context:', error);
-    return null;
-  }
-}
 
 /**
  * Clear all chat data from localStorage

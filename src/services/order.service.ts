@@ -1,5 +1,5 @@
 import { httpClient, ApiResponse } from './http.client';
-import { PageResponse } from './product.service';
+import { PageResponse } from '../types';
 
 export interface OrderItemRequest {
     productId?: number;
@@ -42,6 +42,7 @@ export interface OrderResponse {
     status: string;
     createdAt: string;
     items: OrderItemResponse[];
+    buyerId?: number;
 }
 
 class OrderService {

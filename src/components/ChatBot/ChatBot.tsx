@@ -7,7 +7,7 @@ import React from 'react';
 import { ChatBotButton } from './ChatBotButton';
 import { ChatBotModal } from './ChatBotModal';
 import { useChatBotContext } from './ChatBotContext';
-import './ChatBot.css';
+import styles from './ChatBot.module.css';
 
 interface ChatBotProps {
   className?: string;
@@ -27,7 +27,7 @@ export function ChatBot({
   const { isOpen } = useChatBotContext();
 
   return (
-    <div className={`chatbot-container ${className}`}>
+    <div className={`${styles['chatbot-container']} ${className}`}>
       {/* Floating Chat Button */}
       <ChatBotButton 
         unreadCount={unreadCount} 

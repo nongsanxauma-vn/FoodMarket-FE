@@ -3,7 +3,7 @@
  * Helper functions for message handling
  */
 
-import { ChatMessage } from '../types';
+import { ChatMessage } from '../chatbot.types';
 
 /**
  * Generate unique message ID
@@ -30,9 +30,9 @@ export function createUserMessage(content: string): Omit<ChatMessage, 'id' | 'ti
 export function createAIMessage(content: string): Omit<ChatMessage, 'id' | 'timestamp'> {
   return {
     content,
-    sender: 'ai',
+    sender: 'bot',
     type: 'text',
-    status: 'delivered'
+    status: 'sent'
   };
 }
 
@@ -42,9 +42,9 @@ export function createAIMessage(content: string): Omit<ChatMessage, 'id' | 'time
 export function createSystemMessage(content: string): Omit<ChatMessage, 'id' | 'timestamp'> {
   return {
     content,
-    sender: 'ai',
+    sender: 'bot',
     type: 'system',
-    status: 'delivered'
+    status: 'sent'
   };
 }
 

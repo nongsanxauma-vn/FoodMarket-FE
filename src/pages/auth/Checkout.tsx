@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { MapPin, CreditCard, ChevronRight, Lock, Loader2, ShieldCheck, Wallet, ChevronLeft, AlertCircle, Package, X, Gift, Truck } from 'lucide-react';
 import { orderService, paymentService, authService, cartService, CartResponse } from '../../services';
 import { httpClient } from '../../services/http.client';
+import { globalShowAlert } from '../../contexts/PopupContext';
 
 // ✅ Extend CartResponse để có shopOwnerId (BE đã thêm field này)
 type CartItemWithShop = {
@@ -24,7 +25,7 @@ interface CheckoutProps {
 
 const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
    const [isProcessing, setIsProcessing] = useState(false);
-   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'PAYOS' | 'WALLET'>('WALLET');
+   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'PAYOS'>('PAYOS');
    const [cartData, setCartData] = useState<CartResponse | null>(null);
    const [recipientName, setRecipientName] = useState('');
    const [recipientPhone, setRecipientPhone] = useState('');
@@ -125,16 +126,16 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
    }, [shopId]);
 
    const validateForm = (): boolean => {
-      if (!recipientName.trim()) { alert('Vui lòng nhập tên người nhận'); return false; }
-      if (!recipientPhone.trim()) { alert('Vui lòng nhập số điện thoại'); return false; }
-      if (!recipientAddress.trim()) { alert('Vui lòng nhập địa chỉ nhận hàng'); return false; }
+      if (!recipientName.trim()) { globalShowAlert('Vui lòng nhập tên người nhận', 'Lỗi', 'error'); return false; }
+      if (!recipientPhone.trim()) { globalShowAlert('Vui lòng nhập số điện thoại', 'Lỗi', 'error'); return false; }
+      if (!recipientAddress.trim()) { globalShowAlert('Vui lòng nhập địa chỉ nhận hàng', 'Lỗi', 'error'); return false; }
       return true;
    };
 
    const handleConfirmPayment = async () => {
       if (!validateForm()) return;
       if (!cartData || !cartData.items || cartData.items.length === 0) {
-         alert('Giỏ hàng trống!');
+         globalShowAlert('Giỏ hàng trống!', 'Lỗi', 'error');
          return;
       }
 
@@ -180,8 +181,6 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
                      return;
                   }
                }
-            } else if (paymentMethod === 'WALLET') {
-               await paymentService.createPayment({ orderId, amount, method: 'WALLET', paymentGateway: 'WALLET' });
             }
 
             onComplete(orderId);
@@ -306,16 +305,14 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, onBack }) => {
                      </div>
                      <div className="space-y-2">
                         {[
-                           { id: 'WALLET', label: 'Ví Sàn', sub: 'Bảo vệ bởi Escrow', icon: Wallet, color: 'primary', badge: 'Khuyên dùng' },
-                           { id: 'PAYOS', label: 'PayOS (VietQR)', sub: 'Quét mã thanh toán', icon: CreditCard, color: 'blue-500' },
+                           { id: 'PAYOS', label: 'PayOS (VietQR)', sub: 'Quét mã thanh toán', icon: CreditCard, color: 'blue-500', badge: 'Khuyên dùng' },
                            { id: 'COD', label: 'COD', sub: 'Thanh toán khi nhận hàng', icon: Package, color: 'orange-500' },
                         ].map(({ id, label, sub, icon: Icon, color, badge }) => (
                            <div
                               key={id}
                               onClick={() => !isProcessing && setPaymentMethod(id as any)}
-                              className={`p-4 border-2 rounded-xl flex items-center gap-3 cursor-pointer transition-all ${
-                                 paymentMethod === id ? `border-${color} bg-${color === 'primary' ? 'green' : color.split('-')[0]}-50` : 'border-gray-200 hover:border-gray-300'
-                              } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              className={`p-4 border-2 rounded-xl flex items-center gap-3 cursor-pointer transition-all ${paymentMethod === id ? `border-${color} bg-${color === 'primary' ? 'green' : color.split('-')[0]}-50` : 'border-gray-200 hover:border-gray-300'
+                                 } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
                            >
                               <div className={`size-10 rounded-lg flex items-center justify-center ${paymentMethod === id ? `bg-${color} text-white` : 'bg-gray-100 text-gray-400'}`}>
                                  <Icon className="size-5" />

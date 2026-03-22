@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { ChatMessage } from '../types';
+import { ChatMessage } from '../chatbot.types';
 
 export interface LazyLoadingOptions {
   pageSize?: number;
@@ -227,7 +227,7 @@ export function useScrollPreload(
 export function useLoadingTimeout(timeout: number = 10000) {
   const [isLoading, setIsLoading] = useState(false);
   const [hasTimedOut, setHasTimedOut] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   const startLoading = useCallback(() => {
     setIsLoading(true);

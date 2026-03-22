@@ -3,6 +3,7 @@ import { Truck, CheckCircle2, XCircle, User, AlertTriangle, X, Loader2, AlertCir
 import { useNavigate } from 'react-router-dom';
 import { orderService, OrderResponse } from '../../services';
 import Pagination, { PageInfo } from '../../components/ui/Pagination';
+import { globalShowAlert, globalShowConfirm } from '../../contexts/PopupContext';
 
 const PAGE_SIZE = 10;
 
@@ -58,41 +59,41 @@ const Orders: React.FC<OrdersProps> = ({ onPrepareOrder }) => {
     try {
       setIsProcessing(true);
       await orderService.updateOrder(cancellingOrderId, { status: 'CANCELLED' });
-      alert(`Đã hủy đơn hàng #${cancellingOrderId}`);
+      globalShowAlert(`Đã hủy đơn hàng #${cancellingOrderId}`, 'Thành công', 'success');
       setShowCancelModal(false);
       setCancellingOrderId(null);
       fetchOrders();
     } catch (err: any) {
-      alert(err?.data?.message || 'Có lỗi khi hủy đơn hàng');
+      globalShowAlert(err?.data?.message || 'Có lỗi khi hủy đơn hàng', 'Lỗi', 'error');
     } finally {
       setIsProcessing(false);
     }
   };
 
   const handleDeleteOrder = async (orderId: number) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn XÓA VĨNH VIỄN đơn hàng #${orderId} không?`)) return;
+    if (!await globalShowConfirm(`Bạn có chắc chắn muốn XÓA VĨNH VIỄN đơn hàng #${orderId} không?`, 'Xác nhận xóa')) return;
     try {
       setIsProcessing(true);
       await orderService.deleteOrder(orderId);
-      alert(`Đã xóa vĩnh viễn đơn hàng #${orderId}`);
+      globalShowAlert(`Đã xóa vĩnh viễn đơn hàng #${orderId}`, 'Thành công', 'success');
       fetchOrders();
     } catch (err: any) {
-      alert(err?.data?.message || 'Có lỗi khi xóa đơn hàng');
+      globalShowAlert(err?.data?.message || 'Có lỗi khi xóa đơn hàng', 'Lỗi', 'error');
     } finally {
       setIsProcessing(false);
     }
   };
 
   const handleConfirmOrder = async (orderId: number) => {
-    if (!window.confirm(`Xác nhận chuẩn bị đơn hàng #${orderId}?`)) return;
+    if (!await globalShowConfirm(`Xác nhận chuẩn bị đơn hàng #${orderId}?`, 'Xác nhận đơn')) return;
     try {
       setIsProcessing(true);
       await orderService.updateOrder(orderId, { status: 'CONFIRMED' });
-      alert(`Đã xác nhận đơn hàng #${orderId} — Đang chuẩn bị hàng!`);
+      globalShowAlert(`Đã xác nhận đơn hàng #${orderId} — Đang chuẩn bị hàng!`, 'Thành công', 'success');
       if (onPrepareOrder) onPrepareOrder(orderId.toString());
       fetchOrders();
     } catch (err: any) {
-      alert(err?.data?.message || 'Có lỗi khi xác nhận đơn hàng');
+      globalShowAlert(err?.data?.message || 'Có lỗi khi xác nhận đơn hàng', 'Lỗi', 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -273,7 +274,10 @@ const Orders: React.FC<OrdersProps> = ({ onPrepareOrder }) => {
                           <CheckCircle2 className="size-5" /> Chuẩn bị hàng
                         </button>
                         <div className="grid grid-cols-2 gap-3">
-                          <button className="py-3 border border-gray-100 text-gray-600 font-bold text-xs rounded-2xl flex items-center justify-center gap-2 hover:bg-gray-50 transition-all">
+                          <button 
+                            onClick={() => navigate(`/chat?userId=${order.buyerId}&userName=${order.recipientName}`)}
+                            className="py-3 border border-gray-100 text-gray-600 font-bold text-xs rounded-2xl flex items-center justify-center gap-2 hover:bg-gray-50 transition-all font-display uppercase tracking-tight"
+                          >
                             <Truck className="size-4" /> Liên hệ KH
                           </button>
                           <button disabled={isProcessing} onClick={() => handleOpenCancelModal(order.id)}

@@ -142,6 +142,7 @@ export interface MealItemResponse {
     type: string;
     mealType?: string;
     items?: any[];
+    shopOwnerId?: number;
   };
 }
 

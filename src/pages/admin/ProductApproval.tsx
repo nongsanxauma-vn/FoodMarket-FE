@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CheckCircle, Search, Filter, MoreVertical, Eye, Trash2, Check, X, ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
 import { productService, ProductResponse } from '../../services';
 import Pagination, { PageInfo } from '../../components/ui/Pagination';
+import { globalShowAlert, globalShowConfirm } from '../../contexts/PopupContext';
 
 const PAGE_SIZE = 10;
 
@@ -46,7 +47,7 @@ const ProductApproval: React.FC = () => {
   }, [page]);
 
   const handleApprove = async (product: ProductResponse) => {
-    if (!window.confirm(`Bạn có chắc muốn duyệt sản phẩm "${product.productName}"?`)) return;
+    if (!await globalShowConfirm('Xác nhận', `Bạn có chắc muốn duyệt sản phẩm "${product.productName}"?`)) return;
 
     try {
       setIsProcessing(true);
@@ -61,11 +62,11 @@ const ProductApproval: React.FC = () => {
         status: 'AVAILABLE'
       } as any);
 
-      alert(`Đã duyệt sản phẩm ${product.productName}`);
+      globalShowAlert(`Đã duyệt sản phẩm ${product.productName}`, 'Thành công', 'success');
       setSelectedProduct(null);
       fetchProducts(); // Reload list
     } catch (err: any) {
-      alert(err?.data?.message || 'Có lỗi khi duyệt sản phẩm');
+      globalShowAlert(err?.data?.message || 'Có lỗi khi duyệt sản phẩm', 'Lỗi', 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -78,7 +79,7 @@ const ProductApproval: React.FC = () => {
 
   const confirmReject = async () => {
     if (!rejectReason.trim()) {
-      alert('Vui lòng nhập lý do từ chối');
+      globalShowAlert('Vui lòng nhập lý do từ chối', 'Lỗi', 'error');
       return;
     }
 
@@ -98,7 +99,7 @@ const ProductApproval: React.FC = () => {
           status: 'OUT_OF_STOCK'
         } as any);
 
-        alert(`Đã từ chối sản phẩm #${rejectingProductId}`);
+        globalShowAlert(`Đã từ chối sản phẩm #${rejectingProductId}`, 'Thành công', 'success');
       }
 
       setShowRejectModal(false);
@@ -107,7 +108,7 @@ const ProductApproval: React.FC = () => {
       setSelectedProduct(null);
       fetchProducts(); // Reload
     } catch (err: any) {
-      alert(err?.data?.message || 'Có lỗi khi từ chối sản phẩm');
+      globalShowAlert(err?.data?.message || 'Có lỗi khi từ chối sản phẩm', 'Lỗi', 'error');
     } finally {
       setIsProcessing(false);
     }

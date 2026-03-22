@@ -17,6 +17,7 @@ import {
 import FakeGPS from './Fakegps';
 import { authService } from '../../services/auth.service';
 import type { UserResponse } from '../../services/auth.service';
+import { globalShowAlert } from '../../contexts/PopupContext';
 
 interface ShipperDashboardProps {
   onLogout: () => void;
@@ -129,12 +130,12 @@ const ShipperDashboard: React.FC<ShipperDashboardProps> = ({ onLogout }) => {
       setAvailableOrders(prev => prev.filter(o => o.orderId !== orderId));
       setTimeout(() => setAcceptSuccess(null), 3000);
     } catch (err: any) {
-      alert(err?.data?.message === 'ORDER_ALREADY_TAKEN' ? 'Đơn đã được nhận!' : 'Không thể nhận đơn.');
+      globalShowAlert(err?.data?.message === 'ORDER_ALREADY_TAKEN' ? 'Đơn đã được nhận!' : 'Không thể nhận đơn.', 'Lỗi', 'error');
     } finally { setAcceptingOrderId(null); }
   };
 
   const startTracking = useCallback((orderId: number) => {
-    if (!navigator.geolocation) { alert('Trình duyệt không hỗ trợ GPS'); return; }
+    if (!navigator.geolocation) { globalShowAlert('Trình duyệt không hỗ trợ GPS', 'Lỗi', 'error'); return; }
     setTrackingStatus('starting');
     setTrackingOrderId(orderId);
     const token = localStorage.getItem(TOKEN_KEY);
@@ -186,8 +187,8 @@ const ShipperDashboard: React.FC<ShipperDashboardProps> = ({ onLogout }) => {
       await shipperService.updateOrderStatus(orderId, { status });
       if (trackingOrderId === orderId) stopTracking();
       fetchMyOrders();
-      alert(status === 'DELIVERED' ? '✅ Giao hàng thành công!' : '❌ Đã đánh dấu thất bại');
-    } catch { alert('Không thể cập nhật.'); }
+      globalShowAlert(status === 'DELIVERED' ? '✅ Giao hàng thành công!' : '❌ Đã đánh dấu thất bại', 'Cập nhật', status === 'DELIVERED' ? 'success' : 'warning');
+    } catch { globalShowAlert('Không thể cập nhật.', 'Lỗi', 'error'); }
   };
 
   // ===================== HELPERS =====================

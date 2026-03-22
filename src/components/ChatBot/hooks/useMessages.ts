@@ -5,13 +5,12 @@
 
 import { useCallback } from 'react';
 import { useChatBotContext } from '../ChatBotContext';
-import { ChatMessage, UseMessagesReturn } from '../types';
-
+import { ChatMessage } from '../chatbot.types';
 /**
  * Messages management hook
  * Provides functionality for managing chat messages
  */
-export function useMessages(): UseMessagesReturn {
+export function useMessages() {
   const context = useChatBotContext();
 
   // Generate unique message ID
@@ -29,7 +28,7 @@ export function useMessages(): UseMessagesReturn {
 
     // For now, we'll use the sendMessage from context for user messages
     // and let the context handle AI responses
-    if (messageData.sender === 'user' && messageData.type === 'text') {
+    if (messageData.sender === 'user') {
       context.sendMessage(messageData.content);
     }
   }, [context, generateMessageId]);

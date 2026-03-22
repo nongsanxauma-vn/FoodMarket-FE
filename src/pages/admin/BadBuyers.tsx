@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { UserX, Search, Bell, ShieldAlert, Zap, AlertCircle, Lock, Unlock, History, MoreHorizontal, Filter, Download, ChevronRight, XCircle, Loader2 } from 'lucide-react';
 import { userService, UserResponse } from '../../services';
 import Pagination, { PageInfo } from '../../components/ui/Pagination';
+import { globalShowAlert, globalShowConfirm } from '../../contexts/PopupContext';
 
 const PAGE_SIZE = 10;
 
@@ -43,13 +44,13 @@ const BadBuyers: React.FC = () => {
   }, [page]);
 
   const handleBlock = async (userId: number) => {
-    if (!window.confirm('Bạn có chắc muốn khóa tài khoản này?')) return;
+    if (!await globalShowConfirm('Xác nhận', 'Bạn có chắc muốn khóa tài khoản này?')) return;
     setProcessing(userId);
     try {
       await userService.deactivateUser(userId);
       setBuyers(prev => prev.map(b => b.id === userId ? { ...b, status: 'DEACTIVATED' } : b));
     } catch (err: any) {
-      alert(err?.data?.message || 'Không thể khóa tài khoản');
+      globalShowAlert(err?.data?.message || 'Không thể khóa tài khoản', 'Lỗi', 'error');
     } finally {
       setProcessing(null);
     }
@@ -61,7 +62,7 @@ const BadBuyers: React.FC = () => {
       await userService.activateUser(userId);
       setBuyers(prev => prev.map(b => b.id === userId ? { ...b, status: 'ACTIVE' } : b));
     } catch (err: any) {
-      alert(err?.data?.message || 'Không thể mở khóa tài khoản');
+      globalShowAlert(err?.data?.message || 'Không thể mở khóa tài khoản', 'Lỗi', 'error');
     } finally {
       setProcessing(null);
     }
