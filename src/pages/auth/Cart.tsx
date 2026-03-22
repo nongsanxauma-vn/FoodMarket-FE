@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { ShoppingCart, Trash2, Plus, Minus, Info, ArrowRight, ArrowLeft, Loader2, Package, Gift, ChefHat } from 'lucide-react';
+import { ShoppingCart, Trash2, Plus, Minus, Info, ArrowRight, ArrowLeft, Loader2, Package, Gift, ChefHat, AlertCircle } from 'lucide-react';
 import { cartService, CartResponse, CartItemResponse } from '../../services/cart.service';
-import { globalShowConfirm } from '../../contexts/PopupContext';
+import { globalShowConfirm, globalShowAlert } from '../../contexts/PopupContext';
 
 interface CartProps {
-  onProceedToCheckout: () => void;
+  onProceedToCheckout: (selectedKeys?: string[]) => void;
   onBackToShopping: () => void;
 }
 
@@ -19,6 +19,7 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
   const [cartState, setCartState] = useState<CartState>({ cart: null, groupedItems: {} });
   const [loading, setLoading] = useState(true);
   const [updatingKey, setUpdatingKey] = useState<string | null>(null);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
 
   const fetchCart = async (isSilent = false) => {
     if (!isSilent) setLoading(true);
@@ -48,23 +49,59 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
   }, []);
 
   const itemKey = (item: CartItemResponse) => {
-    if (item.itemType === 'MYSTERY_BOX') return `b-${item.mysteryBoxId}`;
-    if (item.itemType === 'BUILD_COMBO') return `c-${item.buildComboId}`;
-    return `p-${item.productId}`;
+    const type = item.itemType || '';
+    let id: any = null;
+    if (type === 'MYSTERY_BOX') id = item.mysteryBoxId || (item as any).id || (item as any).mysteryBoxId;
+    else if (type === 'BUILD_COMBO') id = item.buildComboId || (item as any).id || (item as any).comboId || (item as any).buildComboId;
+    else id = item.productId || (item as any).id || (item as any).productId;
+
+    if (type === 'MYSTERY_BOX') return `b-${id}`;
+    if (type === 'BUILD_COMBO') return `c-${id}`;
+    return `p-${id}`;
+  };
+
+  const handleToggleItem = (key: string) => {
+    setSelectedKeys(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const handleToggleShop = (shopName: string, items: CartItemResponse[]) => {
+    const shopItemKeys = items.map(itemKey);
+    setSelectedKeys(prev => {
+      const next = new Set(prev);
+      const allSelected = shopItemKeys.every(k => next.has(k));
+      if (allSelected) {
+        shopItemKeys.forEach(k => next.delete(k));
+      } else {
+        shopItemKeys.forEach(k => next.add(k));
+      }
+      return next;
+    });
   };
 
   const handleUpdateQuantity = async (item: CartItemResponse, change: number) => {
-    const newQty = item.quantity + change;
+    const currentQty = Number(item.quantity) || 0;
+    const newQty = currentQty + change;
     if (newQty < 1) return;
+
     const key = itemKey(item);
     setUpdatingKey(key);
     try {
-      if (item.itemType === 'MYSTERY_BOX' && item.mysteryBoxId) {
-        await cartService.updateMysteryBoxQuantity(item.mysteryBoxId, newQty);
-      } else if (item.itemType === 'BUILD_COMBO' && item.buildComboId) {
-        await cartService.updateComboQuantity(item.buildComboId, newQty);
-      } else if (item.productId) {
-        await cartService.updateQuantity(item.productId, newQty);
+      const type = (item.itemType || '').toUpperCase();
+      
+      if (type === 'MYSTERY_BOX') {
+        const id = item.mysteryBoxId || (item as any).id;
+        if (id) await cartService.updateMysteryBoxQuantity(Number(id), newQty);
+      } else if (type === 'BUILD_COMBO' || type === 'COMBO') {
+        const id = item.buildComboId || (item as any).comboId || (item as any).id;
+        if (id) await cartService.updateComboQuantity(Number(id), newQty);
+      } else {
+        const id = item.productId || (item as any).id;
+        if (id) await cartService.updateQuantity(Number(id), newQty);
       }
       await fetchCart(true);
     } catch (error) {
@@ -78,12 +115,16 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
     const key = itemKey(item);
     setUpdatingKey(key);
     try {
-      if (item.itemType === 'MYSTERY_BOX' && item.mysteryBoxId) {
-        await cartService.removeMysteryBox(item.mysteryBoxId);
-      } else if (item.itemType === 'BUILD_COMBO' && item.buildComboId) {
-        await cartService.removeCombo(item.buildComboId);
-      } else if (item.productId) {
-        await cartService.removeItem(item.productId);
+      const mysteryBoxId = item.mysteryBoxId || (item.itemType === 'MYSTERY_BOX' ? (item as any).id : null);
+      const buildComboId = item.buildComboId || (item.itemType === 'BUILD_COMBO' ? ((item as any).comboId || (item as any).id) : null);
+      const productId = item.productId || (item.itemType === 'PRODUCT' ? (item as any).id : null);
+
+      if (item.itemType === 'MYSTERY_BOX' && mysteryBoxId) {
+        await cartService.removeMysteryBox(mysteryBoxId);
+      } else if (item.itemType === 'BUILD_COMBO' && buildComboId) {
+        await cartService.removeCombo(buildComboId);
+      } else if (productId) {
+        await cartService.removeItem(productId);
       }
       await fetchCart(true);
       window.dispatchEvent(new Event('cart-updated'));
@@ -99,6 +140,7 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
     setLoading(true);
     try {
       await cartService.clearCart();
+      setSelectedKeys(new Set());
       await fetchCart();
     } catch (error) {
       console.error('Clear cart failed', error);
@@ -119,8 +161,26 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
   }
 
   const { cart, groupedItems } = cartState;
-  const totalItems = cart?.items.reduce((sum, item) => sum + item.quantity, 0) || 0;
+  const totalItems = cart?.items.length || 0;
+  
+  const selectedItems = cart?.items.filter(it => selectedKeys.has(itemKey(it))) || [];
+  const selectedTotal = selectedItems.reduce((sum, it) => sum + (it.price * it.quantity), 0);
+  const selectedShops = Array.from(new Set(selectedItems.map(it => it.shopName)));
+  const isMultiShop = selectedShops.length > 1;
   const shopsCount = Object.keys(groupedItems).length;
+
+  const handleCheckout = () => {
+    if (selectedKeys.size === 0) {
+      globalShowAlert('Vui lòng chọn ít nhất một sản phẩm để thanh toán', 'Thông báo', 'info');
+      return;
+    }
+    if (isMultiShop) {
+      globalShowAlert('Hệ thống hiện tại chưa hỗ trợ gộp đơn từ nhiều nhà vườn. Vui lòng chỉ chọn sản phẩm từ một nhà vườn để thanh toán.', 'Không thể gộp đơn', 'warning');
+      return;
+    }
+    // Chuyển sang checkout với các key đã chọn
+    onProceedToCheckout(Array.from(selectedKeys));
+  };
 
   return (
     <div className="bg-background pb-20 animate-in fade-in duration-500">
@@ -140,9 +200,23 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
             }
           </div>
           {totalItems > 0 && (
-            <button onClick={handleClearCart} className="text-xs font-bold text-red-500 hover:text-red-600 uppercase tracking-widest flex items-center gap-2">
-              <Trash2 className="size-4" /> Xóa tất cả
-            </button>
+            <div className="flex items-center gap-6">
+              <button 
+                onClick={() => {
+                  if (selectedKeys.size === totalItems) setSelectedKeys(new Set());
+                  else {
+                    const allKeys = cart?.items.map(itemKey) || [];
+                    setSelectedKeys(new Set(allKeys));
+                  }
+                }}
+                className="text-xs font-bold text-primary hover:opacity-80 uppercase tracking-widest"
+              >
+                {selectedKeys.size === totalItems ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+              </button>
+              <button onClick={handleClearCart} className="text-xs font-bold text-red-500 hover:text-red-600 uppercase tracking-widest flex items-center gap-2">
+                <Trash2 className="size-4" /> Xóa tất cả
+              </button>
+            </div>
           )}
         </div>
 
@@ -162,85 +236,110 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
 
             {/* Danh sách sản phẩm */}
             <div className="lg:col-span-8 flex flex-col gap-8">
-              {Object.entries(groupedItems).map(([shopName, items]) => (
-                <div key={shopName} className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
-                  <div className="px-8 py-5 border-b border-gray-50 flex items-center gap-3">
-                    <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight">{shopName}</h3>
-                  </div>
-                  <div className="p-8 space-y-8">
-                    {items.map((item, idx) => {
-                      const key = itemKey(item);
-                      const isUpdating = updatingKey === key;
-                      const isMysteryBox = item.itemType === 'MYSTERY_BOX';
-                      const isCombo = item.itemType === 'BUILD_COMBO';
-                      return (
-                        <div key={key} className={`flex items-center gap-6 ${idx > 0 ? 'pt-6 border-t border-gray-50' : ''}`}>
-                          <div className="size-24 rounded-[32px] overflow-hidden bg-gray-50 flex-shrink-0 border border-gray-100 relative">
-                            {item.imageUrl ? (
-                              <img src={item.imageUrl} className="w-full h-full object-cover" alt={item.productName} />
-                            ) : isMysteryBox ? (
-                              <div className="w-full h-full bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center">
-                                <Package className="size-10 text-green-300" />
-                              </div>
-                            ) : isCombo ? (
-                              <div className="w-full h-full bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center">
-                                <ChefHat className="size-10 text-emerald-300" />
-                              </div>
-                            ) : (
-                              <img src={`https://picsum.photos/seed/${item.productId}/120/120`} className="w-full h-full object-cover" alt={item.productName} />
-                            )}
-                            {isMysteryBox && (
-                              <div className="absolute -top-1 -right-1 size-6 bg-primary rounded-full flex items-center justify-center shadow-sm">
-                                <Gift className="size-3 text-white" />
-                              </div>
-                            )}
-                            {isCombo && (
-                              <div className="absolute -top-1 -right-1 size-6 bg-emerald-500 rounded-full flex items-center justify-center shadow-sm">
-                                <ChefHat className="size-3 text-white" />
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex justify-between items-start mb-2">
-                              <div>
-                                <p className="text-[10px] font-black text-primary uppercase mb-1">
-                                  {isMysteryBox ? '🎁 Túi mù nông sản' : isCombo ? '🍳 Combo nấu ăn' : 'Nông sản'}
-                                </p>
-                                <h4 className="text-lg font-black text-gray-900">{item.productName}</h4>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-lg font-black text-gray-900">{(item.price || 0).toLocaleString('vi-VN')}đ</p>
-                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                                  {isMysteryBox ? 'Mỗi túi' : isCombo ? 'Mỗi combo' : 'Mỗi đơn vị'}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center justify-between mt-4">
-                              <div className="flex items-center gap-4 bg-gray-50 p-1.5 rounded-xl border border-gray-100">
-                                <button disabled={isUpdating || item.quantity <= 1} onClick={() => handleUpdateQuantity(item, -1)} className="size-8 flex items-center justify-center text-gray-400 hover:text-primary disabled:opacity-50">
-                                  <Minus className="size-3" />
-                                </button>
-                                <span className="text-sm font-black text-gray-900 w-4 text-center">
-                                  {isUpdating ? <Loader2 className="size-3 animate-spin mx-auto text-primary" /> : item.quantity}
-                                </span>
-                                <button disabled={isUpdating} onClick={() => handleUpdateQuantity(item, 1)} className="size-8 flex items-center justify-center text-gray-400 hover:text-primary disabled:opacity-50">
-                                  <Plus className="size-3" />
-                                </button>
-                              </div>
-                              <div className="flex items-center gap-4">
-                                <span className="text-xl font-black text-gray-900">{((item.price || 0) * item.quantity).toLocaleString('vi-VN')}đ</span>
-                                <button disabled={isUpdating} onClick={() => handleRemoveItem(item)} className="size-10 bg-red-50 rounded-2xl flex items-center justify-center text-red-400 hover:bg-red-500 hover:text-white transition-colors disabled:opacity-50">
-                                  <Trash2 className="size-4" />
-                                </button>
+              {Object.entries(groupedItems).map(([shopName, items]) => {
+                const shopKeys = items.map(itemKey);
+                const isShopSelected = shopKeys.every(k => selectedKeys.has(k));
+                const isShopPartial = !isShopSelected && shopKeys.some(k => selectedKeys.has(k));
+
+                return (
+                  <div key={shopName} className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="px-8 py-5 border-b border-gray-50 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="checkbox"
+                          checked={isShopSelected}
+                          ref={el => {
+                            if (el) el.indeterminate = isShopPartial;
+                          }}
+                          onChange={() => handleToggleShop(shopName, items)}
+                          className="size-5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                        />
+                        <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight">{shopName}</h3>
+                      </div>
+                    </div>
+                    <div className="p-8 space-y-8">
+                      {items.map((item, idx) => {
+                        const key = itemKey(item);
+                        const isUpdating = updatingKey === key;
+                        const isMysteryBox = item.itemType === 'MYSTERY_BOX';
+                        const isCombo = item.itemType === 'BUILD_COMBO';
+                        return (
+                          <div key={key} className={`flex items-center gap-6 ${idx > 0 ? 'pt-6 border-t border-gray-50' : ''}`}>
+                            <div className="flex items-center gap-4 flex-shrink-0">
+                              <input
+                                type="checkbox"
+                                checked={selectedKeys.has(key)}
+                                onChange={() => handleToggleItem(key)}
+                                className="size-5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                              />
+                              <div className="size-24 rounded-[32px] overflow-hidden bg-gray-50 flex-shrink-0 border border-gray-100 relative">
+                                {item.imageUrl ? (
+                                  <img src={item.imageUrl} className="w-full h-full object-cover" alt={item.productName} />
+                                ) : isMysteryBox ? (
+                                  <div className="w-full h-full bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center">
+                                    <Package className="size-10 text-green-300" />
+                                  </div>
+                                ) : isCombo ? (
+                                  <div className="w-full h-full bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center">
+                                    <ChefHat className="size-10 text-emerald-300" />
+                                  </div>
+                                ) : (
+                                  <img src={`https://picsum.photos/seed/${item.productId}/120/120`} className="w-full h-full object-cover" alt={item.productName} />
+                                )}
+                                {isMysteryBox && (
+                                  <div className="absolute -top-1 -right-1 size-6 bg-primary rounded-full flex items-center justify-center shadow-sm">
+                                    <Gift className="size-3 text-white" />
+                                  </div>
+                                )}
+                                {isCombo && (
+                                  <div className="absolute -top-1 -right-1 size-6 bg-emerald-500 rounded-full flex items-center justify-center shadow-sm">
+                                    <ChefHat className="size-3 text-white" />
+                                  </div>
+                                )}
                               </div>
                             </div>
+                            <div className="flex-1">
+                              <div className="flex justify-between items-start mb-2">
+                                <div>
+                                  <p className="text-[10px] font-black text-primary uppercase mb-1">
+                                    {isMysteryBox ? '🎁 Túi mù nông sản' : isCombo ? '🍳 Combo nấu ăn' : 'Nông sản'}
+                                  </p>
+                                  <h4 className="text-lg font-black text-gray-900">{item.productName}</h4>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-lg font-black text-gray-900">{(item.price || 0).toLocaleString('vi-VN')}đ</p>
+                                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                                    {isMysteryBox ? 'Mỗi túi' : isCombo ? 'Mỗi combo' : 'Mỗi đơn vị'}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between mt-4">
+                                <div className="flex items-center gap-4 bg-gray-50 p-1.5 rounded-xl border border-gray-100">
+                                  <button disabled={isUpdating || item.quantity <= 1} onClick={() => handleUpdateQuantity(item, -1)} className="size-8 flex items-center justify-center text-gray-400 hover:text-primary disabled:opacity-50">
+                                    <Minus className="size-3" />
+                                  </button>
+                                  <span className="text-sm font-black text-gray-900 w-4 text-center">
+                                    {isUpdating ? <Loader2 className="size-3 animate-spin mx-auto text-primary" /> : item.quantity}
+                                  </span>
+                                  <button disabled={isUpdating} onClick={() => handleUpdateQuantity(item, 1)} className="size-8 flex items-center justify-center text-gray-400 hover:text-primary disabled:opacity-50">
+                                    <Plus className="size-3" />
+                                  </button>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                  <span className="text-xl font-black text-gray-900">{((item.price || 0) * item.quantity).toLocaleString('vi-VN')}đ</span>
+                                  <button disabled={isUpdating} onClick={() => handleRemoveItem(item)} className="size-10 bg-red-50 rounded-2xl flex items-center justify-center text-red-400 hover:bg-red-500 hover:text-white transition-colors disabled:opacity-50">
+                                    <Trash2 className="size-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Tóm tắt đơn hàng */}
@@ -249,29 +348,40 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
                 <h4 className="text-xl font-black text-gray-900 uppercase tracking-tight">Tóm tắt đơn hàng</h4>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center text-sm font-bold text-gray-500">
-                    <span>Tạm tính ({totalItems} sản phẩm)</span>
-                    <span className="text-gray-900 font-black">{(cart?.totalAmount || 0).toLocaleString('vi-VN')}đ</span>
+                    <span>Đã chọn ({selectedKeys.size} sản phẩm)</span>
+                    <span className="text-gray-900 font-black">{selectedTotal.toLocaleString('vi-VN')}đ</span>
                   </div>
                   <div className="flex justify-between items-center text-sm font-bold text-gray-500">
                     <span>Số nhà vườn</span>
-                    <span className="text-gray-900 font-black">{shopsCount < 10 ? `0${shopsCount}` : shopsCount}</span>
+                    <span className="text-gray-900 font-black">{selectedShops.length < 10 ? `0${selectedShops.length}` : selectedShops.length}</span>
                   </div>
-                
                 </div>
+
+                {isMultiShop && (
+                  <div className="p-4 bg-red-50 rounded-2xl border border-red-100 flex items-start gap-3">
+                    <AlertCircle className="size-5 text-red-500 shrink-0 mt-0.5" />
+                    <p className="text-[10px] text-red-600 font-bold leading-relaxed">
+                      Lưu ý: Bạn chỉ có thể thanh toán sản phẩm từ một nhà vườn trong mỗi lần đặt hàng. Vui lòng lọc lại lựa chọn.
+                    </p>
+                  </div>
+                )}
 
                 <div className="pt-8 border-t border-gray-50 flex justify-between items-end">
                   <div>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tạm tính</p>
                     <h3 className="text-3xl font-black text-primary">
-                      {(cart?.totalAmount || 0).toLocaleString('vi-VN')}đ
+                      {selectedTotal.toLocaleString('vi-VN')}đ
                     </h3>
-                    {/* ✅ Ghi chú rõ chưa bao gồm ship */}
                     <p className="text-[9px] text-gray-400 font-bold italic mt-1">Chưa bao gồm phí vận chuyển</p>
                   </div>
                 </div>
 
-                <button onClick={onProceedToCheckout} className="w-full py-5 bg-primary text-white font-black rounded-2xl flex items-center justify-center gap-3 shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all transform active:scale-[0.98]">
-                  Tiến hành đặt hàng <ArrowRight className="size-5" />
+                <button 
+                  onClick={handleCheckout} 
+                  disabled={selectedKeys.size === 0 || isMultiShop}
+                  className="w-full py-5 bg-primary text-white font-black rounded-2xl flex items-center justify-center gap-3 shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all transform active:scale-[0.98] disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed"
+                >
+                  {isMultiShop ? 'Không thể gộp đơn' : 'Tiến hành đặt hàng'} <ArrowRight className="size-5" />
                 </button>
                 <button onClick={onBackToShopping} className="text-sm font-black text-primary hover:underline mx-auto uppercase tracking-widest">
                   Tiếp tục mua sắm
