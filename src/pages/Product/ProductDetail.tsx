@@ -13,7 +13,7 @@ import {
   AlertCircle,
   MessageSquare
 } from 'lucide-react';
-import { productService, ProductResponse, cartService, reviewService, ReviewResponse } from '../../services';
+import { productService, ProductResponse, cartService, reviewService, ReviewResponse, comboService, BuildComboResponse } from '../../services';
 import { globalShowAlert } from '../../contexts/PopupContext';
 import ShopProducts from './ShopProducts';
 import { useAuth } from '../../contexts/AuthContext';
@@ -31,6 +31,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
 
   const [product, setProduct] = useState<ProductResponse | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<ProductResponse[]>([]);
+  const [shopCombos, setShopCombos] = useState<BuildComboResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,6 +64,14 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
           const allRes = await productService.getAll();
           if (allRes.result) {
             setRelatedProducts(allRes.result.filter(p => p.id !== idNum).slice(0, 4));
+          }
+          // Load combos của shop
+          const shopId = res.result.shopOwnerId || res.result.shopId;
+          if (shopId) {
+            try {
+              const comboRes = await comboService.getByShop(shopId);
+              if (comboRes.result) setShopCombos(comboRes.result);
+            } catch (_) {}
           }
         } else {
           setError('Không tìm thấy sản phẩm.');
@@ -317,15 +326,30 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
         </div>
       </div>
 
-      {relatedProducts.length > 0 && (
+      {shopCombos.length > 0 && (
         <div className="max-w-7xl mx-auto px-4 mt-32">
-          <h2 className="text-2xl font-black font-display text-gray-900 uppercase mb-12 flex items-center gap-4">Gợi ý mua kèm <span className="h-px bg-gray-200 flex-1"></span></h2>
+          <h2 className="text-2xl font-black font-display text-gray-900 uppercase mb-12 flex items-center gap-4">
+            Combo nấu ăn từ shop này <span className="h-px bg-gray-200 flex-1"></span>
+          </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {relatedProducts.map((p) => (
-              <div key={p.id} onClick={() => { if (p.id) navigate(`/product/${p.id}`); }} className="group cursor-pointer">
-                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-gray-50 mb-4 border border-gray-100"><img src={p.imageUrl || 'https://picsum.photos/seed/product/400/300'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={p.productName} /></div>
-                <h4 className="font-extrabold text-gray-900 text-sm mb-1 line-clamp-1">{p.productName}</h4>
-                <div className="flex gap-2 text-sm mt-2 items-center"><span className="text-primary font-black text-lg">{(p.sellingPrice || 0).toLocaleString('vi-VN')}đ</span><span className="text-[10px] text-gray-400 font-bold uppercase">/{p.unit}</span></div>
+            {shopCombos.map((combo) => (
+              <div key={combo.id} onClick={() => navigate(`/combo/${combo.id}`)} className="group cursor-pointer bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden">
+                <div className="aspect-[4/3] bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center relative">
+                  <span className="text-5xl">🥗</span>
+                  {combo.region && (
+                    <span className="absolute top-2 right-2 text-[9px] font-black px-2 py-0.5 rounded-full bg-white/80 text-gray-600">
+                      {combo.region === 'MIEN_BAC' ? '🌿 Bắc' : combo.region === 'MIEN_TRUNG' ? '🌶 Trung' : '🥥 Nam'}
+                    </span>
+                  )}
+                </div>
+                <div className="p-4">
+                  <h4 className="font-extrabold text-gray-900 text-sm mb-1 line-clamp-1">{combo.comboName}</h4>
+                  <p className="text-xs text-gray-400 mb-2">{combo.items?.length || 0} nguyên liệu</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-primary font-black text-lg">{(combo.discountPrice || 0).toLocaleString('vi-VN')}đ</span>
+                    <span className="text-[9px] font-black text-primary bg-primary/10 px-2 py-1 rounded-full uppercase">Chọn combo</span>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
