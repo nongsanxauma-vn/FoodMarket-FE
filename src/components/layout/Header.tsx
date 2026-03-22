@@ -25,6 +25,7 @@ const Header: React.FC<HeaderProps> = ({
   const [loadingNotifs, setLoadingNotifs] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
   const [cartCount, setCartCount] = useState(0);
+  const [searchInput, setSearchInput] = useState('');
   const notifRef = useRef<HTMLDivElement>(null);
 
   // Determine active tab based on location if not provided
@@ -147,6 +148,14 @@ const Header: React.FC<HeaderProps> = ({
     }
   };
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchInput.trim()) {
+      navigate(`/search/shops?product=${encodeURIComponent(searchInput)}`);
+      setSearchInput('');
+    }
+  };
+
   const containerClass = 'w-full max-w-[1280px] mx-auto';
   const outerPaddingClass = 'px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12';
 
@@ -162,16 +171,18 @@ const Header: React.FC<HeaderProps> = ({
           </Link>
 
           {/* Search Bar */}
-          <div className="flex-1 max-w-[700px] relative">
+          <form onSubmit={handleSearch} className="flex-1 max-w-[700px] relative">
             <div className="relative flex items-center bg-white rounded-full h-11 px-5 overflow-hidden shadow-inner">
               <Search className="size-4 text-gray-400 mr-3" />
               <input
-                className="w-full border-none focus:ring-0 text-sm text-gray-800 placeholder:text-gray-400 font-medium"
-                placeholder="Tìm kiếm nông sản, nhà vườn..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="w-full border-none focus:ring-0 focus:outline-none text-sm text-gray-800 placeholder:text-gray-400 font-medium"
+                placeholder="Tìm kiếm sản phẩm (vd: xà lách, cà chua)..."
                 type="text"
               />
             </div>
-          </div>
+          </form>
 
           {/* Icons / Auth Area */}
           <div className="flex items-center gap-6 relative">
@@ -362,7 +373,6 @@ const Header: React.FC<HeaderProps> = ({
               >
                 TRANG CHỦ
               </Link>
-              <a href="#" className="text-gray-600 text-xs font-bold hover:text-primary transition-all uppercase tracking-tight">KHUYẾN MÃI</a>
               <Link
                 to="/news"
                 className={`text-xs font-bold uppercase tracking-tight transition-all ${activeTab === 'news' ? 'text-gray-900 border-b-2 border-[#29a33d] pb-1' : 'text-gray-600 hover:text-primary'}`}
@@ -381,7 +391,7 @@ const Header: React.FC<HeaderProps> = ({
 
             <div className="flex items-center gap-2.5 text-gray-800">
               <Phone className="size-4 fill-current" />
-              <span className="text-xs font-black uppercase tracking-tight">HOTLINE: 1900 1234</span>
+              <span className="text-xs font-black uppercase tracking-tight">HOTLINE: 0913 135 603</span>
             </div>
           </div>
         </div>
