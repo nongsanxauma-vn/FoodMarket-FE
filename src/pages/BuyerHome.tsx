@@ -132,7 +132,7 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated 
         <>
           {/* Hero Section */}
           <div className="relative h-[480px] w-full rounded-3xl overflow-hidden mb-12 group shadow-xl">
-            <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style={{ backgroundImage: 'url("https://picsum.photos/seed/farmhero/1200/600")' }}></div>
+            <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style={{ backgroundImage: 'url("/home.png")' }}></div>
             <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent flex items-center px-12">
               <div className="max-w-xl text-white">
                 <span className="inline-block bg-primary px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-4">Từ Nông Trại Đến Bàn Ăn</span>
@@ -414,4 +414,4 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated 
   );
 };
 
-export default BuyerHome;
+export default BuyerHome;
