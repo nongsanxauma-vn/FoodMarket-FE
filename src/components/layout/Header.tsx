@@ -152,13 +152,13 @@ const Header: React.FC<HeaderProps> = ({
   // Sync search input with URL if user navigates back or types directly
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const q = params.get('search') || '';
+    const q = params.get('q') || params.get('search') || '';
     setSearchQuery(q);
   }, [location.search]);
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
-      navigate(`/?search=${encodeURIComponent(searchQuery.trim())}`);
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
     } else {
       navigate('/');
     }
