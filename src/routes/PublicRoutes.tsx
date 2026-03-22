@@ -3,6 +3,8 @@ import BuyerHome from '../pages/BuyerHome';
 import ProductDetail from '../pages/Product/ProductDetail';
 import MysteryBoxDetail from '../pages/MysteryBox/MysteryBoxDetail';
 import ComboDetail from '../pages/Combo/ComboDetail';
+import AllCombos from '../pages/Combo/AllCombos';
+import AllMysteryBoxes from '../pages/MysteryBox/AllMysteryBoxes';
 import News from '../pages/News/News';
 import NewsDetail from '../pages/News/NewsDetail';
 import PaymentSuccess from '../pages/auth/PaymentSuccess';
@@ -41,6 +43,8 @@ const PublicRoutes = () => {
             <Route path="/product/:productId" element={<ProductDetail />} />
             <Route path="/mystery-box/:boxId" element={<MysteryBoxDetail />} />
             <Route path="/combo/:comboId" element={<ComboDetail />} />
+            <Route path="/combos" element={<AllCombos />} />
+            <Route path="/mystery-boxes" element={<AllMysteryBoxes />} />
             <Route path="/news" element={<News />} />
             <Route path="/news/:id" element={<NewsDetail />} />
 

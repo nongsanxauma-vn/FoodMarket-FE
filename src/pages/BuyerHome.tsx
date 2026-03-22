@@ -169,7 +169,7 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated 
                   <Zap className="size-4 fill-current" /> Tiết kiệm 50% so với mua lẻ
                 </p>
               </div>
-              <button className="text-primary font-bold flex items-center gap-2 hover:underline group">
+              <button onClick={() => navigate('/mystery-boxes')} className="text-primary font-bold flex items-center gap-2 hover:underline group">
                 Xem tất cả <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
@@ -242,6 +242,9 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated 
                     <Tag className="size-4" /> Tiết kiệm hơn khi mua theo combo
                   </p>
                 </div>
+                <button onClick={() => navigate('/combos')} className="text-primary font-bold flex items-center gap-2 hover:underline group">
+                  Xem tất cả <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
+                </button>
               </div>
 
               {isLoadingCombos ? (
