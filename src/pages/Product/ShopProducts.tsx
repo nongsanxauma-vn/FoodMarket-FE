@@ -131,7 +131,9 @@ const ShopProducts: React.FC<ShopProductsProps> = ({
 
   const handleChatNow = () => {
     if (!isAuthenticated) { onOpenLogin(); return; }
-    navigate(`/chat?userId=${shopId}&userName=${encodeURIComponent(shopName)}`);
+    window.dispatchEvent(new CustomEvent('open-chat-with-user', {
+      detail: { userId: shopId, userName: shopName }
+    }));
   };
 
   // Filter and sort products

@@ -124,12 +124,12 @@
 /* ChatBot Button Styles */
 .chatbot-button {
   position: fixed;
-  bottom: var(--chatbot-spacing-lg);
+  bottom: 6rem !important;
   right: var(--chatbot-spacing-lg);
   z-index: 1000;
 
-  width: var(--chatbot-touch-target-lg);
-  height: var(--chatbot-touch-target-lg);
+  width: 56px !important;
+  height: 56px !important;
 
   background: linear-gradient(135deg, var(--chatbot-primary), var(--chatbot-primary-hover));
   color: white;
