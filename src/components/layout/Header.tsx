@@ -376,41 +376,39 @@ const Header: React.FC<HeaderProps> = ({
 
       {/* Sub Header - Navigation (cùng padding & max-width với top bar để thẳng hàng) */}
       <div className={`bg-white border-b border-gray-100 ${outerPaddingClass} h-14 flex items-center w-full`}>
-        <div className={`flex items-center justify-center ${containerClass}`}>
-          <div className="flex items-center gap-12">
-            <nav className="flex items-center gap-10">
-              <Link
-                to="/mystery-boxes"
-                className={`text-xs font-bold uppercase tracking-tight transition-all ${location.pathname.includes('/mystery-box') ? 'text-gray-900 border-b-2 border-[#29a33d] pb-1' : 'text-gray-600 hover:text-primary'}`}
-              >
-                GÓI MÙ
-              </Link>
-              <Link
-                to="/"
-                className={`text-xs font-black pb-1 uppercase tracking-tight text-nowrap transition-all ${activeTab === 'home' ? 'text-gray-900 border-b-2 border-[#29a33d]' : 'text-gray-600 hover:text-primary'}`}
-              >
-                TRANG CHỦ
-              </Link>
-              <Link
-                to="/news"
-                className={`text-xs font-bold uppercase tracking-tight transition-all ${activeTab === 'news' ? 'text-gray-900 border-b-2 border-[#29a33d] pb-1' : 'text-gray-600 hover:text-primary'}`}
-              >
-                TIN TỨC
-              </Link>
-              <Link
-                to="/meal-plan"
-                className={`text-xs font-bold uppercase tracking-tight transition-all ${location.pathname === '/meal-plan' ? 'text-gray-900 border-b-2 border-[#29a33d] pb-1' : 'text-gray-600 hover:text-primary'}`}
-              >
-                KẾ HOẠCH ĂN UỐNG
-              </Link>
-            </nav>
+        <div className={`flex items-center justify-between w-full ${containerClass}`}>
+          <div className="flex-1" />
+          <nav className="flex items-center gap-10">
+            <Link
+              to="/mystery-boxes"
+              className={`text-xs font-bold uppercase tracking-tight transition-all ${location.pathname.includes('/mystery-box') ? 'text-gray-900 border-b-2 border-[#29a33d] pb-1' : 'text-gray-600 hover:text-primary'}`}
+            >
+              GÓI MÙ
+            </Link>
+            <Link
+              to="/"
+              className={`text-xs font-black pb-1 uppercase tracking-tight text-nowrap transition-all ${activeTab === 'home' ? 'text-gray-900 border-b-2 border-[#29a33d]' : 'text-gray-600 hover:text-primary'}`}
+            >
+              TRANG CHỦ
+            </Link>
+            <Link
+              to="/news"
+              className={`text-xs font-bold uppercase tracking-tight transition-all ${activeTab === 'news' ? 'text-gray-900 border-b-2 border-[#29a33d] pb-1' : 'text-gray-600 hover:text-primary'}`}
+            >
+              TIN TỨC
+            </Link>
+            <Link
+              to="/meal-plan"
+              className={`text-xs font-bold uppercase tracking-tight transition-all ${location.pathname === '/meal-plan' ? 'text-gray-900 border-b-2 border-[#29a33d] pb-1' : 'text-gray-600 hover:text-primary'}`}
+            >
+              KẾ HOẠCH ĂN UỐNG
+            </Link>
+          </nav>
+          <div className="flex-1" />
 
-            <div className="h-6 w-px bg-gray-100 mx-2" />
-
-            <div className="flex items-center gap-2.5 text-gray-800">
-              <Phone className="size-4 fill-current" />
-              <span className="text-xs font-black uppercase tracking-tight">HOTLINE: 0913 135 603</span>
-            </div>
+          <div className="flex items-center gap-2.5 text-gray-800">
+            <Phone className="size-4 fill-current" />
+            <span className="text-xs font-black uppercase tracking-tight">HOTLINE: 0913 135 603</span>
           </div>
         </div>
       </div>
