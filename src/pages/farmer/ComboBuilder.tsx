@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   ArrowLeft, Save, Plus, Minus, Check, Trash2,
-  ChefHat, Sparkles, Loader2, AlertCircle, MapPin
+  ChefHat, Sparkles, Loader2, AlertCircle, MapPin, Camera
 } from 'lucide-react';
 import { productService, comboService, authService, ProductResponse, Region } from '../../services/index';
 import { globalShowAlert } from '../../contexts/PopupContext';
@@ -26,6 +26,8 @@ const ComboBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [comboImage, setComboImage] = useState<File | null>(null);
+  const [comboImagePreview, setComboImagePreview] = useState<string>('');
 
   useEffect(() => {
     const loadData = async () => {
@@ -48,6 +50,7 @@ const ComboBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             setComboDescription(combo.description || '');
             setComboPrice(combo.discountPrice.toString());
             setComboRegion(combo.region || '');
+            if (combo.imageUrl) setComboImagePreview(combo.imageUrl);
             setSelectedIngredients(combo.items.map(item => ({
               productId: item.productId,
               productName: productsList.find(p => p.id === item.productId)?.productName || `Sản phẩm #${item.productId}`,
@@ -121,9 +124,9 @@ const ComboBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       };
       console.log('[ComboBuilder] Sending payload:', JSON.stringify(payload, null, 2));
       if (isEditMode) {
-        await comboService.update(Number(comboId), payload);
+        await comboService.update(Number(comboId), payload, comboImage || undefined);
       } else {
-        await comboService.create(payload);
+        await comboService.create(payload, comboImage || undefined);
       }
       onBack();
     } catch (err: any) {
@@ -239,6 +242,29 @@ const ComboBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                       ⚠ Giá combo không được vượt quá tổng giá trị nguyên liệu
                     </p>
                   )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Ảnh combo</label>
+                  <label className="relative flex flex-col items-center justify-center w-full h-48 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition-all group overflow-hidden">
+                    <input type="file" accept="image/*" className="hidden" onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) { setComboImage(file); setComboImagePreview(URL.createObjectURL(file)); }
+                    }} />
+                    {comboImagePreview ? (
+                      <img src={comboImagePreview} className="w-full h-full object-cover" alt="Ảnh combo" />
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-gray-400 group-hover:text-primary transition-colors">
+                        <Camera className="size-8" />
+                        <span className="text-xs font-bold">Click để tải ảnh combo</span>
+                      </div>
+                    )}
+                    {comboImagePreview && (
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="text-white text-xs font-bold bg-black/50 px-3 py-1.5 rounded-full">Đổi ảnh</span>
+                      </div>
+                    )}
+                  </label>
                 </div>
 
                 <div>
