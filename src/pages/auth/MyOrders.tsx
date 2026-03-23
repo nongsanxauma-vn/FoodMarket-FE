@@ -11,6 +11,8 @@ import Pagination, { PageInfo } from '../../components/ui/Pagination';
 import { globalShowAlert, globalShowConfirm } from '../../contexts/PopupContext';
 import ReturnRequestModal from '../../components/ReturnRequestModal';
 
+import { useSearchParams } from 'react-router-dom';
+
 const PAGE_SIZE = 10;
 
 interface MyOrdersProps {
@@ -21,10 +23,12 @@ interface MyOrdersProps {
 type OrderStatusFilter = 'ALL' | 'PENDING' | 'CONFIRMED' | 'SHIPPING' | 'DELIVERED' | 'CANCELLED';
 
 const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const orderIdFromUrl = searchParams.get('orderId');
   const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<OrderStatusFilter>('ALL');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(orderIdFromUrl || '');
   const [page, setPage] = useState(0);
   const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
   const [userId, setUserId] = useState<number | null>(null);
@@ -49,6 +53,15 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
 
       const uid = userInfo.result.id;
       setUserId(uid);
+
+      if (orderIdFromUrl) {
+        const response = await orderService.getOrderById(parseInt(orderIdFromUrl));
+        if (response.result) {
+          setOrders([response.result]);
+          setPageInfo(null);
+          return;
+        }
+      }
 
       const response = await orderService.getOrdersByUserIdPaged(uid, page, PAGE_SIZE);
 
@@ -176,7 +189,7 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
 
   useEffect(() => {
     fetchOrders();
-  }, [page]);
+  }, [page, orderIdFromUrl]);
 
   const getStatusConfig = (status: string) => {
     const configs: Record<string, { label: string; color: string; icon: any; bg: string }> = {
@@ -226,9 +239,22 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
             <ArrowLeft className="size-5" />
           </button>
           <div className="flex-1">
-            <h1 className="text-4xl font-black text-gray-900">Đơn Hàng Của Tôi</h1>
+            <h1 className="text-4xl font-black text-gray-900">
+              {orderIdFromUrl ? `Chi tiết đơn #${orderIdFromUrl}` : 'Đơn Hàng Của Tôi'}
+            </h1>
             <p className="text-gray-400 font-bold text-sm mt-1">
-              Quản lý và theo dõi tất cả đơn hàng của bạn
+              {orderIdFromUrl 
+                ? 'Đang hiển thị đơn hàng cụ thể từ yêu cầu trả hàng' 
+                : 'Quản lý và theo dõi tất cả đơn hàng của bạn'
+              }
+              {orderIdFromUrl && (
+                <button 
+                  onClick={() => { setSearchParams({}); setSearchQuery(''); }}
+                  className="ml-4 text-primary hover:underline font-black"
+                >
+                  Xem tất cả đơn hàng
+                </button>
+              )}
             </p>
           </div>
           <button
@@ -367,7 +393,18 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
                                       Đánh giá
                                     </button>
                                     {item.isRequestedReturn ? (
-                                       <span className="text-orange-500 font-black text-[10px] uppercase tracking-wider italic">Đã y/c trả</span>
+                                       <span className={`font-black text-[10px] uppercase tracking-wider italic ${
+                                         item.returnStatus === 'REJECTED' ? 'text-red-500' : 
+                                         item.returnStatus === 'COMPLETED' ? 'text-green-500' : 'text-orange-500'
+                                       }`}>
+                                         {item.returnStatus === 'PENDING' ? 'Đang chờ duyệt' :
+                                          item.returnStatus === 'SHOP_APPROVED' ? 'Shop đã duyệt' :
+                                          item.returnStatus === 'APPROVED' ? 'Admin đã duyệt' :
+                                          item.returnStatus === 'REJECTED' ? 'Bị từ chối' :
+                                          item.returnStatus === 'DISPUTED' ? 'Đang khiếu nại' :
+                                          item.returnStatus === 'COMPLETED' ? 'Đã hoàn tiền' :
+                                          item.returnStatus === 'REFUND_PENDING' ? 'Đang hoàn tiền' : 'Đã y/c trả'}
+                                       </span>
                                     ) : (
                                       <button
                                         onClick={() => setSelectedReturnItem(item)}
