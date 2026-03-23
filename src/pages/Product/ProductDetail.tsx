@@ -15,6 +15,8 @@ import {
   ChefHat
 } from 'lucide-react';
 import { productService, ProductResponse, cartService, reviewService, ReviewResponse, comboService, BuildComboResponse } from '../../services';
+import { userService } from '../../services';
+import { UserResponse } from '../../services/auth.service';
 import { globalShowAlert } from '../../contexts/PopupContext';
 import ShopProducts from './ShopProducts';
 import { useAuth } from '../../contexts/AuthContext';
@@ -44,6 +46,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
   const [reviews, setReviews] = useState<ReviewResponse[]>([]);
   const [isReviewsLoading, setIsReviewsLoading] = useState(false);
   const [shopReviews, setShopReviews] = useState<ReviewResponse[]>([]);
+  const [shopOwner, setShopOwner] = useState<UserResponse | null>(null);
 
   const handleBack = () => {
     if (propOnBack) propOnBack();
@@ -162,6 +165,21 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
 
     if (product?.shopId) fetchShopReviews();
   }, [product?.shopId]);
+
+  // Fetch shop owner info for real avatar and join date
+  useEffect(() => {
+    const fetchShopOwner = async () => {
+      const ownerId = product?.shopOwnerId || product?.shopId;
+      if (!ownerId) return;
+      try {
+        const res = await userService.getUserById(ownerId);
+        if (res.result) setShopOwner(res.result);
+      } catch (err) {
+        console.error('Failed to fetch shop owner info:', err);
+      }
+    };
+    if (product) fetchShopOwner();
+  }, [product?.shopOwnerId, product?.shopId]);
 
   if (viewShopMode && selectedShopId) {
     return <ShopProducts shopId={selectedShopId} onBack={() => setViewShopMode(false)} isAuthenticated={isAuthenticated} onOpenLogin={() => navigate('/login')} />;
@@ -289,7 +307,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
             <div className="flex items-start gap-5">
               <div className="size-24 rounded-2xl overflow-hidden bg-white shadow-sm flex-shrink-0 border-4 border-white">
-                <img src={`https://picsum.photos/seed/shop${product.shopOwnerId}/100/100`} alt={farmName} className="w-full h-full object-cover" />
+                <img src={shopOwner?.logoUrl || `https://picsum.photos/seed/shop${product.shopOwnerId}/100/100`} alt={farmName} className="w-full h-full object-cover" />
               </div>
               <div className="flex-1 pt-1">
                 <h4 className="font-black text-gray-900 text-lg mb-1">{farmName}</h4>
@@ -324,8 +342,26 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
                     Đánh Giá ({shopReviews.length > 0 ? shopReviews.length : 0})
                   </p>
                 </div>
-                <div className="text-center border-l border-r border-gray-100 px-4"><p className="text-2xl font-black text-gray-900 mb-1">98%</p><p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Tỉ Lệ Phản Hồi</p></div>
-                <div className="text-center"><p className="text-2xl font-black text-gray-900 mb-1">3 Năm</p><p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Tham Gia</p></div>
+                <div className="text-center border-l border-r border-gray-100 px-4">
+                  <p className="text-2xl font-black text-gray-900 mb-1">
+                    {shopReviews.length > 0
+                      ? `${Math.round((shopReviews.filter(r => r.replyFromShop).length / shopReviews.length) * 100)}%`
+                      : 'N/A'
+                    }
+                  </p>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Tỉ Lệ Phản Hồi</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-black text-gray-900 mb-1">
+                    {(() => {
+                      const joinDate = shopOwner?.createAt || shopOwner?.createdAt;
+                      if (!joinDate) return 'N/A';
+                      const years = Math.floor((Date.now() - new Date(joinDate).getTime()) / (1000 * 60 * 60 * 24 * 365));
+                      return years > 0 ? `${years} Năm` : 'Mới tham gia';
+                    })()}
+                  </p>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Tham Gia</p>
+                </div>
               </div>
             </div>
           </div>
