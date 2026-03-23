@@ -33,8 +33,8 @@ export interface BuildComboResponse {
     type: string;
     region?: Region;
     mealType?: string;
-    imageUrl?: string;
     shopOwnerId: number;
+    imageUrl?: string;
     items: ProductComboResponse[];
 }
 
