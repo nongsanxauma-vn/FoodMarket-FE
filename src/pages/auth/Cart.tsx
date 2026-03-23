@@ -52,11 +52,11 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
     const type = item.itemType || '';
     let id: any = null;
     if (type === 'MYSTERY_BOX') id = item.mysteryBoxId || (item as any).id || (item as any).mysteryBoxId;
-    else if (type === 'BUILD_COMBO') id = item.buildComboId || (item as any).id || (item as any).comboId || (item as any).buildComboId;
+    else if (type === 'BUILD_COMBO' || type === 'COMBO') id = item.buildComboId || (item as any).comboId || (item as any).id;
     else id = item.productId || (item as any).id || (item as any).productId;
 
     if (type === 'MYSTERY_BOX') return `b-${id}`;
-    if (type === 'BUILD_COMBO') return `c-${id}`;
+    if (type === 'BUILD_COMBO' || type === 'COMBO') return `c-${id}`;
     return `p-${id}`;
   };
 
@@ -115,13 +115,14 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
     const key = itemKey(item);
     setUpdatingKey(key);
     try {
-      const mysteryBoxId = item.mysteryBoxId || (item.itemType === 'MYSTERY_BOX' ? (item as any).id : null);
-      const buildComboId = item.buildComboId || (item.itemType === 'BUILD_COMBO' ? ((item as any).comboId || (item as any).id) : null);
-      const productId = item.productId || (item.itemType === 'PRODUCT' ? (item as any).id : null);
+      const type = (item.itemType || '').toUpperCase();
+      const mysteryBoxId = item.mysteryBoxId || (type === 'MYSTERY_BOX' ? (item as any).id : null);
+      const buildComboId = item.buildComboId || ((type === 'BUILD_COMBO' || type === 'COMBO') ? ((item as any).comboId || (item as any).id) : null);
+      const productId = item.productId || (type === 'PRODUCT' ? (item as any).id : null);
 
-      if (item.itemType === 'MYSTERY_BOX' && mysteryBoxId) {
+      if (type === 'MYSTERY_BOX' && mysteryBoxId) {
         await cartService.removeMysteryBox(mysteryBoxId);
-      } else if (item.itemType === 'BUILD_COMBO' && buildComboId) {
+      } else if ((type === 'BUILD_COMBO' || type === 'COMBO') && buildComboId) {
         await cartService.removeCombo(buildComboId);
       } else if (productId) {
         await cartService.removeItem(productId);
@@ -262,7 +263,7 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
                         const key = itemKey(item);
                         const isUpdating = updatingKey === key;
                         const isMysteryBox = item.itemType === 'MYSTERY_BOX';
-                        const isCombo = item.itemType === 'BUILD_COMBO';
+                        const isCombo = item.itemType === 'BUILD_COMBO' || item.itemType === 'COMBO';
                         return (
                           <div key={key} className={`flex items-center gap-6 ${idx > 0 ? 'pt-6 border-t border-gray-50' : ''}`}>
                             <div className="flex items-center gap-4 flex-shrink-0">
