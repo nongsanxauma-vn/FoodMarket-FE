@@ -276,39 +276,41 @@ const ChatWidget: React.FC = () => {
       {isOpen && (
         <div className="chat-widget-container chat-widget-enter chat-widget-z-index fixed bottom-6 right-6 w-full max-w-[420px] h-[550px] bg-white shadow-2xl rounded-2xl flex overflow-hidden border border-gray-200">
           {/* Sidebar */}
-          <div className={`${selected ? 'hidden md:flex' : 'flex'} w-full md:w-full shrink-0 flex-col border-r border-gray-100`}>
-            {/* Header with close button */}
-            <div className="p-4 border-b border-gray-100 bg-primary/5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 bg-primary/10 rounded-2xl flex items-center justify-center">
-                    <MessageSquare className="size-5 text-primary" />
+          <div className="flex w-full shrink-0 flex-col overflow-hidden">
+            {/* Header with close button - Only show when NOT in a conversation */}
+            {!selected && (
+              <div className="p-4 border-b border-gray-100 bg-primary/5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="size-10 bg-primary/10 rounded-2xl flex items-center justify-center">
+                      <MessageSquare className="size-5 text-primary" />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-black text-gray-900 uppercase tracking-tight">Tin nhắn</h2>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                        {conversations.length} cuộc trò chuyện
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-base font-black text-gray-900 uppercase tracking-tight">Tin nhắn</h2>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                      {conversations.length} cuộc trò chuyện
-                    </p>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={handleMinimize}
+                      className="size-8 hover:bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 transition-all"
+                      aria-label="Thu nhỏ"
+                    >
+                      <Minimize2 className="size-4" />
+                    </button>
+                    <button
+                      onClick={handleToggle}
+                      className="size-8 hover:bg-red-50 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 transition-all"
+                      aria-label="Đóng"
+                    >
+                      <X className="size-4" />
+                    </button>
                   </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={handleMinimize}
-                    className="size-8 hover:bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 transition-all"
-                    aria-label="Thu nhỏ"
-                  >
-                    <Minimize2 className="size-4" />
-                  </button>
-                  <button
-                    onClick={handleToggle}
-                    className="size-8 hover:bg-red-50 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 transition-all"
-                    aria-label="Đóng"
-                  >
-                    <X className="size-4" />
-                  </button>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Conversation List or Chat Window */}
             {selected ? (
@@ -317,6 +319,8 @@ const ChatWidget: React.FC = () => {
                   conversation={selected}
                   currentUserId={currentUserId}
                   onBack={() => setSelected(null)}
+                  onClose={handleToggle}
+                  onMinimize={handleMinimize}
                 />
               </div>
             ) : (
@@ -332,6 +336,7 @@ const ChatWidget: React.FC = () => {
               </div>
             )}
           </div>
+
         </div>
       )}
     </>

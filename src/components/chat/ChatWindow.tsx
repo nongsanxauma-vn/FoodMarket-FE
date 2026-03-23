@@ -3,7 +3,7 @@
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  Send, Loader2, ArrowLeft, AlertCircle, MessageSquare
+  Send, Loader2, ArrowLeft, AlertCircle, MessageSquare, X, Minimize2
 } from 'lucide-react';
 import { chatService } from '../../services/chat.service';
 import type { ChatMessage, Conversation } from '../../types/chat';
@@ -12,6 +12,8 @@ interface ChatWindowProps {
   conversation: Conversation;
   currentUserId: number;
   onBack?: () => void; // dùng cho mobile view
+  onClose?: () => void;
+  onMinimize?: () => void;
 }
 
 const formatMsgTime = (isoStr: string) => {
@@ -49,7 +51,13 @@ const groupByDate = (messages: ChatMessage[]): { label: string; msgs: ChatMessag
 
 const getInitial = (name: string) => (name || '?').charAt(0).toUpperCase();
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ conversation, currentUserId, onBack }) => {
+const ChatWindow: React.FC<ChatWindowProps> = ({
+  conversation,
+  currentUserId,
+  onBack,
+  onClose,
+  onMinimize,
+}) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -169,6 +177,28 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversation, currentUserId, on
               {wsConnected ? 'Trực tuyến' : 'Đang kết nối...'}
             </p>
           </div>
+        </div>
+        
+        {/* Widget Controls */}
+        <div className="flex items-center gap-1">
+          {onMinimize && (
+            <button
+              onClick={onMinimize}
+              className="size-8 hover:bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 transition-all"
+              aria-label="Thu nhỏ"
+            >
+              <Minimize2 className="size-4" />
+            </button>
+          )}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="size-8 hover:bg-red-50 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 transition-all"
+              aria-label="Đóng"
+            >
+              <X className="size-4" />
+            </button>
+          )}
         </div>
       </div>
 
