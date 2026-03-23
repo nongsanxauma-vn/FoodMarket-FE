@@ -16,11 +16,14 @@ interface OrderPreparationProps {
 
 const STATUS_MAP: Record<string, string> = {
   'PENDING': 'Chờ xử lý',
+  'PAID': 'Đã thanh toán',
   'CONFIRMED': 'Đã xác nhận',
   'PREPARING': 'Đang chuẩn bị',
   'SHIPPING': 'Đang giao hàng',
+  'DELIVERED': 'Đã giao',
   'COMPLETED': 'Đã hoàn thành',
   'CANCELLED': 'Đã hủy',
+  'FAILED': 'Thất bại',
 };
 
 const OrderPreparation: React.FC<OrderPreparationProps> = ({ orderId, onBack, onComplete }) => {

@@ -214,7 +214,7 @@ const KYCApproval: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <span className="size-2 rounded-full bg-yellow-400 animate-pulse" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-yellow-600">
-                          {u.status === 'INACTIVE' ? 'CHỜ KÍCH HOẠT' : u.status}
+                          {u.status === 'INACTIVE' ? 'Chờ kích hoạt' : u.status === 'PENDING' ? 'Chờ duyệt' : u.status === 'ACTIVE' ? 'Hoạt động' : u.status === 'DEACTIVATED' ? 'Đã khóa' : 'Chờ duyệt'}
                         </span>
                       </div>
                     </td>

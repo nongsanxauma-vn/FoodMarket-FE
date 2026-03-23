@@ -227,7 +227,9 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-1.5">
                           <span className="size-1.5 bg-primary rounded-full"></span>
-                          <span className="text-[11px] font-bold text-gray-600">{p.status || 'Đang bán'}</span>
+                          <span className="text-[11px] font-bold text-gray-600">
+                            {p.status === 'AVAILABLE' ? 'Đang bán' : p.status === 'OUT_OF_STOCK' ? 'Hết hàng' : p.status === 'INACTIVE' ? 'Đã ẩn' : p.status === 'PENDING' ? 'Chờ duyệt' : 'Đang bán'}
+                          </span>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right">
