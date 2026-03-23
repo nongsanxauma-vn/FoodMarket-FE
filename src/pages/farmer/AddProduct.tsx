@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Save, Send, Camera, Info, Truck, HelpCircle, AlertTriangle, Plus } from 'lucide-react';
+import { ArrowLeft, Save, Send, Camera, Info, Truck, HelpCircle, AlertTriangle } from 'lucide-react';
 import SubmissionSuccess from './SubmissionSuccessProps';
 import { productService } from '../../services';
 
@@ -15,16 +15,14 @@ const AddProduct: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Thêm state xử lý ảnh
   const [images, setImages] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const selectedFiles = Array.from(e.target.files);
-      const newImages = [...images, ...selectedFiles].slice(0, 4); // Max 4 ảnh (1 chính, 3 phụ)
-      setImages(newImages);
-      setPreviews(newImages.map(file => URL.createObjectURL(file)));
+    if (e.target.files && e.target.files[0]) {
+      const selectedFile = e.target.files[0];
+      setImages([selectedFile]);
+      setPreviews([URL.createObjectURL(selectedFile)]);
     }
   };
 
@@ -234,7 +232,7 @@ const AddProduct: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
             <div className="space-y-6">
               <label className="aspect-square w-full border-2 border-dashed border-gray-200 rounded-[32px] flex flex-col items-center justify-center text-center gap-4 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition-all group relative overflow-hidden">
-                <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
+                <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                 
                 {previews.length > 0 ? (
                   <img src={previews[0]} alt="Sản phẩm chính" className="w-full h-full object-cover" />
@@ -250,19 +248,6 @@ const AddProduct: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                   </div>
                 )}
               </label>
-
-              <div className="grid grid-cols-3 gap-3">
-                {[1, 2, 3].map(i => (
-                  <label key={i} className="aspect-square bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 hover:border-primary/20 cursor-pointer transition-colors relative overflow-hidden">
-                    <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
-                    {previews.length > i ? (
-                        <img src={previews[i]} alt={`Sản phẩm phụ ${i}`} className="w-full h-full object-cover" />
-                    ) : (
-                        <Plus className="size-6" />
-                    )}
-                  </label>
-                ))}
-              </div>
 
               <div className="p-6 bg-yellow-50/50 rounded-2xl border border-yellow-100/50">
                 <h5 className="flex items-center gap-2 text-[10px] font-black text-yellow-700 uppercase tracking-widest mb-3">
@@ -291,5 +276,4 @@ const AddProduct: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   );
 };
 
-// Add fix: Export default
 export default AddProduct;

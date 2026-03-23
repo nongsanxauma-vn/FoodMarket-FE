@@ -368,12 +368,7 @@ const Header: React.FC<HeaderProps> = ({
 
       {/* Sub Header - Navigation (cùng padding & max-width với top bar để thẳng hàng) */}
       <div className={`bg-white border-b border-gray-100 ${outerPaddingClass} h-14 flex items-center w-full`}>
-        <div className={`flex items-center justify-between ${containerClass}`}>
-          <button className="flex items-center gap-3 text-gray-800 hover:text-primary transition-colors group">
-            <Menu className="size-4 group-hover:scale-110 transition-transform" />
-            <span className="text-xs font-bold uppercase tracking-tight">DANH MỤC SẢN PHẨM</span>
-          </button>
-
+        <div className={`flex items-center justify-center ${containerClass}`}>
           <div className="flex items-center gap-12">
             <nav className="flex items-center gap-10">
               <a href="/mystery-boxes" className={`text-xs font-bold hover:text-primary transition-all uppercase tracking-tight ${activeTab === 'blindbox' ? 'text-gray-900 border-b-2 border-[#29a33d] pb-1' : 'text-gray-600'}`}>GÓI MÙ</a>
