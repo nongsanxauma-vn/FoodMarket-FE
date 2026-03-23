@@ -12,6 +12,10 @@ import FarmerNotifications from '../pages/farmer/Notifications';
 import Reviews from '../pages/farmer/Reviews';
 import Tracking from '../pages/auth/Tracking';
 import AdminMessages from '../pages/admin/Messages';
+import Orders from '../pages/farmer/Orders';
+import OrderPreparation from '../pages/farmer/OrderPreparation';
+import Wallet from '../pages/farmer/Wallet';
+import Profile from '../pages/farmer/Profile';
 import { AppRole, KYCStatus } from '../types';
 
 // ── Wrapper components ──────────────────────────────────────────────────────
