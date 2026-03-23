@@ -31,6 +31,7 @@ export interface WithdrawRequestResponse {
     processedAt?: string;
     walletId: number;
     shopOwnerId: number;
+    shipperId?: number;
     bankName?: string;
     bankAccountNumber?: string;
     bankAccountHolder?: string;

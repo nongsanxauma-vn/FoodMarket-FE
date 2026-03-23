@@ -98,7 +98,7 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
     { label: 'Combo Đã Tạo', value: totalCombos.toString(), trend: 'Tự chọn', icon: ChefHat },
     { label: 'Hộp mù (Blind Box)', value: totalBlindBoxes.toString(), trend: 'Giải cứu nông sản', icon: Sparkles },
     { label: 'Chất lượng Shop', value: '98%', trend: 'Top 5%', icon: Star, bar: 98 },
-    { label: 'Số dư khả dụng', value: `${walletBalance.toLocaleString('vi-VN')}đ`, icon: Wallet, isPrimary: true, frozen: `${frozenBalance.toLocaleString('vi-VN')}đ` },
+    { label: 'Số dư khả dụng', value: `${frozenBalance.toLocaleString('vi-VN')}đ`, icon: Wallet, isPrimary: true, frozen: `${frozenBalance.toLocaleString('vi-VN')}đ` },
   ].map((stat, i) => (
     <div 
       key={i} 
@@ -337,7 +337,7 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
             <div className="grid grid-cols-2 gap-4">
               <div className="p-6 bg-gray-50/50 rounded-2xl border border-gray-100">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Số dư khả dụng</p>
-                <h3 className="text-2xl font-black text-gray-900 mt-1">{walletBalance.toLocaleString('vi-VN')}đ</h3>
+                <h3 className="text-2xl font-black text-gray-900 mt-1">{frozenBalance.toLocaleString('vi-VN')}đ</h3>
               </div>
               <div className="p-6 bg-yellow-50/50 rounded-2xl border border-yellow-100">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-yellow-600">Số dư đóng băng</p>
@@ -353,6 +353,7 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
               </button>
             </div>
           </div>
+
         </div>
 
         {/* Sidebar Tool: Recent Orders */}
