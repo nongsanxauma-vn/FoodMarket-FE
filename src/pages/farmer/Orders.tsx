@@ -324,10 +324,7 @@ const Orders: React.FC<OrdersProps> = ({ onPrepareOrder }) => {
                           <p className="text-sm font-black text-red-700">Giao hàng thất bại</p>
                           <p className="text-[11px] text-red-500 font-bold mt-1">Khách không nhận hàng hoặc shipper giao lỗi</p>
                         </div>
-                        <button disabled={isProcessing} onClick={() => handleDeleteOrder(order.id)}
-                          className="w-full py-3 border border-red-200 text-red-500 font-bold text-xs rounded-2xl flex items-center justify-center gap-2 hover:bg-red-50 transition-all disabled:opacity-50">
-                          <Trash2 className="size-4" /> Xóa vĩnh viễn
-                        </button>
+                        
                       </div>
                     )}
 
@@ -337,10 +334,7 @@ const Orders: React.FC<OrdersProps> = ({ onPrepareOrder }) => {
                           <XCircle className="size-6 text-red-500 mx-auto mb-2" />
                           <p className="text-xs font-black text-red-600">Đơn hàng đã hủy</p>
                         </div>
-                        <button disabled={isProcessing} onClick={() => handleDeleteOrder(order.id)}
-                          className="w-full py-3 border border-red-200 text-red-500 font-bold text-xs rounded-2xl flex items-center justify-center gap-2 hover:bg-red-50 transition-all disabled:opacity-50">
-                          <Trash2 className="size-4" /> Xóa vĩnh viễn
-                        </button>
+                        
                       </div>
                     )}
                   </div>

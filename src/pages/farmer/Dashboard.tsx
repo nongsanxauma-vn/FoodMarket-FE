@@ -353,6 +353,7 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
               </button>
             </div>
           </div>
+
         </div>
 
         {/* Sidebar Tool: Recent Orders */}
