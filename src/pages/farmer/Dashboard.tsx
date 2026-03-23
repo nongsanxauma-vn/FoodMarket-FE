@@ -327,32 +327,7 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
             </div>
           </div>
 
-          <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="size-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
-                <Landmark className="size-5" />
-              </div>
-              <h4 className="font-black text-gray-800 uppercase tracking-tight">Chi tiết tài chính</h4>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-6 bg-gray-50/50 rounded-2xl border border-gray-100">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Số dư khả dụng</p>
-                <h3 className="text-2xl font-black text-gray-900 mt-1">{walletBalance.toLocaleString('vi-VN')}đ</h3>
-              </div>
-              <div className="p-6 bg-yellow-50/50 rounded-2xl border border-yellow-100">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-yellow-600">Số dư đóng băng</p>
-                <h3 className="text-2xl font-black text-yellow-700 mt-1">{frozenBalance.toLocaleString('vi-VN')}đ</h3>
-              </div>
-            </div>
-            <div className="flex gap-4 mt-6">
-              <button onClick={() => onNavigate('wallet')} className="flex-1 py-3 bg-primary text-white font-bold rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-primary/20">
-                <Landmark className="size-4" /> Rút tiền về ngân hàng
-              </button>
-              <button onClick={() => onNavigate('wallet')} className="flex-1 py-3 bg-white border border-gray-100 text-gray-600 font-bold rounded-2xl flex items-center justify-center gap-2 shadow-sm">
-                <History className="size-4" /> Lịch sử giao dịch
-              </button>
-            </div>
-          </div>
+
         </div>
 
         {/* Sidebar Tool: Recent Orders */}
