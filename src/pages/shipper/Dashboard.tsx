@@ -416,11 +416,11 @@ const ShipperDashboard: React.FC<ShipperDashboardProps> = ({ onLogout }) => {
               <span className="text-[10px] font-black text-green-300 uppercase">GPS Live</span>
             </div>
           )}
-          {/* ✅ Nút chat — mở trang /chat giống Buyer */}
+          {/* ✅ Nút chat — mở ChatWidget */}
           <button
-            onClick={() => navigate('/chat')}
+            onClick={() => window.dispatchEvent(new CustomEvent('open-chat-with-user', { detail: { userId: 1, userName: 'Admin Support' } }))}
             className="size-10 bg-white/10 rounded-xl flex items-center justify-center text-white hover:bg-white/20 transition-all"
-            title="Tin nhắn"
+            title="Hỗ trợ"
           >
             <MessageSquare className="size-5" />
           </button>

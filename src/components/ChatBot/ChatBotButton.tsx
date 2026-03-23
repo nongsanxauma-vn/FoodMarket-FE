@@ -44,13 +44,13 @@ export function ChatBotButton({ unreadCount = 0, className = '' }: ChatBotButton
             d="M6 18L18 6M6 6l12 12"
           />
         ) : (
-          // Chat bubble icon
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-          />
+          // Robot/Bot icon
+          <>
+            <rect x="4" y="8" width="16" height="12" rx="2" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M9 12h.01M15 12h.01" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M9 16h6" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M12 8V5M12 5L10 7M12 5L14 7" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+          </>
         )}
       </svg>
 

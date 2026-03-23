@@ -245,7 +245,12 @@ const ComboDetail: React.FC = () => {
                     Xem Cửa Hàng
                   </button>
                   <button
-                    onClick={() => { if (!isAuthenticated) { navigate('/login'); return; } navigate(`/chat?userId=${combo.shopOwnerId}`); }}
+                    onClick={() => { 
+                      if (!isAuthenticated) { navigate('/login'); return; } 
+                      window.dispatchEvent(new CustomEvent('open-chat-with-user', {
+                        detail: { userId: combo.shopOwnerId, userName: 'Chủ shop' }
+                      }));
+                    }}
                     className="flex items-center gap-1.5 px-5 py-2.5 bg-blue-50 text-blue-600 font-black text-[10px] uppercase tracking-widest rounded-xl border border-blue-100 hover:bg-blue-500 hover:text-white transition-all shadow-sm"
                   >
                     <MessageSquare className="size-3.5" /> Chat Shop

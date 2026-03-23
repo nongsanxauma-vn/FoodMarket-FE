@@ -690,7 +690,9 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
                   <button
                     onClick={() => {
                       if (location?.shipperId) {
-                        navigate(`/chat?userId=${location.shipperId}&userName=${encodeURIComponent(location.shipperName ?? 'Shipper')}`);
+                        window.dispatchEvent(new CustomEvent('open-chat-with-user', {
+                          detail: { userId: location.shipperId, userName: location.shipperName || 'Shipper' }
+                        }));
                       }
                     }}
                     className="size-11 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all"

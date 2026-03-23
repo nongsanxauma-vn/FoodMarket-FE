@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ChatBotProvider, ChatBot } from './components/ChatBot';
+import ChatWidget from './components/chat/ChatWidget';
 import AppRouter from './routes/AppRouter';
 import ScrollToTop from './components/layout/ScrollToTop';
 import { PopupProvider } from './contexts/PopupContext';
@@ -36,6 +37,15 @@ const ChatBotWrapper: React.FC = () => {
   );
 };
 
+const ChatWidgetWrapper: React.FC = () => {
+  const { isAuthenticated, user } = useAuth();
+  
+  // Chỉ hiển thị ChatWidget cho BUYER
+  if (!isAuthenticated || !user || user.role !== 'BUYER') return null;
+  
+  return <ChatWidget />;
+};
+
 const App: React.FC = () => {
   return (
     <BrowserRouter basename="/">
@@ -44,6 +54,7 @@ const App: React.FC = () => {
         <AuthProvider>
           <AppRouter />
           <ChatBotWrapper />
+          <ChatWidgetWrapper />
         </AuthProvider>
       </PopupProvider>
     </BrowserRouter>
