@@ -6,6 +6,7 @@ import {
 import { orderService, OrderResponse, OrderItemResponse } from '../../services/order.service';
 import { authService } from '../../services/auth.service';
 import { reviewService } from '../../services/review.service';
+import { returnService } from '../../services/return.service';
 import { Star, Camera, X, Loader2 } from 'lucide-react';
 import Pagination, { PageInfo } from '../../components/ui/Pagination';
 import { globalShowAlert, globalShowConfirm } from '../../contexts/PopupContext';
@@ -41,6 +42,10 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
   const [evidence, setEvidence] = useState<File | null>(null);
   const [submittingReview, setSubmittingReview] = useState(false);
   const [selectedReturnItem, setSelectedReturnItem] = useState<OrderItemResponse | null>(null);
+  const [orderReturnModal, setOrderReturnModal] = useState<{ orderId: number; orderNum: number } | null>(null);
+  const [orderReturnReason, setOrderReturnReason] = useState('');
+  const [orderReturnEvidence, setOrderReturnEvidence] = useState<File | null>(null);
+  const [submittingOrderReturn, setSubmittingOrderReturn] = useState(false);
 
   const fetchOrders = async () => {
     try {
@@ -184,6 +189,36 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
       globalShowAlert(error.message || 'Không thể hủy đơn hàng. Vui lòng thử lại sau.', 'Lỗi', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOrderReturn = async () => {
+    if (!orderReturnModal) return;
+    if (!orderReturnReason.trim()) {
+      globalShowAlert('Vui lòng nhập lý do trả hàng.', 'Nhắc nhở', 'warning');
+      return;
+    }
+    const confirmOk = await globalShowConfirm(
+      `Bạn có chắc muốn yêu cầu trả toàn bộ đơn hàng #${orderReturnModal.orderNum}? Toàn bộ tiền sẽ được hoàn lại nếu được phê duyệt.`,
+      'Xác nhận trả hàng'
+    );
+    if (!confirmOk) return;
+    setSubmittingOrderReturn(true);
+    try {
+      await returnService.createOrderReturn(
+        { orderId: orderReturnModal.orderId, reason: orderReturnReason.trim() },
+        orderReturnEvidence || undefined
+      );
+      globalShowAlert('Yêu cầu trả toàn bộ đơn hàng đã được gửi thành công!', 'Thành công', 'success');
+      setOrderReturnModal(null);
+      setOrderReturnReason('');
+      setOrderReturnEvidence(null);
+      fetchOrders();
+    } catch (err: any) {
+      const msg = err?.data?.message || err?.message || 'Không thể gửi yêu cầu trả hàng. Vui lòng thử lại.';
+      globalShowAlert(msg, 'Lỗi', 'error');
+    } finally {
+      setSubmittingOrderReturn(false);
     }
   };
 
@@ -445,9 +480,21 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
                       </div>
 
                       {order.status === 'DELIVERED' ? (
-                        <div className="flex items-center gap-2 px-6 py-3 bg-green-50 text-green-700 rounded-2xl border border-green-100">
-                          <CheckCircle2 className="size-4" />
-                          <span className="text-sm font-black uppercase tracking-wider">Đã nhận được hàng</span>
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <div className="flex items-center gap-2 px-6 py-3 bg-green-50 text-green-700 rounded-2xl border border-green-100">
+                            <CheckCircle2 className="size-4" />
+                            <span className="text-sm font-black uppercase tracking-wider">Đã nhận được hàng</span>
+                          </div>
+                          {/* Return whole order button — only shown if NO item has been returned yet */}
+                          {!order.items?.some(i => i.isRequestedReturn) && (
+                            <button
+                              onClick={() => setOrderReturnModal({ orderId: order.id, orderNum: order.id })}
+                              className="px-5 py-3 bg-orange-50 text-orange-600 font-black text-xs rounded-2xl border border-orange-100 hover:bg-orange-100 transition-all flex items-center gap-2 uppercase tracking-wider"
+                            >
+                              <RefreshCw className="size-3.5" />
+                              Trả toàn bộ đơn
+                            </button>
+                          )}
                         </div>
                       ) : trackable ? (
                         <button
@@ -596,6 +643,69 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
             onClose={() => setSelectedReturnItem(null)} 
             onSuccess={() => { setSelectedReturnItem(null); fetchOrders(); }} 
         />
+      )}
+
+      {/* Order-level Return Modal */}
+      {orderReturnModal && (
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="px-10 py-8 border-b border-gray-50 flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-black text-gray-900">Trả toàn bộ đơn hàng</h3>
+                <p className="text-gray-400 font-bold text-sm mt-1">Đơn hàng #{orderReturnModal.orderNum}</p>
+              </div>
+              <button
+                onClick={() => { setOrderReturnModal(null); setOrderReturnReason(''); setOrderReturnEvidence(null); }}
+                className="size-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 hover:text-gray-900 transition-all"
+              >
+                <X className="size-6" />
+              </button>
+            </div>
+            <div className="p-10 space-y-6">
+              <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100">
+                <p className="text-xs font-bold text-orange-700 leading-relaxed">
+                  ⚠️ Yêu cầu này sẽ trả <strong>toàn bộ sản phẩm</strong> trong đơn hàng. Toàn bộ số tiền sẽ được hoàn lại nếu được phê duyệt.
+                </p>
+              </div>
+              <div className="space-y-3">
+                <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Lý do trả hàng *</p>
+                <textarea
+                  value={orderReturnReason}
+                  onChange={(e) => setOrderReturnReason(e.target.value)}
+                  placeholder="Mô tả vấn đề với đơn hàng này..."
+                  className="w-full h-32 p-6 bg-gray-50 border border-gray-100 rounded-3xl text-sm font-medium outline-none focus:border-primary transition-all resize-none"
+                />
+              </div>
+              <div className="space-y-3">
+                <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Hình ảnh minh chứng (không bắt buộc)</p>
+                <div className="flex items-center gap-4">
+                  <label className="size-20 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-orange-400 hover:bg-orange-50 transition-all group">
+                    <Camera className="size-6 text-gray-300 group-hover:text-orange-400 transition-colors" />
+                    <span className="text-[8px] font-black text-gray-300 mt-1 uppercase group-hover:text-orange-400">Tải lên</span>
+                    <input type="file" className="hidden" accept="image/*" onChange={(e) => setOrderReturnEvidence(e.target.files?.[0] || null)} />
+                  </label>
+                  {orderReturnEvidence && (
+                    <div className="relative size-20 rounded-2xl overflow-hidden border border-gray-100 group">
+                      <img src={URL.createObjectURL(orderReturnEvidence)} alt="Evidence" className="w-full h-full object-cover" />
+                      <button onClick={() => setOrderReturnEvidence(null)} className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <X className="size-5 text-white" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="px-10 py-8 bg-gray-50 border-t border-gray-100">
+              <button
+                onClick={handleOrderReturn}
+                disabled={submittingOrderReturn || !orderReturnReason.trim()}
+                className="w-full py-5 bg-orange-500 text-white font-black rounded-[24px] shadow-xl shadow-orange-500/20 hover:bg-orange-600 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+              >
+                {submittingOrderReturn ? <Loader2 className="size-5 animate-spin" /> : <><RefreshCw className="size-5" />Gửi yêu cầu trả hàng</>}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
