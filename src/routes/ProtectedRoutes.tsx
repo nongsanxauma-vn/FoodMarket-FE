@@ -7,6 +7,7 @@ import Checkout from '../pages/auth/Checkout';
 import Success from '../pages/auth/Success';
 import Tracking from '../pages/auth/Tracking';
 import MyOrders from '../pages/auth/MyOrders';
+import MyReturns from '../pages/auth/MyReturns';
 import UserProfile from '../pages/auth/UserProfile';
 // import MealPlan from '../pages/auth/MealPlan';
 import KYC from '../pages/auth/KYC';
@@ -42,6 +43,11 @@ const ProtectedRoutes = () => {
             <Route path="/my-orders" element={
                 <ProtectedRoute>
                     <MyOrders onBack={() => navigate('/')} onViewTracking={(id) => navigate(`/tracking/${id}`)} />
+                </ProtectedRoute>
+            } />
+            <Route path="/my-returns" element={
+                <ProtectedRoute>
+                    <MyReturns />
                 </ProtectedRoute>
             } />
             <Route path="/profile" element={

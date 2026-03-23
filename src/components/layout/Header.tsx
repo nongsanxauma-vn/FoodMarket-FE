@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { AppRole, User, KYCStatus } from '../../types/index';
-import { Search, ShoppingCart, Bell, Menu, User as UserIcon, LogOut, Phone, X, CheckCircle2, Trash2, Store, Truck, LayoutDashboard, Package, MessageSquare } from 'lucide-react';
+import { Search, ShoppingCart, Bell, Menu, User as UserIcon, LogOut, Phone, X, CheckCircle2, Trash2, Store, Truck, LayoutDashboard, Package, MessageSquare, RefreshCw } from 'lucide-react';
 import { notificationService, NotificationItem, cartService } from '../../services';
 
 import { useAuth } from '../../contexts/AuthContext';
@@ -338,6 +338,14 @@ const Header: React.FC<HeaderProps> = ({
                       <button onClick={() => { setShowProfileMenu(false); navigate('/my-orders'); }} className="w-full px-5 py-3 text-left text-xs font-bold hover:bg-gray-50 flex items-center gap-3 transition-colors">
                         <Package className="size-4 text-gray-400" /> Đơn hàng của tôi
                       </button>
+                      <button onClick={() => { setShowProfileMenu(false); navigate('/my-returns'); }} className="w-full px-5 py-3 text-left text-xs font-bold hover:bg-gray-50 flex items-center gap-3 transition-colors">
+                        <RefreshCw className="size-4 text-gray-400" /> Đổi trả / Hoàn tiền
+                      </button>
+                      {(user?.role === AppRole.BUYER || user?.role === AppRole.FARMER) && (
+                        <button onClick={() => { setShowProfileMenu(false); navigate('/chat'); }} className="w-full px-5 py-3 text-left text-xs font-bold hover:bg-gray-50 flex items-center gap-3 transition-colors">
+                          <MessageSquare className="size-4 text-gray-400" /> Tin nhắn
+                        </button>
+                      )}
                       <div className="h-px bg-gray-50 mx-3 my-1" />
                       <button onClick={() => { setShowProfileMenu(false); onLogout(); }} className="w-full px-5 py-3 text-left text-xs font-black text-red-500 hover:bg-red-50 flex items-center gap-3 transition-colors">
                         <LogOut className="size-4" /> Đăng xuất

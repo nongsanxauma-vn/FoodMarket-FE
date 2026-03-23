@@ -9,6 +9,7 @@ import { reviewService } from '../../services/review.service';
 import { Star, Camera, X, Loader2 } from 'lucide-react';
 import Pagination, { PageInfo } from '../../components/ui/Pagination';
 import { globalShowAlert, globalShowConfirm } from '../../contexts/PopupContext';
+import ReturnRequestModal from '../../components/ReturnRequestModal';
 
 const PAGE_SIZE = 10;
 
@@ -35,6 +36,7 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
   const [comment, setComment] = useState('');
   const [evidence, setEvidence] = useState<File | null>(null);
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [selectedReturnItem, setSelectedReturnItem] = useState<OrderItemResponse | null>(null);
 
   const fetchOrders = async () => {
     try {
@@ -357,12 +359,24 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
                               <div className="flex items-center gap-4">
                                 <span className="font-bold text-gray-900">{item.unitPrice.toLocaleString('vi-VN')}đ</span>
                                 {order.status === 'DELIVERED' && (
-                                  <button
-                                    onClick={() => { setSelectedItem(item); setShowReviewModal(true); }}
-                                    className="text-primary font-black text-[10px] uppercase tracking-wider hover:underline"
-                                  >
-                                    Đánh giá
-                                  </button>
+                                  <div className="flex gap-3">
+                                    <button
+                                      onClick={() => { setSelectedItem(item); setShowReviewModal(true); }}
+                                      className="text-primary font-black text-[10px] uppercase tracking-wider hover:underline"
+                                    >
+                                      Đánh giá
+                                    </button>
+                                    {item.isRequestedReturn ? (
+                                       <span className="text-orange-500 font-black text-[10px] uppercase tracking-wider italic">Đã y/c trả</span>
+                                    ) : (
+                                      <button
+                                        onClick={() => setSelectedReturnItem(item)}
+                                        className="text-red-500 font-black text-[10px] uppercase tracking-wider hover:underline"
+                                      >
+                                        Trả hàng
+                                      </button>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -537,6 +551,14 @@ const MyOrders: React.FC<MyOrdersProps> = ({ onBack, onViewTracking }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {selectedReturnItem && (
+        <ReturnRequestModal 
+            item={selectedReturnItem} 
+            onClose={() => setSelectedReturnItem(null)} 
+            onSuccess={() => { setSelectedReturnItem(null); fetchOrders(); }} 
+        />
       )}
     </div>
   );
