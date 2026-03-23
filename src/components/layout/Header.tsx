@@ -371,7 +371,12 @@ const Header: React.FC<HeaderProps> = ({
         <div className={`flex items-center justify-center ${containerClass}`}>
           <div className="flex items-center gap-12">
             <nav className="flex items-center gap-10">
-              <a href="/mystery-boxes" className={`text-xs font-bold hover:text-primary transition-all uppercase tracking-tight ${activeTab === 'blindbox' ? 'text-gray-900 border-b-2 border-[#29a33d] pb-1' : 'text-gray-600'}`}>GÓI MÙ</a>
+              <Link
+                to="/mystery-boxes"
+                className={`text-xs font-bold uppercase tracking-tight transition-all ${location.pathname.includes('/mystery-box') ? 'text-gray-900 border-b-2 border-[#29a33d] pb-1' : 'text-gray-600 hover:text-primary'}`}
+              >
+                GÓI MÙ
+              </Link>
               <Link
                 to="/"
                 className={`text-xs font-black pb-1 uppercase tracking-tight text-nowrap transition-all ${activeTab === 'home' ? 'text-gray-900 border-b-2 border-[#29a33d]' : 'text-gray-600 hover:text-primary'}`}
