@@ -171,16 +171,23 @@ const ShopMonitoring: React.FC = () => {
                            </td>
                            <td className="px-6 py-6 text-center text-xs font-bold text-gray-600">{shop.email || 'N/A'}</td>
                            <td className="px-6 py-6 text-center">
-                              <span className={`px-3 py-1 rounded-lg text-[10px] font-black ${shop.status === 'ACTIVE' ? 'bg-green-50 text-green-600' :
-                                 shop.status === 'DEACTIVATED' || shop.status === 'INACTIVE' ? 'bg-red-50 text-red-500' :
-                                    'bg-orange-50 text-orange-500'
+                              {/* Thêm whitespace-nowrap để chặn xuống dòng, w-max để thẻ co giãn theo chữ */}
+                              <span className={`inline-flex items-center justify-center px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider whitespace-nowrap min-w-[100px] ${
+                                    shop.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
+                                    shop.status === 'DEACTIVATED' || shop.status === 'INACTIVE' ? 'bg-red-100 text-red-600' :
+                                    'bg-orange-100 text-orange-600'
                                  }`}>
+                                 {/* Thêm dấu chấm tròn nhỏ cho chuẩn giao diện Monitoring */}
+                                 <span className={`size-1.5 rounded-full mr-2 ${
+                                    shop.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'
+                                 }`}></span>
+                                 
                                  {shop.status === 'ACTIVE' ? 'Hoạt động' :
-                                  shop.status === 'DEACTIVATED' ? 'Đã khóa' :
-                                  shop.status === 'INACTIVE' ? 'Tạm ngưng' :
-                                  shop.status || 'N/A'}
+                                 shop.status === 'DEACTIVATED' ? 'Đã khóa' :
+                                 shop.status === 'INACTIVE' ? 'Tạm ngưng' :
+                                 shop.status || 'N/A'}
                               </span>
-                           </td>
+                              </td>
                            <td className="px-10 py-6 text-right">
                               <div className="flex items-center justify-end gap-3">
                                  {shop.status === 'ACTIVE' ? (
