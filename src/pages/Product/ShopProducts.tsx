@@ -131,7 +131,9 @@ const ShopProducts: React.FC<ShopProductsProps> = ({
 
   const handleChatNow = () => {
     if (!isAuthenticated) { onOpenLogin(); return; }
-    navigate(`/chat?userId=${shopId}&userName=${encodeURIComponent(shopName)}`);
+    window.dispatchEvent(new CustomEvent('open-chat-with-user', {
+      detail: { userId: shopId, userName: shopName }
+    }));
   };
 
   // Filter and sort products
@@ -555,8 +557,10 @@ const ShopProducts: React.FC<ShopProductsProps> = ({
                     <div key={combo.id} onClick={() => navigate(`/combo/${combo.id}`)} className="group bg-gradient-to-br from-green-50 to-white rounded-2xl border border-green-100 overflow-hidden hover:shadow-lg hover:border-green-200 transition-all cursor-pointer">
                       {/* Header */}
                       <div className="p-4 flex items-center gap-3 border-b border-green-100">
-                        <div className="size-11 bg-white rounded-xl flex items-center justify-center shadow-sm border border-green-100">
-                          <ChefHat className="size-5 text-primary" />
+                        <div className="size-11 bg-white rounded-xl flex items-center justify-center shadow-sm border border-green-100 overflow-hidden flex-shrink-0">
+                          {combo.imageUrl
+                            ? <img src={combo.imageUrl} className="w-full h-full object-cover" alt={combo.comboName} />
+                            : <ChefHat className="size-5 text-primary" />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="font-black text-gray-900 text-sm truncate">{combo.comboName}</h4>

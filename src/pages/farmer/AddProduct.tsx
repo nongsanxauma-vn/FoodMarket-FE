@@ -44,7 +44,7 @@ const AddProduct: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         description,
         unit,
         categoryId,
-        expiryDate: expiryDate ? `${expiryDate}T00:00:00` : undefined,
+        expiryDate: expiryDate ? expiryDate : undefined,
       }, images.length > 0 ? images[0] : undefined);
 
       if (response.result) {

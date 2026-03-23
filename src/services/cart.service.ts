@@ -16,7 +16,7 @@ export interface CartItemResponse {
     price: number;
     imageUrl?: string;
     shopName?: string;
-    itemType: 'PRODUCT' | 'MYSTERY_BOX' | 'BUILD_COMBO';
+    itemType: 'PRODUCT' | 'MYSTERY_BOX' | 'BUILD_COMBO' | 'COMBO';
     shopOwnerId?: number;
 }
 
@@ -44,7 +44,7 @@ export const cartService = {
     },
 
     updateComboQuantity: async (buildComboId: number, quantity: number): Promise<ApiResponse<CartResponse>> => {
-        return await api.put<CartResponse>(`/cart/build-combo/quantity?buildComboId=${buildComboId}&quantity=${quantity}`);
+        return await api.put<CartResponse>(`/cart/build-combo/quantity?comboId=${buildComboId}&quantity=${quantity}`);
     },
 
     removeItem: async (productId: number): Promise<ApiResponse<string>> => {
@@ -56,7 +56,7 @@ export const cartService = {
     },
 
     removeCombo: async (buildComboId: number): Promise<ApiResponse<string>> => {
-        return await api.delete<string>(`/cart/combo/${buildComboId}`);
+        return await api.delete<string>(`/cart/build-combo/${buildComboId}`);
     },
 
     clearCart: async (): Promise<ApiResponse<string>> => {

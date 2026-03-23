@@ -8,17 +8,16 @@ import AddProduct from '../pages/farmer/AddProduct';
 import EditProduct from '../pages/farmer/EditProduct';
 import ComboBuilder from '../pages/farmer/ComboBuilder';
 import MysteryBoxEditor from '../pages/farmer/MysteryBoxEditor';
-import Wallet from '../pages/farmer/Wallet';
-import Orders from '../pages/farmer/Orders';
-import OrderPreparation from '../pages/farmer/OrderPreparation';
-import Profile from '../pages/farmer/Profile';
-import BlindBoxTool from '../pages/farmer/BlindBoxTool';
 import FarmerNotifications from '../pages/farmer/Notifications';
 import Reviews from '../pages/farmer/Reviews';
 import Tracking from '../pages/auth/Tracking';
+import AdminMessages from '../pages/admin/Messages';
+import Orders from '../pages/farmer/Orders';
+import OrderPreparation from '../pages/farmer/OrderPreparation';
+import Wallet from '../pages/farmer/Wallet';
+import Profile from '../pages/farmer/Profile';
 import FarmerDisputes from '../pages/farmer/FarmerDisputes';
 import { AppRole, KYCStatus } from '../types';
-
 // ── Wrapper components ──────────────────────────────────────────────────────
 
 const DashboardWrapper = () => {
@@ -102,10 +101,11 @@ const FarmerRoutes = () => {
             <Route path="order-prep/:orderId" element={<OrderPreparationWrapper />} />
             <Route path="notifications" element={<FarmerNotifications />} />
             <Route path="profile" element={<Profile />} />
-            <Route path="blind-box" element={<BlindBoxTool />} />
+            <Route path="blind-box" element={<Navigate to="/farmer/mystery-box-editor" replace />} />
             <Route path="reviews" element={<Reviews />} />
             <Route path="tracking/:orderId" element={<TrackingWrapper />} />
             <Route path="farmer-disputes" element={<FarmerDisputes />} />
+            <Route path="messages" element={<AdminMessages />} />
         </Route>
     );
 };

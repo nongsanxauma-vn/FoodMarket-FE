@@ -11,7 +11,8 @@ import {
   Share2,
   Loader2,
   AlertCircle,
-  MessageSquare
+  MessageSquare,
+  ChefHat
 } from 'lucide-react';
 import { productService, ProductResponse, cartService, reviewService, ReviewResponse, comboService, BuildComboResponse } from '../../services';
 import { globalShowAlert } from '../../contexts/PopupContext';
@@ -42,6 +43,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
   const [isAdding, setIsAdding] = useState(false);
   const [reviews, setReviews] = useState<ReviewResponse[]>([]);
   const [isReviewsLoading, setIsReviewsLoading] = useState(false);
+  const [shopReviews, setShopReviews] = useState<ReviewResponse[]>([]);
 
   const handleBack = () => {
     if (propOnBack) propOnBack();
@@ -89,21 +91,76 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
 
   useEffect(() => {
     const fetchReviews = async () => {
-      if (!product?.shopId) return;
+      if (!product?.id) return;
       try {
         setIsReviewsLoading(true);
-        const res = await reviewService.getByShopId(product.shopId);
-        if (res.result) {
-          setReviews(res.result);
+        console.log('[ProductDetail] Fetching reviews for product ID:', product.id);
+        
+        // Try to fetch reviews for this specific product
+        try {
+          const res = await reviewService.getByProductId(product.id);
+          console.log('[ProductDetail] Product reviews response:', res);
+          if (res.result) {
+            console.log('[ProductDetail] Product reviews found:', res.result.length, res.result);
+            console.log('[ProductDetail] Setting reviews to state:', res.result);
+            setReviews(res.result);
+            console.log('[ProductDetail] Reviews state should be updated');
+            return;
+          }
+        } catch (productErr) {
+          console.warn('[ProductDetail] getByProductId not available, falling back to shop reviews:', productErr);
+        }
+        
+        // Fallback: Get all shop reviews and filter by productId
+        if (product.shopId) {
+          console.log('[ProductDetail] Fetching shop reviews and filtering...');
+          const shopRes = await reviewService.getByShopId(product.shopId);
+          console.log('[ProductDetail] Shop reviews response:', shopRes);
+          if (shopRes.result) {
+            console.log('[ProductDetail] All shop reviews:', shopRes.result);
+            console.log('[ProductDetail] Looking for reviews with productId:', product.id);
+            
+            // Log each review to see what fields it has
+            shopRes.result.forEach((r, idx) => {
+              console.log(`[ProductDetail] Review ${idx}:`, {
+                id: r.id,
+                productId: r.productId,
+                orderDetailId: r.orderDetailId,
+                allFields: Object.keys(r)
+              });
+            });
+            
+            // Filter reviews that have productId matching current product
+            const productReviews = shopRes.result.filter(r => r.productId === product.id);
+            console.log('[ProductDetail] Filtered product reviews:', productReviews.length, productReviews);
+            setReviews(productReviews);
+          }
         }
       } catch (err) {
-        console.error('Failed to fetch reviews:', err);
+        console.error('[ProductDetail] Failed to fetch reviews:', err);
       } finally {
         setIsReviewsLoading(false);
       }
     };
 
-    if (product?.shopId) fetchReviews();
+    if (product?.id) fetchReviews();
+  }, [product?.id, product?.shopId]);
+
+  // Fetch shop reviews for shop rating display
+  useEffect(() => {
+    const fetchShopReviews = async () => {
+      if (!product?.shopId) return;
+      try {
+        const res = await reviewService.getByShopId(product.shopId);
+        if (res.result) {
+          setShopReviews(res.result);
+        }
+      } catch (err) {
+        console.error('Failed to fetch shop reviews:', err);
+      }
+    };
+
+    if (product?.shopId) fetchShopReviews();
   }, [product?.shopId]);
 
   if (viewShopMode && selectedShopId) {
@@ -173,11 +230,14 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
             <div className="flex items-center gap-4 text-sm mt-3">
               <div className="flex text-yellow-400">
                 {[...Array(5)].map((_, i) => {
-                  const avg = reviews.length > 0 ? reviews.reduce((acc, r) => acc + r.ratingStar, 0) / reviews.length : 4.5;
+                  // Calculate average rating from this product's reviews only
+                  const avg = reviews.length > 0 ? reviews.reduce((acc, r) => acc + r.ratingStar, 0) / reviews.length : 0;
                   return <Star key={i} className={`size-4 ${i < Math.round(avg) ? 'fill-yellow-400' : ''}`} />;
                 })}
               </div>
-              <span className="text-gray-400 font-bold text-xs">({reviews.length || 128} đánh giá)</span>
+              <span className="text-gray-400 font-bold text-xs">
+                {reviews.length > 0 ? `${reviews.length} đánh giá` : 'Chưa có đánh giá'}
+              </span>
             </div>
           </div>
 
@@ -246,9 +306,9 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
                     onClick={() => {
                       if (!isAuthenticated) { navigate('/login'); return; }
                       if (product.shopId) {
-                        navigate(`/chat?userId=${product.shopId}&userName=${encodeURIComponent(product.shopName || 'Chủ shop')}`);
-                      } else {
-                          console.error("Missing shopId");
+                        window.dispatchEvent(new CustomEvent('open-chat-with-user', {
+                          detail: { userId: product.shopId, userName: product.shopName || 'Chủ shop' }
+                        }));
                       }
                     }}
                     className="flex items-center gap-1.5 px-5 py-2.5 bg-blue-50 text-blue-600 font-black text-[10px] uppercase tracking-widest rounded-xl border border-blue-100 hover:bg-blue-500 hover:text-white transition-all shadow-sm"
@@ -260,7 +320,17 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
             </div>
             <div className="lg:col-span-2 flex items-center">
               <div className="grid grid-cols-3 gap-8 w-full bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                <div className="text-center"><p className="text-2xl font-black text-primary mb-1">4.9</p><p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Đánh Giá (1K+)</p></div>
+                <div className="text-center">
+                  <p className="text-2xl font-black text-primary mb-1">
+                    {shopReviews.length > 0 
+                      ? (shopReviews.reduce((acc, r) => acc + r.ratingStar, 0) / shopReviews.length).toFixed(1)
+                      : '5.0'
+                    }
+                  </p>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                    Đánh Giá ({shopReviews.length > 0 ? shopReviews.length : 0})
+                  </p>
+                </div>
                 <div className="text-center border-l border-r border-gray-100 px-4"><p className="text-2xl font-black text-gray-900 mb-1">98%</p><p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Tỉ Lệ Phản Hồi</p></div>
                 <div className="text-center"><p className="text-2xl font-black text-gray-900 mb-1">3 Năm</p><p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Tham Gia</p></div>
               </div>
@@ -280,45 +350,52 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
 
           {activeTab.startsWith('Đánh giá') && (
             <div className="space-y-8">
+              {(() => {
+                console.log('[ProductDetail] Rendering reviews tab. isReviewsLoading:', isReviewsLoading, 'reviews.length:', reviews.length, 'reviews:', reviews);
+                return null;
+              })()}
               {isReviewsLoading ? (
                 <div className="flex justify-center py-10"><Loader2 className="animate-spin text-primary" /></div>
               ) : reviews.length > 0 ? (
-                reviews.map((review) => (
-                  <div key={review.id} className="bg-gray-50 p-8 rounded-[32px] border border-gray-100 animate-in fade-in slide-in-from-bottom-2">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
-                          {review.fullName ? review.fullName.charAt(0).toUpperCase() : review.buyerId}
-                        </div>
-                        <div>
-                          <p className="font-black text-gray-900 text-sm">{review.fullName || `Người dùng #${review.buyerId}`}</p>
-                          <div className="flex text-yellow-400 mt-1">
-                            {[...Array(5)].map((_, i) => (
-                              <Star key={i} className={`size-3 ${i < review.ratingStar ? 'fill-yellow-400' : ''}`} />
-                            ))}
+                reviews.map((review) => {
+                  console.log('[ProductDetail] Rendering review:', review);
+                  return (
+                    <div key={review.id} className="bg-gray-50 p-8 rounded-[32px] border border-gray-100 animate-in fade-in slide-in-from-bottom-2">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
+                            {review.fullName ? review.fullName.charAt(0).toUpperCase() : review.buyerId}
+                          </div>
+                          <div>
+                            <p className="font-black text-gray-900 text-sm">{review.fullName || `Người dùng #${review.buyerId}`}</p>
+                            <div className="flex text-yellow-400 mt-1">
+                              {[...Array(5)].map((_, i) => (
+                                <Star key={i} className={`size-3 ${i < review.ratingStar ? 'fill-yellow-400' : ''}`} />
+                              ))}
+                            </div>
                           </div>
                         </div>
+                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Gần đây</span>
                       </div>
-                      <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Gần đây</span>
+                      <p className="text-gray-600 text-sm leading-relaxed mb-6">{review.comment}</p>
+                      {review.evidence && (
+                        <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 w-32 aspect-square">
+                          <img src={review.evidence} alt="Bằng chứng" className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                      {review.replyFromShop && (
+                        <div className="bg-white p-6 rounded-2xl border border-primary/10 relative">
+                          <div className="absolute -top-3 left-6 bg-primary text-white text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-primary/20">Phản hồi từ Nhà vườn</div>
+                          <p className="text-gray-600 text-sm italic">{review.replyFromShop}</p>
+                        </div>
+                      )}
                     </div>
-                    <p className="text-gray-600 text-sm leading-relaxed mb-6">{review.comment}</p>
-                    {review.evidence && (
-                      <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 w-32 aspect-square">
-                        <img src={review.evidence} alt="Bằng chứng" className="w-full h-full object-cover" />
-                      </div>
-                    )}
-                    {review.replyFromShop && (
-                      <div className="bg-white p-6 rounded-2xl border border-primary/10 relative">
-                        <div className="absolute -top-3 left-6 bg-primary text-white text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-primary/20">Phản hồi từ Nhà vườn</div>
-                        <p className="text-gray-600 text-sm italic">{review.replyFromShop}</p>
-                      </div>
-                    )}
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="text-center py-20 bg-gray-50 rounded-[32px] border border-dashed border-gray-200">
                   <Star className="size-12 text-gray-200 mx-auto mb-4" />
-                  <p className="text-gray-400 font-black uppercase tracking-widest text-[10px]">Chưa có đánh giá nào cho cửa hàng này</p>
+                  <p className="text-gray-400 font-black uppercase tracking-widest text-[10px]">Chưa có đánh giá nào cho sản phẩm này</p>
                 </div>
               )}
             </div>
@@ -326,16 +403,20 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
         </div>
       </div>
 
-      {shopCombos.length > 0 && (
+      {shopCombos.filter(combo => combo.items?.some(item => item.productId === Number(productId))).length > 0 && (
         <div className="max-w-7xl mx-auto px-4 mt-32">
           <h2 className="text-2xl font-black font-display text-gray-900 uppercase mb-12 flex items-center gap-4">
             Combo nấu ăn từ shop này <span className="h-px bg-gray-200 flex-1"></span>
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {shopCombos.map((combo) => (
+            {shopCombos
+              .filter(combo => combo.items?.some(item => item.productId === Number(productId)))
+              .map((combo) => (
               <div key={combo.id} onClick={() => navigate(`/combo/${combo.id}`)} className="group cursor-pointer bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden">
-                <div className="aspect-[4/3] bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center relative">
-                  <span className="text-5xl">🥗</span>
+                <div className="aspect-[4/3] bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center relative overflow-hidden">
+                  {combo.imageUrl
+                    ? <img src={combo.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={combo.comboName} />
+                    : <ChefHat className="size-12 text-green-200" />}
                   {combo.region && (
                     <span className="absolute top-2 right-2 text-[9px] font-black px-2 py-0.5 rounded-full bg-white/80 text-gray-600">
                       {combo.region === 'MIEN_BAC' ? '🌿 Bắc' : combo.region === 'MIEN_TRUNG' ? '🌶 Trung' : '🥥 Nam'}
