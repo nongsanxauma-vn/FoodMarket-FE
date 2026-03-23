@@ -62,6 +62,7 @@ export interface UserResponse {
   kycStatus?: string;
   createdAt?: string;
   createAt?: string;
+  lockedAt?: string | null;
 }
 
 export interface IntrospectRequest {

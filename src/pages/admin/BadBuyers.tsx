@@ -31,7 +31,7 @@ const BadBuyers: React.FC = () => {
             last: res.result.last,
           });
         }
-        const buyerList = allUsers.filter((u: UserResponse) => u.roleName === 'BUYER');
+        const buyerList = allUsers.filter((u: UserResponse) => u.roleName === 'BUYER' || u.role?.name === 'BUYER');
         setBuyers(buyerList);
       } catch (err) {
         console.error('Failed to load buyers', err);
@@ -68,8 +68,8 @@ const BadBuyers: React.FC = () => {
     }
   };
 
-  const blockedBuyers = buyers.filter(b => b.status === 'DEACTIVATED' || b.status === 'INACTIVE');
-  const activeBuyers = buyers.filter(b => b.status === 'ACTIVE');
+  const blockedBuyers = buyers.filter(b => b.lockedAt != null || b.status === 'DEACTIVATED' || b.status === 'INACTIVE');
+  const activeBuyers = buyers.filter(b => b.lockedAt == null && b.status === 'ACTIVE');
 
   if (loading) {
     return (
@@ -133,7 +133,7 @@ const BadBuyers: React.FC = () => {
                   <td colSpan={4} className="px-10 py-10 text-center text-gray-400 font-bold">Không có người mua nào.</td>
                 </tr>
               ) : buyers.map((user, i) => {
-                const isBlocked = user.status === 'DEACTIVATED' || user.status === 'INACTIVE';
+                const isBlocked = user.lockedAt != null || user.status === 'DEACTIVATED' || user.status === 'INACTIVE';
                 return (
                   <tr key={user.id} className={`hover:bg-gray-50/30 transition-colors ${isBlocked ? 'bg-red-50/20' : ''}`}>
                     <td className="px-10 py-6">
@@ -144,6 +144,7 @@ const BadBuyers: React.FC = () => {
                         <div>
                           <p className={`text-sm font-black ${isBlocked ? 'text-red-700' : 'text-gray-900'}`}>{user.fullName || user.username || 'N/A'}</p>
                           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">ID: {user.id}</p>
+                          {user.lockedAt && <p className="text-[10px] text-red-400 font-bold mt-0.5">Khóa lúc: {new Date(user.lockedAt).toLocaleString('vi-VN')}</p>}
                         </div>
                       </div>
                     </td>

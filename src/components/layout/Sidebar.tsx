@@ -54,7 +54,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role, user, currentPath, onNavigate, 
     { name: 'Giám sát cửa hàng', icon: Store, id: 'admin-stores' },
     { name: 'Tranh chấp', icon: Gavel, id: 'admin-disputes' },
     { name: 'Quản lý Shipper', icon: Truck, id: 'admin-shippers' },
-    { name: 'Người mua xấu', icon: Users, id: 'admin-bad-buyers' },
+    { name: 'Quản lý người dùng', icon: Users, id: 'admin-bad-buyers' },
     { name: 'Ví sàn', icon: Wallet, id: 'admin-wallet' },
   ];
 
