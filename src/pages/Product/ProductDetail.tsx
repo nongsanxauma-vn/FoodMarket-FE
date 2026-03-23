@@ -202,14 +202,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
       </div>
 
       <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-2 gap-12 mb-20 animate-in fade-in duration-500">
-        <div className="flex gap-4">
-          <div className="flex flex-col gap-3 w-20 hidden md:flex">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className={`aspect-square rounded-md overflow-hidden border-2 cursor-pointer transition-all ${i === 1 ? 'border-primary' : 'border-gray-100 hover:border-primary/50'}`}>
-                <img src={product.imageUrl || `https://picsum.photos/seed/${product.id + i}/200/200`} className="w-full h-full object-cover" alt="thumb" />
-              </div>
-            ))}
-          </div>
+        <div className="flex">
           <div className="flex-1 relative aspect-square rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
             <img src={product.imageUrl || 'https://picsum.photos/seed/product/400/400'} className="w-full h-full object-cover" alt={product.productName} />
             {isOutOfStock ? (

@@ -100,7 +100,9 @@ const ShopMonitoring: React.FC = () => {
                   <div className="mt-8 bg-white/50 backdrop-blur rounded-[32px] border border-gray-100 p-8 relative z-10">
                      <div className="flex items-center justify-between mb-4">
                         <h4 className="font-black text-gray-900">{shop.shopName || shop.fullName || 'Shop N/A'}</h4>
-                        <span className={`text-xs font-black ${i === 0 ? 'text-red-500' : 'text-orange-500'}`}>{shop.status}</span>
+                        <span className={`text-[10px] font-black text-gray-400 font-bold uppercase tracking-widest`}>
+                           {shop.status === 'ACTIVE' ? 'Hoạt động' : shop.status === 'DEACTIVATED' ? 'Đã khóa' : shop.status === 'INACTIVE' ? 'Tạm ngưng' : shop.status}
+                        </span>
                      </div>
                      <div className="flex items-center justify-between mt-4">
                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Email: {shop.email}</span>

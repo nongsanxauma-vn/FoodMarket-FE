@@ -193,7 +193,7 @@ const ProductApproval: React.FC = () => {
                   <p className="text-sm text-gray-400 mt-1">Duyệt hoặc từ chối sản phẩm này</p>
                 </div>
                 <div className="px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-blue-50 text-blue-600">
-                  {selectedProduct.status || 'PENDING'}
+                  {selectedProduct.status === 'AVAILABLE' ? 'Hoạt động' : selectedProduct.status === 'OUT_OF_STOCK' ? 'Hết hàng' : 'Chờ duyệt'}
                 </div>
               </div>
               <div className="flex gap-4">

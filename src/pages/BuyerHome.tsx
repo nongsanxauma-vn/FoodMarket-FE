@@ -27,7 +27,7 @@ interface BuyerHomeProps {
   onOpenLogin?: () => void;
 }
 
-const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated = false, onOpenLogin = () => {} }) => {
+const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated = false, onOpenLogin = () => { } }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [featuredStory, setFeaturedStory] = useState<string>('Đang tải câu chuyện nông sản...');
@@ -64,11 +64,11 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated 
         if (response.result) {
           const availableProducts = response.result.filter(p => p.status === 'AVAILABLE' || !p.status).filter(p => p.id && !isNaN(p.id));
           setProducts(availableProducts);
-          
+
           // Fetch ratings for each individual product
           // Each product's rating is calculated from reviews specifically for that product
           const ratingsMap: Record<number, { average: number; count: number }> = {};
-          
+
           await Promise.all(
             availableProducts.map(async (product) => {
               try {
@@ -88,7 +88,7 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated 
                     }
                   }
                 }
-                
+
                 if (reviews.length > 0) {
                   const average = reviews.reduce((sum, r) => sum + r.ratingStar, 0) / reviews.length;
                   ratingsMap[product.id] = { average, count: reviews.length };
@@ -98,7 +98,7 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated 
               }
             })
           );
-          
+
           setProductRatings(ratingsMap);
         }
       } catch (err) {
@@ -147,8 +147,8 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated 
   const filteredProducts = useMemo(() => {
     if (!searchQuery) return products;
     const lowQuery = searchQuery.toLowerCase();
-    return products.filter(p => 
-      p.productName.toLowerCase().includes(lowQuery) || 
+    return products.filter(p =>
+      p.productName.toLowerCase().includes(lowQuery) ||
       (p.description && p.description.toLowerCase().includes(lowQuery)) ||
       (p.shopName && p.shopName.toLowerCase().includes(lowQuery))
     );
@@ -174,14 +174,13 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated 
                   {featuredStory}
                 </p>
                 <div className="flex gap-4">
-                  <button className="bg-primary hover:bg-primary-dark text-white px-8 py-4 rounded-xl font-bold text-lg shadow-xl shadow-primary/20 transition-all transform hover:-translate-y-1">Mua sắm ngay</button>
-                  <button className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/30 px-8 py-4 rounded-xl font-bold text-lg transition-all">Tìm hiểu thêm</button>
+                  <button className="bg-primary hover:bg-primary-dark text-white px-8 py-4 rounded-xl font-bold text-lg shadow-xl shadow-primary/20 transition-all transform hover:-translate-y-1" onClick={() => navigate('/search')}>Mua sắm ngay</button>
+                  <button className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/30 px-8 py-4 rounded-xl font-bold text-lg transition-all" onClick={() => navigate('/search')}>Tìm hiểu thêm</button>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Categories Bar */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-16">
             {categories.map((cat, i) => (
               <div key={i} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center gap-4 cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all group">
@@ -368,7 +367,7 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated 
             {isSearching ? `Kết quả cho "${searchQuery}"` : 'Dành cho bạn hôm nay'}
           </h2>
           {isSearching && (
-            <button 
+            <button
               onClick={clearSearch}
               className="flex items-center gap-2 text-gray-400 hover:text-red-500 font-bold text-sm transition-colors"
             >
@@ -392,7 +391,7 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated 
             <SearchX className="size-16 text-gray-300 mb-4" />
             <h3 className="text-xl font-black text-gray-800 mb-2">Không tìm thấy sản phẩm nào</h3>
             <p className="text-gray-500 font-medium mb-8 text-center max-w-xs">Chúng mình không tìm thấy sản phẩm khớp với từ khóa của bạn. Thử tìm từ khác xem sao?</p>
-            <button 
+            <button
               onClick={clearSearch}
               className="px-8 py-3 bg-primary text-white font-black rounded-xl hover:bg-primary-dark transition-all shadow-lg shadow-primary/20"
             >
@@ -406,7 +405,7 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated 
                 const productRating = productRatings[product.id];
                 const rating = productRating?.average || 0;
                 const reviewCount = productRating?.count || 0;
-                
+
                 return (
                   <div
                     key={product.id}
@@ -415,7 +414,7 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated 
                   >
                     <div className="relative aspect-[4/3] w-full overflow-hidden">
                       <img className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" src={product.imageUrl || 'https://picsum.photos/seed/product/400/300'} alt={product.productName} />
-                      <button 
+                      <button
                         onClick={(e) => { e.stopPropagation(); onSelectProduct(product.id.toString()); }}
                         className="absolute bottom-4 right-4 size-10 bg-primary text-white rounded-full shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100"
                       >
@@ -451,9 +450,9 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated 
                 );
               })}
             </div>
-            
+
             {!isSearching && (
-              <button 
+              <button
                 onClick={() => navigate('/search')}
                 className="px-8 py-3 bg-white border-2 border-primary text-primary font-black rounded-xl hover:bg-primary hover:text-white transition-colors duration-300 shadow-sm"
               >

@@ -16,8 +16,8 @@ import Orders from '../pages/farmer/Orders';
 import OrderPreparation from '../pages/farmer/OrderPreparation';
 import Wallet from '../pages/farmer/Wallet';
 import Profile from '../pages/farmer/Profile';
+import FarmerDisputes from '../pages/farmer/FarmerDisputes';
 import { AppRole, KYCStatus } from '../types';
-
 // ── Wrapper components ──────────────────────────────────────────────────────
 
 const DashboardWrapper = () => {
@@ -104,6 +104,7 @@ const FarmerRoutes = () => {
             <Route path="blind-box" element={<Navigate to="/farmer/mystery-box-editor" replace />} />
             <Route path="reviews" element={<Reviews />} />
             <Route path="tracking/:orderId" element={<TrackingWrapper />} />
+            <Route path="farmer-disputes" element={<FarmerDisputes />} />
             <Route path="messages" element={<AdminMessages />} />
         </Route>
     );
