@@ -64,7 +64,7 @@ const EditProduct: React.FC<{ productId: number; onBack: () => void }> = ({ prod
         stockQuantity: stock,
         description,
         unit,
-        expiryDate: expiryDate || undefined,
+        expiryDate: expiryDate ? `${expiryDate}T00:00:00` : undefined,
       }, image || undefined);
       onBack();
     } catch (err: any) {
