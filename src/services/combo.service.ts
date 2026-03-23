@@ -32,7 +32,8 @@ export interface BuildComboResponse {
     description: string;
     type: string;
     region?: Region;
-    mealType?: string; // BREAKFAST, LUNCH, DINNER
+    mealType?: string;
+    imageUrl?: string;
     shopOwnerId: number;
     items: ProductComboResponse[];
 }
@@ -57,16 +58,18 @@ class ComboService {
         return response;
     }
 
-    async create(request: BuildComboCreationRequest): Promise<ApiResponse<BuildComboResponse>> {
-        console.log('[ComboService] create payload:', JSON.stringify(request));
-        const response = await httpClient.post<BuildComboResponse>(this.baseUrl, request);
-        return response;
+    async create(request: BuildComboCreationRequest, image?: File): Promise<ApiResponse<BuildComboResponse>> {
+        const formData = new FormData();
+        formData.append('data', new Blob([JSON.stringify(request)], { type: 'application/json' }));
+        if (image) formData.append('image', image);
+        return httpClient.post<BuildComboResponse>(this.baseUrl, formData);
     }
 
-    async update(id: number, request: BuildComboUpdateRequest): Promise<ApiResponse<BuildComboResponse>> {
-        console.log('[ComboService] update payload:', JSON.stringify(request));
-        const response = await httpClient.put<BuildComboResponse>(`${this.baseUrl}/${id}`, request);
-        return response;
+    async update(id: number, request: BuildComboUpdateRequest, image?: File): Promise<ApiResponse<BuildComboResponse>> {
+        const formData = new FormData();
+        formData.append('data', new Blob([JSON.stringify(request)], { type: 'application/json' }));
+        if (image) formData.append('image', image);
+        return httpClient.put<BuildComboResponse>(`${this.baseUrl}/${id}`, formData);
     }
 
     async delete(id: number): Promise<ApiResponse<void>> {

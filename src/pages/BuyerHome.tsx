@@ -250,65 +250,72 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated 
               {isLoadingCombos ? (
                 <div className="py-10 text-center text-gray-400 font-bold uppercase tracking-widest text-[10px]">Đang tải combo...</div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {combos.slice(0, 6).map((combo) => {
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  {combos.slice(0, 3).map((combo) => {
                     const totalOriginal = combo.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
                     const savings = totalOriginal - combo.discountPrice;
                     return (
-                      <div key={combo.id} onClick={() => onSelectProduct(`combo-${combo.id}`)} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden group cursor-pointer">
-                        {/* Header */}
-                        <div className="bg-gradient-to-br from-green-50 to-emerald-100 p-5 flex items-center gap-3">
-                          <div className="size-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                            <ChefHat className="size-6 text-primary" />
+                      <div
+                        key={combo.id}
+                        onClick={() => onSelectProduct(`combo-${combo.id}`)}
+                        className="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all border border-gray-100 flex flex-col group p-4 cursor-pointer"
+                      >
+                        {/* Image area */}
+                        <div className="relative h-48 rounded-xl bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center mb-6 overflow-hidden">
+                          {combo.imageUrl ? (
+                            <img src={combo.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={combo.comboName} />
+                          ) : (
+                            <ChefHat className="size-20 text-green-200 group-hover:scale-110 transition-transform duration-500" />
+                          )}
+                          <div className="absolute top-3 right-3 bg-white/90 backdrop-blur px-2 py-1 rounded-full shadow-sm flex items-center gap-1">
+                            <ChefHat className="size-3 text-green-600" />
+                            <span className="text-[10px] font-bold uppercase">Combo nấu ăn</span>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <h4 className="font-black text-gray-900 text-sm truncate">{combo.comboName}</h4>
-                              {combo.region && (
-                                <span className="shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full bg-white/80 text-primary border border-primary/20">
-                                  {combo.region === 'MIEN_BAC' ? '🌿 Bắc' : combo.region === 'MIEN_TRUNG' ? '🌶 Trung' : '🥥 Nam'}
-                                </span>
-                              )}
-                            </div>
-                            {combo.description && (
-                              <p className="text-xs text-gray-500 font-medium line-clamp-1 mt-0.5">{combo.description}</p>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Items */}
-                        <div className="p-4 space-y-2">
-                          {combo.items.map((item) => (
-                            <div key={item.productId} className="flex items-center justify-between text-xs">
-                              <span className="text-gray-700 font-medium truncate flex-1 pr-2">• {item.productName}</span>
-                              <span className="text-gray-500 font-bold whitespace-nowrap">x{item.quantity}</span>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Footer */}
-                        <div className="px-4 pb-4 pt-2 border-t border-gray-50">
-                          <div className="flex items-center justify-between mb-3">
-                            <div>
-                              <span className="text-xl font-black text-primary">{combo.discountPrice.toLocaleString('vi-VN')}đ</span>
-                              {savings > 0 && (
-                                <p className="text-[10px] text-green-600 font-bold">
-                                  Tiết kiệm {savings.toLocaleString('vi-VN')}đ
-                                </p>
-                              )}
-                            </div>
-                            {savings > 0 && (
-                              <span className="bg-red-100 text-red-600 text-[10px] font-black px-2 py-1 rounded-full">
-                                -{Math.round((savings / totalOriginal) * 100)}%
+                          {combo.region && (
+                            <div className="absolute top-3 left-3 bg-white/90 backdrop-blur px-2 py-1 rounded-full shadow-sm">
+                              <span className="text-[10px] font-black text-primary">
+                                {combo.region === 'MIEN_BAC' ? '🌿 Bắc' : combo.region === 'MIEN_TRUNG' ? '🌶 Trung' : '🥥 Nam'}
                               </span>
-                            )}
-                          </div>
+                            </div>
+                          )}
+                          {savings > 0 && (
+                            <div className="absolute bottom-3 left-3 bg-red-500 text-white px-2 py-1 rounded-lg flex items-center gap-1">
+                              <Tag className="size-3" />
+                              <span className="text-[10px] font-black">-{Math.round((savings / totalOriginal) * 100)}%</span>
+                            </div>
+                          )}
                           <button
                             onClick={(e) => { e.stopPropagation(); onSelectProduct(`combo-${combo.id}`); }}
-                            className="w-full bg-primary hover:bg-primary-dark text-white font-black py-2.5 rounded-xl text-xs transition-all flex items-center justify-center gap-2"
+                            className="absolute bottom-3 right-3 size-10 bg-primary text-white rounded-full shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100"
                           >
-                            <ChefHat className="size-4" />
-                            Chọn combo này
+                            <ShoppingCart className="size-5" />
+                          </button>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                          <div className="flex justify-between items-start">
+                            <h4 className="font-extrabold text-lg text-gray-900 truncate pr-2 uppercase tracking-tight">{combo.comboName}</h4>
+                            <span className="text-primary font-black text-xl whitespace-nowrap">{combo.discountPrice.toLocaleString('vi-VN')}đ</span>
+                          </div>
+                          <p className="text-xs text-gray-500 font-medium line-clamp-2 min-h-[32px]">{combo.description || `${combo.items.length} nguyên liệu tươi ngon`}</p>
+                          <div className="space-y-1">
+                            {combo.items.slice(0, 2).map((item) => (
+                              <div key={item.productId} className="flex items-center justify-between text-xs text-gray-500">
+                                <span className="truncate">• {item.productName}</span>
+                                <span className="font-bold ml-2">x{item.quantity}</span>
+                              </div>
+                            ))}
+                            {combo.items.length > 2 && (
+                              <p className="text-[10px] text-gray-400 font-bold">+{combo.items.length - 2} nguyên liệu khác</p>
+                            )}
+                          </div>
+                          {savings > 0 && (
+                            <p className="text-xs text-green-600 font-bold">Tiết kiệm {savings.toLocaleString('vi-VN')}đ</p>
+                          )}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onSelectProduct(`combo-${combo.id}`); }}
+                            className="w-full bg-primary hover:bg-primary-dark text-white font-black py-3 rounded-xl transition-all mt-2 active:scale-95"
+                          >
+                            CHỌN COMBO NÀY
                           </button>
                         </div>
                       </div>
