@@ -40,6 +40,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role, user, currentPath, onNavigate, 
     { name: 'Đánh giá', icon: MessageSquare, id: 'reviews' },
     { name: 'Thông báo', icon: Bell, id: 'notifications' },
     { name: 'Tin nhắn', icon: Send, id: 'chat' },
+    { name: 'Khiếu nại', icon: Gavel, id: 'farmer-disputes' },
     { name: 'Hồ sơ cá nhân', icon: UserCircle, id: 'profile' },
     { name: 'Ví tiền', icon: Wallet, id: 'wallet' },
   ];

@@ -16,6 +16,7 @@ import BlindBoxTool from '../pages/farmer/BlindBoxTool';
 import FarmerNotifications from '../pages/farmer/Notifications';
 import Reviews from '../pages/farmer/Reviews';
 import Tracking from '../pages/auth/Tracking';
+import FarmerDisputes from '../pages/farmer/FarmerDisputes';
 import { AppRole, KYCStatus } from '../types';
 
 // ── Wrapper components ──────────────────────────────────────────────────────
@@ -104,6 +105,7 @@ const FarmerRoutes = () => {
             <Route path="blind-box" element={<BlindBoxTool />} />
             <Route path="reviews" element={<Reviews />} />
             <Route path="tracking/:orderId" element={<TrackingWrapper />} />
+            <Route path="farmer-disputes" element={<FarmerDisputes />} />
         </Route>
     );
 };

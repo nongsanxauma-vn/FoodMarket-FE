@@ -47,7 +47,7 @@ const Wallet: React.FC = () => {
          globalShowAlert('Vui lòng nhập số tiền hợp lệ', 'Lỗi', 'warning');
          return;
       }
-      if (wallet && amountNum > wallet.totalBalance) {
+      if (wallet && amountNum > wallet.frozenBalance) {
          globalShowAlert('Số tiền rút vượt quá số dư khả dụng', 'Lỗi', 'warning');
          return;
       }
@@ -295,7 +295,7 @@ const Wallet: React.FC = () => {
 
                   <div className="mb-6">
                      <h3 className="text-2xl font-bold text-slate-900 mb-1">Tạo Yêu Cầu Rút Tiền</h3>
-                     <p className="text-sm text-slate-500">Số dư khả dụng: <span className="font-bold text-primary">{(wallet?.totalBalance || 0).toLocaleString('vi-VN')}đ</span></p>
+                     <p className="text-sm text-slate-500">Số dư khả dụng: <span className="font-bold text-primary">{(wallet?.frozenBalance || 0).toLocaleString('vi-VN')}đ</span></p>
                   </div>
 
                   <form onSubmit={handleWithdrawSubmit} className="space-y-4">

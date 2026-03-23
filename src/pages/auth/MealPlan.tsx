@@ -1006,7 +1006,7 @@ export default function MealPlan() {
                   </div>
                 </section>
 
-                {/* Shopping List */}
+                Shopping List
                 <section className="bg-emerald-900 text-white rounded-3xl p-8 shadow-2xl relative overflow-hidden">
                   <div className="relative z-10">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">

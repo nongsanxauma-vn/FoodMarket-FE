@@ -28,6 +28,7 @@ export interface OrderItemResponse {
     itemType: 'PRODUCT' | 'MYSTERY_BOX';
     category?: string;
     imageUrl?: string;
+    isRequestedReturn?: boolean;
 }
 
 export interface OrderResponse {
