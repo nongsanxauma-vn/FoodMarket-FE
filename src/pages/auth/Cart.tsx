@@ -118,6 +118,7 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
         if (id) await cartService.updateQuantity(Number(id), newQty);
       }
       await fetchCart(true);
+      window.dispatchEvent(new Event('cart-updated'));
     } catch (error) {
       console.error('Update quantity failed', error);
     } finally {
@@ -157,6 +158,7 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
       await cartService.clearCart();
       setSelectedKeys(new Set());
       await fetchCart();
+      window.dispatchEvent(new Event('cart-updated'));
     } catch (error) {
       console.error('Clear cart failed', error);
     } finally {

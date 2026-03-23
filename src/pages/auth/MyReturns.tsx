@@ -292,6 +292,7 @@ const MyReturns: React.FC = () => {
                                     )}
                                     
                                     <button 
+                                        onClick={() => navigate(`/my-orders?orderId=${req.orderId}`)}
                                         className="px-8 py-4 bg-gray-900 text-white font-black rounded-2xl hover:bg-black transition-all flex items-center gap-2 shadow-xl shadow-black/10"
                                     >
                                         <Info className="size-5" />

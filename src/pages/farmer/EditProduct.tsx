@@ -134,8 +134,8 @@ const EditProduct: React.FC<{ productId: number; onBack: () => void }> = ({ prod
                     className="w-full px-6 py-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-bold text-gray-600 outline-none appearance-none cursor-pointer">
                     <option value={1}>Rau củ</option>
                     <option value={2}>Trái cây</option>
-                    <option value={3}>Thịt cá</option>
-                    <option value={4}>Khác</option>
+                    {/* <option value={3}>Thịt cá</option> */}
+                    <option value={3}>Khác</option>
                   </select>
                 </div>
                 <div className="flex flex-col gap-3">

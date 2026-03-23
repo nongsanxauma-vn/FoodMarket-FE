@@ -89,14 +89,14 @@ const BadBuyers: React.FC = () => {
           { label: 'ĐANG HOẠT ĐỘNG', value: activeBuyers.length.toLocaleString(), sub: 'Tài khoản bình thường', icon: ShieldAlert, color: 'text-orange-500', bg: 'bg-orange-50' },
           { label: 'TỔNG NGƯỜI MUA', value: buyers.length.toLocaleString(), sub: 'Tất cả trạng thái', icon: Unlock, color: 'text-blue-500', bg: 'bg-blue-50' },
         ].map((stat, i) => (
-          <div key={i} className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm flex items-center gap-6 group">
-            <div className={`size-16 ${stat.bg} ${stat.color} rounded-[28px] flex items-center justify-center transition-transform group-hover:scale-110`}>
-              <stat.icon className="size-8" />
+          <div key={i} className="bg-white p-6 rounded-[40px] border border-gray-100 shadow-sm flex items-center gap-4 group">
+            <div className={`size-14 ${stat.bg} ${stat.color} rounded-[24px] flex items-center justify-center transition-transform group-hover:scale-110 shrink-0`}>
+              <stat.icon className="size-7" />
             </div>
-            <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{stat.label}</p>
+            <div className="min-w-0">
+              <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 line-clamp-2">{stat.label}</p>
               <h3 className="text-3xl font-black text-gray-900 font-display">{stat.value}</h3>
-              <p className={`text-[10px] font-bold mt-1 ${stat.color} opacity-80`}>{stat.sub}</p>
+              <p className={`text-[9px] font-bold mt-1 ${stat.color} opacity-80`}>{stat.sub}</p>
             </div>
           </div>
         ))}
@@ -118,11 +118,10 @@ const BadBuyers: React.FC = () => {
               <button className="px-5 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-[10px] font-black text-gray-500 flex items-center gap-2 uppercase tracking-widest"><Download className="size-3" /> Xuất</button>
             </div>
           </div>
-          <table className="w-full text-left">
+          <table className="w-full text-left" style={{ tableLayout: 'fixed' }}>
             <thead className="bg-gray-50/50">
               <tr>
                 <th className="px-10 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Người dùng</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Email</th>
                 <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Trạng thái</th>
                 <th className="px-10 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Thao tác</th>
               </tr>
@@ -130,7 +129,7 @@ const BadBuyers: React.FC = () => {
             <tbody className="divide-y divide-gray-50">
               {buyers.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-10 py-10 text-center text-gray-400 font-bold">Không có người mua nào.</td>
+                  <td colSpan={3} className="px-10 py-10 text-center text-gray-400 font-bold">Không có người mua nào.</td>
                 </tr>
               ) : buyers.map((user, i) => {
                 const isBlocked = user.lockedAt != null || user.status === 'DEACTIVATED' || user.status === 'INACTIVE';
@@ -148,7 +147,6 @@ const BadBuyers: React.FC = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-6 text-center text-xs font-bold text-gray-600">{user.email || 'N/A'}</td>
                     <td className="px-6 py-6 text-center">
                       <span className={`px-3 py-1 rounded-lg text-[10px] font-black ${isBlocked ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}`}>
                         {isBlocked ? 'Đã khóa' : 'Hoạt động'}

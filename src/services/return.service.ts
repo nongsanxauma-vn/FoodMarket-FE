@@ -28,6 +28,7 @@ export interface ReturnRequestResponse {
     quantity: number;
     unitPrice: number;
     refundAmount: number;
+    orderId: number;
     status: ReturnStatus;
     createdAt: string;
     updatedAt: string;

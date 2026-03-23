@@ -121,8 +121,8 @@ const AddProduct: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                   >
                     <option value={1}>Rau củ</option>
                     <option value={2}>Trái cây</option>
-                    <option value={3}>Thịt cá</option>
-                    <option value={4}>Khác</option>
+                    {/* <option value={3}>Thịt cá</option> */}
+                    <option value={3}>Khác</option>
                   </select>
                 </div>
               </div>

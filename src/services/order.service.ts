@@ -29,6 +29,7 @@ export interface OrderItemResponse {
     category?: string;
     imageUrl?: string;
     isRequestedReturn?: boolean;
+    returnStatus?: string;
 }
 
 export interface OrderResponse {
