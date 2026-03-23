@@ -166,8 +166,8 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
   const CATEGORY_MAP = [
     { id: 1, name: 'Rau củ' },
     { id: 2, name: 'Trái cây' },
-    { id: 3, name: 'Thịt cá' },
-    { id: 4, name: 'Khác' },
+    // { id: 3, name: 'Thịt cá' },
+    { id: 3, name: 'Khác' },
   ];
 
   return (

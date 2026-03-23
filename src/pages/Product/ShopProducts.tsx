@@ -51,6 +51,10 @@ const ShopProducts: React.FC<ShopProductsProps> = ({
   const [addingComboToCart, setAddingComboToCart] = useState<number | null>(null);
 
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, []);
+
+  useEffect(() => {
     const fetchShopData = async () => {
       setLoading(true);
       console.log('[ShopProducts] Fetching data for shopId:', shopId);

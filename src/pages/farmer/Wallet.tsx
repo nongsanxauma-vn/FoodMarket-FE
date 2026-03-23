@@ -221,7 +221,7 @@ const Wallet: React.FC = () => {
                               <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                                  <td className="px-6 py-5 font-mono text-sm text-slate-600">#WD-{item.id}</td>
                                  <td className="px-6 py-5 text-sm text-slate-600">
-                                    {(item as any).createdAt ? new Date((item as any).createdAt).toLocaleDateString('vi-VN') : 'N/A'}
+                                    {(item as any).processedAt ? new Date((item as any).processedAt).toLocaleDateString('vi-VN') : 'N/A'}
                                  </td>
                                  <td className="px-6 py-5 text-sm font-bold text-slate-900">
                                     {item.amount.toLocaleString('vi-VN')}đ
