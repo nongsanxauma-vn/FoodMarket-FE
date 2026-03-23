@@ -35,9 +35,20 @@ const markdownComponents = {
 const isMatch = (productName: string, line: string): boolean => {
   const name = productName.toLowerCase().trim();
   const text = line.toLowerCase().trim();
+
+  if (!text || text.length < 2) return false;
+
+  // Chiều 1: line chứa ĐÚNG tên sản phẩm (whole word check)
   if (text.includes(name)) return true;
-  const mainWords = name.split(' ').filter(w => w.length >= 3);
-  return mainWords.length > 0 && mainWords.every(word => text.includes(word));
+
+  // Chiều 2: match từng từ - tất cả từ của tên SP (>= 3 ký tự)
+  // phải xuất hiện trong line
+  const nameWords = name.split(' ').filter(w => w.length >= 3);
+  if (nameWords.length > 0 && nameWords.every(w => text.includes(w))) return true;
+
+  return false;
+  // ❌ Bỏ chiều "tên SP chứa text" vì gây false positive
+  // VD: line "bảo quản" → match "sả" vì "sả" nằm trong "bảo quản" (không đúng)
 };
 
 // ===== PRODUCT CARD INLINE =====
@@ -161,43 +172,43 @@ const renderContentWithProducts = (
     );
   }
 
-  // Tách dòng
   const lines = content.split('\n');
 
-  // Nhóm các dòng liên tiếp thành các block
-  // Mỗi block gồm: dòng text + các sản phẩm match
-  const blocks: { text: string; matchedProducts: ProductSuggestion[] }[] = [];
-
-  lines.forEach(line => {
-    const matched = products.filter(p => isMatch(p.name, line));
-    blocks.push({ text: line, matchedProducts: matched });
-  });
+  // ✅ Track ID đã render - mỗi sản phẩm chỉ hiện 1 lần duy nhất
+  const renderedProductIds = new Set<number>();
 
   return (
     <div>
-      {blocks.map((block, index) => (
-        <div key={index}>
-          {/* Render dòng text */}
-          {block.text.trim() && (
-            <ReactMarkdown components={markdownComponents}>
-              {block.text}
-            </ReactMarkdown>
-          )}
+      {lines.map((line, index) => {
+        // Chỉ lấy sản phẩm CHƯA render và match với dòng này
+        const matched = products.filter(p =>
+          !renderedProductIds.has(p.id) && isMatch(p.name, line)
+        );
 
-          {/* Render product cards ngay sau dòng có match */}
-          {block.matchedProducts.length > 0 && (
-            <div style={{ marginBottom: '6px' }}>
-              {block.matchedProducts.map(product => (
-                <InlineProductCard
-                  key={product.id}
-                  product={product}
-                  onClick={() => navigate(`/product/${product.id}`)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      ))}
+        // Đánh dấu đã render ngay khi tìm thấy
+        matched.forEach(p => renderedProductIds.add(p.id));
+
+        return (
+          <div key={index}>
+            {line.trim() && (
+              <ReactMarkdown components={markdownComponents}>
+                {line}
+              </ReactMarkdown>
+            )}
+            {matched.length > 0 && (
+              <div style={{ marginBottom: '6px' }}>
+                {matched.map(product => (
+                  <InlineProductCard
+                    key={product.id}
+                    product={product}
+                    onClick={() => navigate(`/product/${product.id}`)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };
@@ -265,10 +276,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
         {isUser
           ? message.content
           : renderContentWithProducts(
-              message.content,
-              message.suggestedProducts ?? [],
-              navigate
-            )
+            message.content,
+            message.suggestedProducts ?? [],
+            navigate
+          )
         }
       </div>
 
