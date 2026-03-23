@@ -11,7 +11,8 @@ import {
   Share2,
   Loader2,
   AlertCircle,
-  MessageSquare
+  MessageSquare,
+  ChefHat
 } from 'lucide-react';
 import { productService, ProductResponse, cartService, reviewService, ReviewResponse, comboService, BuildComboResponse } from '../../services';
 import { globalShowAlert } from '../../contexts/PopupContext';
@@ -402,16 +403,20 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propProductId,
         </div>
       </div>
 
-      {shopCombos.length > 0 && (
+      {shopCombos.filter(combo => combo.items?.some(item => item.productId === Number(productId))).length > 0 && (
         <div className="max-w-7xl mx-auto px-4 mt-32">
           <h2 className="text-2xl font-black font-display text-gray-900 uppercase mb-12 flex items-center gap-4">
             Combo nấu ăn từ shop này <span className="h-px bg-gray-200 flex-1"></span>
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {shopCombos.map((combo) => (
+            {shopCombos
+              .filter(combo => combo.items?.some(item => item.productId === Number(productId)))
+              .map((combo) => (
               <div key={combo.id} onClick={() => navigate(`/combo/${combo.id}`)} className="group cursor-pointer bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden">
-                <div className="aspect-[4/3] bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center relative">
-                  <span className="text-5xl">🥗</span>
+                <div className="aspect-[4/3] bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center relative overflow-hidden">
+                  {combo.imageUrl
+                    ? <img src={combo.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={combo.comboName} />
+                    : <ChefHat className="size-12 text-green-200" />}
                   {combo.region && (
                     <span className="absolute top-2 right-2 text-[9px] font-black px-2 py-0.5 rounded-full bg-white/80 text-gray-600">
                       {combo.region === 'MIEN_BAC' ? '🌿 Bắc' : combo.region === 'MIEN_TRUNG' ? '🌶 Trung' : '🥥 Nam'}

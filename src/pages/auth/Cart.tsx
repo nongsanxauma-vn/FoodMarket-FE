@@ -34,6 +34,20 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
         return acc;
       }, {});
       setCartState({ cart: cartData, groupedItems: grouped });
+      // Auto-select tất cả khi load lần đầu
+      if (!isSilent) {
+        const allKeys = cartData.items.map(item => {
+          const type = item.itemType || '';
+          let id: any = null;
+          if (type === 'MYSTERY_BOX') id = item.mysteryBoxId || (item as any).id;
+          else if (type === 'BUILD_COMBO' || type === 'COMBO') id = item.buildComboId || (item as any).comboId || (item as any).id;
+          else id = item.productId || (item as any).id;
+          if (type === 'MYSTERY_BOX') return `b-${id}`;
+          if (type === 'BUILD_COMBO' || type === 'COMBO') return `c-${id}`;
+          return `p-${id}`;
+        });
+        setSelectedKeys(new Set(allKeys));
+      }
     } catch (error) {
       console.error('Failed to load cart', error);
     } finally {
@@ -354,7 +368,7 @@ const Cart: React.FC<CartProps> = ({ onProceedToCheckout, onBackToShopping }) =>
                   </div>
                   <div className="flex justify-between items-center text-sm font-bold text-gray-500">
                     <span>Số nhà vườn</span>
-                    <span className="text-gray-900 font-black">{selectedShops.length < 10 ? `0${selectedShops.length}` : selectedShops.length}</span>
+                    <span className="text-gray-900 font-black">{selectedShops.length}</span>
                   </div>
                 </div>
 

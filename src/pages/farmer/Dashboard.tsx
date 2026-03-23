@@ -137,7 +137,7 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
                 <button onClick={() => onNavigate('combo-builder')} className="px-4 py-2 bg-orange-50 text-orange-600 rounded-xl text-xs font-bold border border-orange-200 hover:bg-orange-100 transition-colors flex items-center gap-2">
                   <ChefHat className="size-4" /> Tạo Combo
                 </button>
-                <button onClick={() => onNavigate('blind-box')} className="px-4 py-2 bg-gray-50 text-gray-600 rounded-xl text-xs font-bold border border-gray-100">Blindbox</button>
+                <button onClick={() => onNavigate('mystery-box-editor')} className="px-4 py-2 bg-gray-50 text-gray-600 rounded-xl text-xs font-bold border border-gray-100">Hộp mù</button>
                 <button onClick={() => onNavigate('add-product')} className="px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-primary/20 hover:bg-primary-dark">
                   <Plus className="size-4" /> Thêm sản phẩm
                 </button>
