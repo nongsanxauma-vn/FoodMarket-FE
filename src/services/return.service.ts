@@ -25,10 +25,11 @@ export interface ReturnRequestResponse {
     shopResponse?: string;
     adminRemark?: string;
     productName: string;
-    quantity: number;
-    unitPrice: number;
+    quantity: number | null;
+    unitPrice: number | null;
     refundAmount: number;
     orderId: number;
+    isFullOrderReturn: boolean;
     status: ReturnStatus;
     createdAt: string;
     updatedAt: string;
@@ -36,6 +37,11 @@ export interface ReturnRequestResponse {
 
 export interface ReturnCreateRequest {
     orderDetailId: number;
+    reason: string;
+}
+
+export interface ReturnOrderCreateRequest {
+    orderId: number;
     reason: string;
 }
 
@@ -57,6 +63,12 @@ export const returnService = {
         formData.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }));
         if (evidence) formData.append('evidence', evidence);
         return httpClient.post('/returns', formData);
+    },
+    createOrderReturn: async (data: ReturnOrderCreateRequest, evidence?: File): Promise<ApiResponse<ReturnRequestResponse>> => {
+        const formData = new FormData();
+        formData.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }));
+        if (evidence) formData.append('evidence', evidence);
+        return httpClient.post('/returns/order', formData);
     },
     getMyReturns: async (): Promise<ApiResponse<ReturnRequestResponse[]>> => {
         return httpClient.get('/returns/me');
