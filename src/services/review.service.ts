@@ -7,6 +7,8 @@ export interface ReviewResponse {
     fullName?: string;
     shopOwnerId: number;
     orderDetailId: number;
+    productId?: number;
+    productName?: string;
     ratingStar: number;
     comment: string;
     evidence?: string;
@@ -34,11 +36,19 @@ class ReviewService {
     }
 
     async getByShopId(shopId: number): Promise<ApiResponse<ReviewResponse[]>> {
+        // Get all reviews for all products in a shop
+        // Used to calculate shop's overall rating (average of all product ratings)
         return httpClient.get<ReviewResponse[]>(`/reviews/shop/${shopId}`);
     }
 
     async getByShopIdPaged(shopId: number, page = 0, size = 10): Promise<ApiResponse<PageResponse<ReviewResponse>>> {
         return httpClient.get<PageResponse<ReviewResponse>>(`/reviews/shop/${shopId}/paged?page=${page}&size=${size}`);
+    }
+
+    async getByProductId(productId: number): Promise<ApiResponse<ReviewResponse[]>> {
+        // Get reviews for a specific product only
+        // Used to display product-specific ratings on product cards
+        return httpClient.get<ReviewResponse[]>(`/reviews/product/${productId}`);
     }
 
     async createReview(data: ReviewCreateRequest, evidence?: File): Promise<ApiResponse<ReviewResponse>> {
