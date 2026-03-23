@@ -172,7 +172,7 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
                   <Package className="size-5" />
                 </div>
                 <h4 className="font-black text-gray-800 uppercase tracking-tight">Quản lý sản phẩm</h4>
-              </div>
+              </div>          
             </div>
             <div className="p-0 overflow-x-auto">
               {/* Inline Tabs for Table */}

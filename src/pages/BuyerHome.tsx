@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { productService, ProductResponse, mysteryBoxService, MysteryBox, comboService, BuildComboResponse } from '../services';
+import { productService, ProductResponse, mysteryBoxService, MysteryBox, comboService, BuildComboResponse, reviewService } from '../services';
 import {
   Star,
   MapPin,
@@ -38,7 +38,7 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated 
   const [isLoadingBoxes, setIsLoadingBoxes] = useState(false);
   const [isLoadingCombos, setIsLoadingCombos] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [visibleProducts, setVisibleProducts] = useState<number>(8);
+  const [productRatings, setProductRatings] = useState<Record<number, { average: number; count: number }>>({});
 
   // Get search query from URL
   const queryParams = new URLSearchParams(location.search);
@@ -62,7 +62,44 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated 
         setIsLoading(true);
         const response = await productService.getAll();
         if (response.result) {
-          setProducts(response.result.filter(p => p.status === 'AVAILABLE' || !p.status).filter(p => p.id && !isNaN(p.id)));
+          const availableProducts = response.result.filter(p => p.status === 'AVAILABLE' || !p.status).filter(p => p.id && !isNaN(p.id));
+          setProducts(availableProducts);
+          
+          // Fetch ratings for each individual product
+          // Each product's rating is calculated from reviews specifically for that product
+          const ratingsMap: Record<number, { average: number; count: number }> = {};
+          
+          await Promise.all(
+            availableProducts.map(async (product) => {
+              try {
+                // Try to get reviews by productId first
+                let reviews: any[] = [];
+                try {
+                  const reviewsRes = await reviewService.getByProductId(product.id);
+                  if (reviewsRes?.result && Array.isArray(reviewsRes.result)) {
+                    reviews = reviewsRes.result;
+                  }
+                } catch (productErr) {
+                  // Fallback: Get shop reviews and filter by productId
+                  if (product.shopOwnerId) {
+                    const shopReviewsRes = await reviewService.getByShopId(product.shopOwnerId);
+                    if (shopReviewsRes?.result && Array.isArray(shopReviewsRes.result)) {
+                      reviews = shopReviewsRes.result.filter((r: any) => r.productId === product.id);
+                    }
+                  }
+                }
+                
+                if (reviews.length > 0) {
+                  const average = reviews.reduce((sum, r) => sum + r.ratingStar, 0) / reviews.length;
+                  ratingsMap[product.id] = { average, count: reviews.length };
+                }
+              } catch (err) {
+                console.error(`Failed to fetch reviews for product ${product.id}:`, err);
+              }
+            })
+          );
+          
+          setProductRatings(ratingsMap);
         }
       } catch (err) {
         console.error('Failed to fetch products:', err);
@@ -116,10 +153,6 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated 
       (p.shopName && p.shopName.toLowerCase().includes(lowQuery))
     );
   }, [products, searchQuery]);
-
-  const handleLoadMore = () => {
-    setVisibleProducts(prev => prev + 8);
-  };
 
   const clearSearch = () => {
     navigate('/');
@@ -369,52 +402,62 @@ const BuyerHome: React.FC<BuyerHomeProps> = ({ onSelectProduct, isAuthenticated 
         ) : (
           <div className="flex flex-col gap-8 items-center">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 w-full">
-              {filteredProducts.slice(0, isSearching ? Infinity : visibleProducts).map((product) => (
-                <div
-                  key={product.id}
-                  onClick={() => onSelectProduct(product.id.toString())}
-                  className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all border border-gray-100 flex flex-col cursor-pointer group"
-                >
-                  <div className="relative aspect-[4/3] w-full overflow-hidden">
-                    <img className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" src={product.imageUrl || 'https://picsum.photos/seed/product/400/300'} alt={product.productName} />
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); onSelectProduct(product.id.toString()); }}
-                      className="absolute bottom-4 right-4 size-10 bg-primary text-white rounded-full shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100"
-                    >
-                      <ShoppingCart className="size-5" />
-                    </button>
-                  </div>
-                  <div className="p-5 flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-primary text-[10px] font-bold uppercase">Nông sản</span>
-                      <div className="flex items-center gap-1 text-gray-400 text-[10px] font-bold">
-                        <MapPin className="size-3" /> {product.shopName || (product.shopId ? `Farm #${product.shopId}` : 'Vườn nhà')}
+              {filteredProducts.slice(0, isSearching ? Infinity : 8).map((product) => {
+                const productRating = productRatings[product.id];
+                const rating = productRating?.average || 0;
+                const reviewCount = productRating?.count || 0;
+                
+                return (
+                  <div
+                    key={product.id}
+                    onClick={() => onSelectProduct(product.id.toString())}
+                    className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all border border-gray-100 flex flex-col cursor-pointer group"
+                  >
+                    <div className="relative aspect-[4/3] w-full overflow-hidden">
+                      <img className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" src={product.imageUrl || 'https://picsum.photos/seed/product/400/300'} alt={product.productName} />
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); onSelectProduct(product.id.toString()); }}
+                        className="absolute bottom-4 right-4 size-10 bg-primary text-white rounded-full shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100"
+                      >
+                        <ShoppingCart className="size-5" />
+                      </button>
+                    </div>
+                    <div className="p-5 flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-primary text-[10px] font-bold uppercase">Nông sản</span>
+                        <div className="flex items-center gap-1 text-gray-400 text-[10px] font-bold">
+                          <MapPin className="size-3" /> {product.shopName || (product.shopId ? `Farm #${product.shopId}` : 'Vườn nhà')}
+                        </div>
+                      </div>
+                      <h3 className="text-gray-900 font-extrabold text-lg line-clamp-1">{product.productName}</h3>
+                      {rating > 0 && (
+                        <div className="flex items-center gap-1 text-yellow-500">
+                          <Star className="size-4 fill-current" />
+                          <span className="text-xs font-bold text-gray-900">{rating.toFixed(1)}</span>
+                          {reviewCount > 0 && (
+                            <span className="text-gray-400 text-[10px]">({reviewCount})</span>
+                          )}
+                        </div>
+                      )}
+                      <div className="flex items-end justify-between mt-2">
+                        <div className="flex flex-col">
+                          <span className="text-primary font-black text-2xl">{product.sellingPrice.toLocaleString('vi-VN')}đ</span>
+                          <span className="text-[10px] text-gray-400 font-bold uppercase">Mỗi {product.unit}</span>
+                        </div>
+                        <span className="bg-green-100 text-green-700 text-[10px] font-black px-2 py-1 rounded-md">TƯƠI SẠCH</span>
                       </div>
                     </div>
-                    <h3 className="text-gray-900 font-extrabold text-lg line-clamp-1">{product.productName}</h3>
-                    <div className="flex items-center gap-1 text-yellow-500">
-                      <Star className="size-4 fill-current" />
-                      <span className="text-xs font-bold text-gray-900">4.9</span>
-                      <span className="text-gray-400 text-[10px]">(100+)</span>
-                    </div>
-                    <div className="flex items-end justify-between mt-2">
-                      <div className="flex flex-col">
-                        <span className="text-primary font-black text-2xl">{product.sellingPrice.toLocaleString('vi-VN')}đ</span>
-                        <span className="text-[10px] text-gray-400 font-bold uppercase">Mỗi {product.unit}</span>
-                      </div>
-                      <span className="bg-green-100 text-green-700 text-[10px] font-black px-2 py-1 rounded-md">TƯƠI SẠCH</span>
-                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             
-            {!isSearching && visibleProducts < filteredProducts.length && (
+            {!isSearching && (
               <button 
-                onClick={handleLoadMore}
+                onClick={() => navigate('/search')}
                 className="px-8 py-3 bg-white border-2 border-primary text-primary font-black rounded-xl hover:bg-primary hover:text-white transition-colors duration-300 shadow-sm"
               >
-                Xem Thêm
+                Xem Tất Cả Sản Phẩm
               </button>
             )}
           </div>

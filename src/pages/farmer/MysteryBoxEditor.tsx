@@ -184,16 +184,14 @@ const MysteryBoxEditor: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             <div className="h-6 w-px bg-gray-300" />
             <h1 className="text-xl font-black text-gray-900">{isEditMode ? 'Chỉnh Sửa Hộp Mù' : 'Tạo Hộp Mù Mới'}</h1>
           </div>
-          <button onClick={handleSave} disabled={isSaving}
-            className="px-6 py-3 bg-primary text-white font-bold rounded-2xl flex items-center gap-2 shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all disabled:opacity-50">
-            {isSaving ? <><Loader2 className="size-4 animate-spin" />Đang lưu...</> : <><Save className="size-4" />{isEditMode ? 'Cập nhật' : 'Tạo hộp mù'}</>}
-          </button>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Form */}
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
               <div className="flex items-center gap-3 mb-8">
                 <div className="size-10 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-600">
@@ -219,9 +217,25 @@ const MysteryBoxEditor: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Giá bán (VND) *</label>
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-xs text-gray-400 font-bold">Mức giá túi mù</span>
+                    <span className={`text-3xl font-black ${totalProductsPrice > 0 && Number(price) > totalProductsPrice ? 'text-red-500' : 'text-primary'}`}>
+                      {(Number(price) || 0).toLocaleString('vi-VN')}đ
+                    </span>
+                  </div>
+                  <input
+                    type="range" min="10000" max="500000" step="1000"
+                    value={Number(price) || 10000}
+                    onChange={e => setPrice(e.target.value)}
+                    className="w-full h-2 bg-gray-100 rounded-full appearance-none accent-primary cursor-pointer mb-2"
+                  />
+                  <div className="flex justify-between text-[10px] font-black text-gray-400 uppercase mb-2">
+                    <span>10.000đ</span>
+                    <span>500.000đ</span>
+                  </div>
                   <input type="number" min="0" value={price} onChange={e => setPrice(e.target.value)}
-                    placeholder="59000"
-                    className="w-full px-4 py-4 bg-gray-50 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-primary/10 transition-all" />
+                    placeholder="Hoặc nhập trực tiếp..."
+                    className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-primary/10 transition-all" />
                   {totalProductsPrice > 0 && (
                     <p className="text-xs text-gray-500 mt-2 font-bold">
                       Tổng giá trị sản phẩm: {totalProductsPrice.toLocaleString('vi-VN')}đ
@@ -240,6 +254,26 @@ const MysteryBoxEditor: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                     placeholder="VD: 10"
                     className="w-full px-4 py-4 bg-gray-50 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-primary/10 transition-all" />
                   <p className="text-xs text-gray-400 mt-2 font-bold">Số túi mù tối đa có thể bán ra</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Ảnh hộp mù</label>
+                  <label className="relative flex flex-col items-center justify-center w-full h-48 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition-all group overflow-hidden">
+                    <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                    {boxImagePreview ? (
+                      <img src={boxImagePreview} className="w-full h-full object-cover" alt="Ảnh hộp mù" />
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-gray-400 group-hover:text-primary transition-colors">
+                        <ImagePlus className="size-8" />
+                        <span className="text-xs font-bold">Click để tải ảnh hộp mù</span>
+                      </div>
+                    )}
+                    {boxImagePreview && (
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="text-white text-xs font-bold bg-black/50 px-3 py-1.5 rounded-full">Đổi ảnh</span>
+                      </div>
+                    )}
+                  </label>
                 </div>
 
                 <div>
@@ -273,80 +307,26 @@ const MysteryBoxEditor: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                     </button>
                   </div>
                 )}
-
-                <div>
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Ảnh hộp mù</label>
-                  <div className="flex items-center gap-4">
-                    <div className="size-20 rounded-2xl overflow-hidden bg-purple-100 flex items-center justify-center shadow-sm">
-                      {boxImagePreview
-                        ? <img src={boxImagePreview} className="w-full h-full object-cover" />
-                        : <Sparkles className="size-8 text-purple-400" />}
-                    </div>
-                    <label className="cursor-pointer px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-sm rounded-xl transition-colors flex items-center gap-2">
-                      <ImagePlus className="size-4" />
-                      {boxImagePreview ? 'Thay đổi ảnh' : 'Tải lên ảnh'}
-                      <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-                    </label>
-                  </div>
-                </div>
               </div>
             </div>
 
+            {/* Selected Products */}
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
               <div className="flex items-center gap-3 mb-8">
-                <div className="size-10 bg-green-100 rounded-2xl flex items-center justify-center text-green-600">
-                  <Plus className="size-5" />
-                </div>
-                <h3 className="text-xl font-black text-gray-900">Chọn sản phẩm</h3>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {availableProducts.map((product) => {
-                  const isSelected = selectedProducts.find(p => p.productId === product.id);
-                  return (
-                    <div key={product.id}
-                      className={`relative group cursor-pointer ${isSelected ? 'opacity-50' : ''}`}
-                      onClick={() => !isSelected && addProduct(product)}>
-                      <div className={`aspect-square rounded-2xl overflow-hidden border-2 transition-all shadow-sm ${isSelected ? 'border-gray-200' : 'border-transparent group-hover:border-primary'}`}>
-                        <img src={product.imageUrl || `https://picsum.photos/seed/${product.id}/200/200`}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                        <div className={`absolute inset-0 transition-all ${isSelected ? 'bg-gray-500/20' : 'bg-black/10 group-hover:bg-transparent'}`} />
-                        {isSelected && (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="bg-white rounded-full p-2 shadow-lg">
-                              <Check className="size-4 text-green-600" />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      <div className="mt-3 text-center">
-                        <p className="text-xs font-black text-gray-800 uppercase truncate">{product.productName}</p>
-                        <p className="text-[10px] text-gray-500 font-bold">Tồn: {product.stockQuantity} {product.unit}</p>
-                        <p className="text-[10px] text-primary font-bold">{(product.sellingPrice || 0).toLocaleString('vi-VN')}đ/{product.unit}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 sticky top-8">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="size-10 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-600">
+                <div className="size-10 bg-orange-100 rounded-2xl flex items-center justify-center text-orange-600">
                   <Sparkles className="size-5" />
                 </div>
-                <h3 className="text-xl font-black text-gray-900">Sản phẩm đã chọn</h3>
+                <h3 className="text-xl font-black text-gray-900">Sản phẩm đã chọn ({selectedProducts.length})</h3>
               </div>
 
               {selectedProducts.length === 0 ? (
                 <div className="text-center py-12">
                   <Gift className="size-16 text-gray-300 mx-auto mb-4" />
                   <p className="text-gray-500 font-medium">Chưa chọn sản phẩm nào</p>
-                  <p className="text-gray-400 text-sm mt-1">Chọn sản phẩm từ danh sách bên trái</p>
+                  <p className="text-gray-400 text-sm mt-1">Chọn sản phẩm từ danh sách bên phải</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {selectedProducts.map((p) => {
                     const product = availableProducts.find(ap => ap.id === p.productId);
                     return (
@@ -397,6 +377,48 @@ const MysteryBoxEditor: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                   )}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Right Column - Available Products (sticky) */}
+          <div className="space-y-6">
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 sticky top-8">
+              <h3 className="font-black text-gray-800 uppercase tracking-tight mb-6 flex items-center gap-2">
+                <Sparkles className="size-5 text-primary" />
+                Sản Phẩm Của Bạn
+              </h3>
+              {availableProducts.length === 0 ? (
+                <p className="text-center py-8 text-sm text-gray-500 italic">Bạn chưa có sản phẩm nào.</p>
+              ) : (
+                <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                  {availableProducts.map((product) => {
+                    const isSelected = selectedProducts.some(p => p.productId === product.id);
+                    return (
+                      <button key={product.id} onClick={() => !isSelected && addProduct(product)}
+                        className={`w-full text-left p-3 rounded-xl border-2 transition-all ${isSelected ? 'border-primary bg-primary/5' : 'border-gray-100 bg-white hover:border-primary/30'}`}>
+                        <div className="flex items-start gap-3">
+                          <img src={product.imageUrl || `https://picsum.photos/seed/${product.id}/60/60`}
+                            className="size-12 rounded-lg object-cover flex-shrink-0 bg-gray-50" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-gray-800 mb-1 truncate">{product.productName}</p>
+                            <p className="text-xs text-gray-500 mb-1">Tồn: {product.stockQuantity} {product.unit}</p>
+                            <p className="text-xs font-bold text-primary">{(product.sellingPrice || 0).toLocaleString('vi-VN')}đ/{product.unit}</p>
+                          </div>
+                          {isSelected && (
+                            <div className="size-5 bg-primary rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                              <Check className="size-3 text-white" />
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              <button onClick={handleSave} disabled={isSaving}
+                className="mt-6 w-full py-4 bg-primary text-white font-black rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all disabled:opacity-50">
+                {isSaving ? <><Loader2 className="size-4 animate-spin" />Đang lưu...</> : <><Save className="size-4" />{isEditMode ? 'CẬP NHẬT HỘP MÙ' : 'TẠO HỘP MÙ'}</>}
+              </button>
             </div>
           </div>
         </div>
