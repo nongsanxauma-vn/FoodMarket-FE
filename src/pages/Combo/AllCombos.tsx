@@ -46,25 +46,27 @@ const AllCombos: React.FC = () => {
               const savings = totalOriginal - combo.discountPrice;
               return (
                 <div key={combo.id} onClick={() => navigate(`/combo/${combo.id}`)}
-                  className="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all border border-gray-100 flex flex-col group p-4 cursor-pointer">
-                  {/* Image area */}
-                  <div className="relative h-48 rounded-xl bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center mb-6 overflow-hidden">
+                  className="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all border border-gray-100 flex flex-col group cursor-pointer">
+                  {/* Image Header */}
+                  <div className="relative h-44 w-full overflow-hidden bg-gray-100">
                     {combo.imageUrl ? (
-                      <img src={combo.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={combo.comboName} />
+                      <img src={combo.imageUrl} alt={combo.comboName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     ) : (
-                      <ChefHat className="size-20 text-green-200 group-hover:scale-110 transition-transform duration-500" />
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
+                        <ChefHat className="size-16 text-primary/30" />
+                      </div>
                     )}
-                    <div className="absolute top-3 right-3 bg-white/90 backdrop-blur px-2 py-1 rounded-full shadow-sm flex items-center gap-1">
-                      <ChefHat className="size-3 text-green-600" />
-                      <span className="text-[10px] font-bold uppercase">Combo nấu ăn</span>
-                    </div>
                     {combo.region && (
-                      <div className="absolute top-3 left-3 bg-white/90 backdrop-blur px-2 py-1 rounded-full shadow-sm">
-                        <span className="text-[10px] font-black text-primary">
-                          {combo.region === 'MIEN_BAC' ? '🌿 Bắc' : combo.region === 'MIEN_TRUNG' ? '🌶 Trung' : '🥥 Nam'}
+                      <div className="absolute top-3 left-3">
+                        <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-white/95 backdrop-blur shadow-sm text-primary uppercase tracking-widest border border-primary/10">
+                          {combo.region === 'MIEN_BAC' ? '🌿 Miền Bắc' : combo.region === 'MIEN_TRUNG' ? '🌶 Miền Trung' : '🥥 Miền Nam'}
                         </span>
                       </div>
                     )}
+                    <div className="absolute top-3 right-3 bg-white/90 backdrop-blur px-2 py-1 rounded-full shadow-sm flex items-center gap-1">
+                      <ChefHat className="size-3 text-green-600" />
+                      <span className="text-[10px] font-bold uppercase">Combo</span>
+                    </div>
                     {savings > 0 && totalOriginal > 0 && (
                       <div className="absolute bottom-3 left-3 bg-red-500 text-white px-2 py-1 rounded-lg flex items-center gap-1">
                         <Tag className="size-3" />
@@ -72,13 +74,18 @@ const AllCombos: React.FC = () => {
                       </div>
                     )}
                   </div>
-                  <div className="flex flex-col gap-3">
-                    <div className="flex justify-between items-start">
-                      <h4 className="font-extrabold text-lg text-gray-900 truncate pr-2 uppercase tracking-tight">{combo.comboName}</h4>
+
+                  <div className="p-4 flex-1 flex flex-col">
+                    <div className="mb-3">
+                        <h4 className="font-black text-gray-900 text-base mb-1 line-clamp-1">{combo.comboName}</h4>
+                        {combo.description && (
+                          <p className="text-xs text-gray-500 font-medium line-clamp-2">{combo.description}</p>
+                        )}
+                    </div>
+                    <div className="flex justify-between items-start mb-3">
                       <span className="text-primary font-black text-xl whitespace-nowrap">{combo.discountPrice.toLocaleString('vi-VN')}đ</span>
                     </div>
-                    <p className="text-xs text-gray-500 font-medium line-clamp-2 min-h-[32px]">{combo.description || `${combo.items.length} nguyên liệu tươi ngon`}</p>
-                    <div className="space-y-1">
+                    <div className="space-y-1 mb-3 flex-1">
                       {combo.items.slice(0, 2).map((item) => (
                         <div key={item.productId} className="flex items-center justify-between text-xs text-gray-500">
                           <span className="truncate">• {item.productName}</span>
@@ -89,11 +96,8 @@ const AllCombos: React.FC = () => {
                         <p className="text-[10px] text-gray-400 font-bold">+{combo.items.length - 2} nguyên liệu khác</p>
                       )}
                     </div>
-                    {savings > 0 && (
-                      <p className="text-xs text-green-600 font-bold">Tiết kiệm {savings.toLocaleString('vi-VN')}đ</p>
-                    )}
                     <button onClick={(e) => { e.stopPropagation(); navigate(`/combo/${combo.id}`); }}
-                      className="w-full bg-primary hover:bg-primary-dark text-white font-black py-3 rounded-xl transition-all mt-2 active:scale-95">
+                      className="w-full bg-primary hover:bg-primary-dark text-white font-black py-3 rounded-xl transition-all mt-auto active:scale-95 text-xs">
                       CHỌN COMBO NÀY
                     </button>
                   </div>

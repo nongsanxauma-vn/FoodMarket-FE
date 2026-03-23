@@ -34,6 +34,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ onSelectProduct }) => {
   const [sortBy, setSortBy] = useState<SortOption>('popular');
   const [priceFilter, setPriceFilter] = useState<PriceFilter>('all');
   const [minRating, setMinRating] = useState<number>(0);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [productRatings, setProductRatings] = useState<Record<number, { average: number; count: number }>>({});
   const itemsPerPage = 12;
@@ -55,11 +56,11 @@ const SearchResults: React.FC<SearchResultsProps> = ({ onSelectProduct }) => {
         if (productsRes?.result && Array.isArray(productsRes.result)) {
           const availableProducts = productsRes.result.filter(p => p && (p.status === 'AVAILABLE' || !p.status) && p.id && !isNaN(p.id));
           setProducts(availableProducts);
-          
+
           // Fetch ratings for each individual product
           // Each product's rating is calculated from reviews specifically for that product
           const ratingsMap: Record<number, { average: number; count: number }> = {};
-          
+
           await Promise.all(
             availableProducts.map(async (product) => {
               try {
@@ -79,7 +80,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ onSelectProduct }) => {
                     }
                   }
                 }
-                
+
                 if (reviews.length > 0) {
                   const average = reviews.reduce((sum, r) => sum + r.ratingStar, 0) / reviews.length;
                   ratingsMap[product.id] = { average, count: reviews.length };
@@ -89,7 +90,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ onSelectProduct }) => {
               }
             })
           );
-          
+
           setProductRatings(ratingsMap);
         }
         if (boxesRes?.result && Array.isArray(boxesRes.result)) {
@@ -111,36 +112,45 @@ const SearchResults: React.FC<SearchResultsProps> = ({ onSelectProduct }) => {
   // Filter and sort all items
   const filteredResults = useMemo(() => {
     const lowQuery = searchQuery.toLowerCase();
-    
+
     // Filter by search query
-    let filteredProducts = searchQuery 
-      ? products.filter(p => 
-          p && p.productName && (
-            p.productName.toLowerCase().includes(lowQuery) || 
-            (p.description && p.description.toLowerCase().includes(lowQuery)) ||
-            (p.shopName && p.shopName.toLowerCase().includes(lowQuery))
-          )
+    let filteredProducts = searchQuery
+      ? products.filter(p =>
+        p && p.productName && (
+          p.productName.toLowerCase().includes(lowQuery) ||
+          (p.description && p.description.toLowerCase().includes(lowQuery)) ||
+          (p.shopName && p.shopName.toLowerCase().includes(lowQuery))
         )
+      )
       : products;
 
     let filteredBoxes = searchQuery
       ? mysteryBoxes.filter(b =>
-          b && b.boxType && (
-            b.boxType.toLowerCase().includes(lowQuery) ||
-            (b.description && b.description.toLowerCase().includes(lowQuery))
-          )
+        b && b.boxType && (
+          b.boxType.toLowerCase().includes(lowQuery) ||
+          (b.description && b.description.toLowerCase().includes(lowQuery))
         )
+      )
       : mysteryBoxes;
 
     let filteredCombos = searchQuery
       ? combos.filter(c =>
-          c && c.comboName && (
-            c.comboName.toLowerCase().includes(lowQuery) ||
-            (c.description && c.description.toLowerCase().includes(lowQuery)) ||
-            (c.items && Array.isArray(c.items) && c.items.some(item => item && item.productName && item.productName.toLowerCase().includes(lowQuery)))
-          )
+        c && c.comboName && (
+          c.comboName.toLowerCase().includes(lowQuery) ||
+          (c.description && c.description.toLowerCase().includes(lowQuery)) ||
+          (c.items && Array.isArray(c.items) && c.items.some(item => item && item.productName && item.productName.toLowerCase().includes(lowQuery)))
         )
+      )
       : combos;
+
+    // Filter by Category
+    if (selectedCategoryId !== null) {
+      filteredProducts = filteredProducts.filter(p => p.categoryId === selectedCategoryId);
+      // Blind boxes and combos don't have categoryId usually, or it's different. 
+      // Based on UI request, categories usually apply to products.
+      filteredBoxes = [];
+      filteredCombos = [];
+    }
 
     // Filter by price
     if (priceFilter !== 'all') {
@@ -181,7 +191,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ onSelectProduct }) => {
       combos: filteredCombos,
       total: filteredProducts.length + filteredBoxes.length + filteredCombos.length,
     };
-  }, [products, mysteryBoxes, combos, searchQuery, priceFilter, minRating]);
+  }, [products, mysteryBoxes, combos, searchQuery, priceFilter, minRating, selectedCategoryId]);
 
   // Combine and sort all results
   const allResults = useMemo(() => {
@@ -230,6 +240,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ onSelectProduct }) => {
   const clearFilters = () => {
     setPriceFilter('all');
     setMinRating(0);
+    setSelectedCategoryId(null);
     setSortBy('popular');
   };
 
@@ -241,7 +252,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ onSelectProduct }) => {
   return (
     <main className="flex-1 w-full max-w-[1440px] mx-auto px-4 md:px-8 py-8 flex gap-8">
       {/* Left Sidebar - Filters */}
-      <aside className={`${showFilters ? 'block' : 'hidden'} lg:flex flex-col w-64 h-fit sticky top-24 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-8`}>
+      <aside className={`${showFilters ? 'block' : 'hidden'} lg:flex flex-col w-64 h-fit sticky top-[136px] bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5 max-h-[calc(100vh-160px)] overflow-y-auto custom-scrollbar`}>
         <div className="flex items-center justify-between">
           <h3 className="font-extrabold text-gray-900 text-lg">Bộ lọc</h3>
           <button onClick={() => setShowFilters(false)} className="lg:hidden text-gray-400 hover:text-gray-600">
@@ -249,71 +260,95 @@ const SearchResults: React.FC<SearchResultsProps> = ({ onSelectProduct }) => {
           </button>
         </div>
 
+        {/* Category Filter */}
+        <div>
+          <h4 className="font-bold text-gray-900 mb-3 text-sm uppercase tracking-wider">Danh mục sản phẩm</h4>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { id: 1, name: 'Rau củ' },
+              { id: 2, name: 'Trái cây' },
+              // { id: 3, name: 'Thịt cá' },
+              { id: 4, name: 'Khác' },
+            ].map((cat) => (
+              <label key={cat.id} className="flex items-center gap-2 cursor-pointer group whitespace-nowrap">
+                <input
+                  type="checkbox"
+                  checked={selectedCategoryId === cat.id}
+                  onChange={() => setSelectedCategoryId(selectedCategoryId === cat.id ? null : cat.id)}
+                  className="w-3.5 h-3.5 text-primary focus:ring-primary border-gray-300 rounded"
+                />
+                <span className={`text-[13px] transition-colors ${selectedCategoryId === cat.id ? 'text-primary font-bold' : 'text-gray-600 group-hover:text-primary'}`}>
+                  {cat.name}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
         {/* Price Filter */}
         <div>
-          <h4 className="font-bold text-gray-900 mb-4 text-sm uppercase tracking-wider">Lọc theo giá</h4>
-          <div className="space-y-3">
-            <label className="flex items-center gap-3 cursor-pointer group">
+          <h4 className="font-bold text-gray-900 mb-3 text-sm uppercase tracking-wider">Lọc theo giá</h4>
+          <div className="grid grid-cols-2 gap-x-2 gap-y-3">
+            <label className="flex items-center gap-2 cursor-pointer group">
               <input
                 type="radio"
                 name="price"
                 checked={priceFilter === 'all'}
                 onChange={() => setPriceFilter('all')}
-                className="w-4 h-4 text-primary focus:ring-primary border-gray-300"
+                className="w-3.5 h-3.5 text-primary focus:ring-primary border-gray-300"
               />
-              <span className="text-sm text-gray-700 group-hover:text-primary transition-colors">Tất cả</span>
+              <span className="text-[13px] text-gray-600 group-hover:text-primary transition-colors">Tất cả</span>
             </label>
-            <label className="flex items-center gap-3 cursor-pointer group">
+            <label className="flex items-center gap-2 cursor-pointer group">
               <input
                 type="radio"
                 name="price"
                 checked={priceFilter === 'under-50k'}
                 onChange={() => setPriceFilter('under-50k')}
-                className="w-4 h-4 text-primary focus:ring-primary border-gray-300"
+                className="w-3.5 h-3.5 text-primary focus:ring-primary border-gray-300"
               />
-              <span className="text-sm text-gray-700 group-hover:text-primary transition-colors">Dưới 50k</span>
+              <span className="text-[13px] text-gray-600 group-hover:text-primary transition-colors">Dưới 50k</span>
             </label>
-            <label className="flex items-center gap-3 cursor-pointer group">
+            <label className="flex items-center gap-2 cursor-pointer group">
               <input
                 type="radio"
                 name="price"
                 checked={priceFilter === '50k-200k'}
                 onChange={() => setPriceFilter('50k-200k')}
-                className="w-4 h-4 text-primary focus:ring-primary border-gray-300"
+                className="w-3.5 h-3.5 text-primary focus:ring-primary border-gray-300"
               />
-              <span className="text-sm text-gray-700 group-hover:text-primary transition-colors">50k - 200k</span>
+              <span className="text-[13px] text-gray-600 group-hover:text-primary transition-colors whitespace-nowrap">50k - 200k</span>
             </label>
-            <label className="flex items-center gap-3 cursor-pointer group">
+            <label className="flex items-center gap-2 cursor-pointer group">
               <input
                 type="radio"
                 name="price"
                 checked={priceFilter === 'over-200k'}
                 onChange={() => setPriceFilter('over-200k')}
-                className="w-4 h-4 text-primary focus:ring-primary border-gray-300"
+                className="w-3.5 h-3.5 text-primary focus:ring-primary border-gray-300"
               />
-              <span className="text-sm text-gray-700 group-hover:text-primary transition-colors">Trên 200k</span>
+              <span className="text-[13px] text-gray-600 group-hover:text-primary transition-colors whitespace-nowrap">Trên 200k</span>
             </label>
           </div>
         </div>
 
         {/* Rating Filter */}
         <div>
-          <h4 className="font-bold text-gray-900 mb-4 text-sm uppercase tracking-wider">Đánh giá</h4>
-          <div className="space-y-2">
+          <h4 className="font-bold text-gray-900 mb-2 text-sm uppercase tracking-wider">Đánh giá</h4>
+          <div className="space-y-1">
             {[4, 3, 2, 1].map((rating) => (
               <button
                 key={rating}
                 onClick={() => setMinRating(minRating === rating ? 0 : rating)}
-                className={`flex items-center gap-2 text-sm transition-colors w-full ${
-                  minRating === rating ? 'text-primary font-bold' : 'text-gray-600 hover:text-primary'
-                }`}
+                className={`flex items-center gap-2 py-1 text-sm transition-colors w-full ${minRating === rating ? 'text-primary font-bold' : 'text-gray-600 hover:text-primary'
+                  }`}
               >
                 <div className="flex text-yellow-500">
                   {Array.from({ length: 5 }, (_, i) => (
-                    <Star key={i} className={`size-4 ${i < rating ? 'fill-current' : ''}`} />
+                    <Star key={i} className={`size-3.5 ${i < rating ? 'fill-current' : ''}`} />
                   ))}
                 </div>
-                <span>Trở lên</span>
+                <span className="text-[13px]">Trở lên</span>
               </button>
             ))}
           </div>
@@ -322,7 +357,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ onSelectProduct }) => {
         {/* Clear Filters Button */}
         <button
           onClick={clearFilters}
-          className="w-full py-3 bg-gray-100 text-gray-700 font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-gray-200 transition-all"
+          className="w-full py-2.5 bg-gray-100 text-gray-700 font-bold text-[10px] uppercase tracking-widest rounded-xl hover:bg-gray-200 transition-all border border-gray-200"
         >
           Xóa bộ lọc
         </button>
@@ -350,7 +385,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ onSelectProduct }) => {
                 {isLoading ? 'Đang tải...' : `Tìm thấy ${filteredResults.total} sản phẩm`}
               </p>
             </div>
-            
+
             {/* Sort and Filter Controls */}
             <div className="flex items-center gap-4">
               <button
@@ -360,7 +395,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ onSelectProduct }) => {
                 <SlidersHorizontal className="size-4" />
                 <span className="text-sm font-bold">Lọc</span>
               </button>
-              
+
               <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
                 <span className="text-sm font-medium text-gray-600 hidden sm:inline">Sắp xếp:</span>
                 <select
@@ -381,7 +416,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ onSelectProduct }) => {
           </div>
 
           {searchQuery && (
-            <button 
+            <button
               onClick={clearSearch}
               className="flex items-center gap-2 text-gray-400 hover:text-red-500 font-bold text-sm transition-colors px-4 py-2 rounded-xl hover:bg-red-50"
             >
@@ -401,12 +436,12 @@ const SearchResults: React.FC<SearchResultsProps> = ({ onSelectProduct }) => {
             <SearchX className="size-16 text-gray-300 mb-4" />
             <h3 className="text-xl font-black text-gray-800 mb-2">Không tìm thấy sản phẩm nào</h3>
             <p className="text-gray-500 font-medium mb-8 text-center max-w-xs">
-              {searchQuery 
+              {searchQuery
                 ? 'Chúng mình không tìm thấy sản phẩm khớp với từ khóa của bạn. Thử tìm từ khác xem sao?'
                 : 'Không có sản phẩm nào phù hợp với bộ lọc của bạn.'
               }
             </p>
-            <button 
+            <button
               onClick={() => { clearSearch(); clearFilters(); }}
               className="px-8 py-3 bg-primary text-white font-black rounded-xl hover:bg-primary-dark transition-all shadow-lg shadow-primary/20"
             >
@@ -423,7 +458,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ onSelectProduct }) => {
                   const productRating = productRatings[product.id];
                   const rating = productRating?.average || 0;
                   const reviewCount = productRating?.count || 0;
-                  
+
                   return (
                     <div
                       key={`product-${product.id}`}
@@ -431,17 +466,17 @@ const SearchResults: React.FC<SearchResultsProps> = ({ onSelectProduct }) => {
                       className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all border border-gray-100 flex flex-col cursor-pointer group"
                     >
                       <div className="relative aspect-square w-full overflow-hidden bg-gray-50">
-                        <img 
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                          src={product.imageUrl || 'https://picsum.photos/seed/product/400/400'} 
-                          alt={product.productName || 'Sản phẩm'} 
+                        <img
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          src={product.imageUrl || 'https://picsum.photos/seed/product/400/400'}
+                          alt={product.productName || 'Sản phẩm'}
                         />
                         <div className="absolute top-3 left-3">
                           <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
                             Organic
                           </span>
                         </div>
-                        <button 
+                        <button
                           onClick={(e) => { e.stopPropagation(); onSelectProduct(product.id?.toString() || ''); }}
                           className="absolute bottom-3 right-3 size-10 bg-primary text-white rounded-full shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100"
                         >
@@ -526,9 +561,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({ onSelectProduct }) => {
                   const totalOriginal = items.reduce((sum, item) => sum + (item?.price || 0) * (item?.quantity || 0), 0);
                   const savings = totalOriginal - (combo.discountPrice || 0);
                   return (
-                    <div 
-                      key={`combo-${combo.id}`} 
-                      onClick={() => onSelectProduct(`combo-${combo.id}`)} 
+                    <div
+                      key={`combo-${combo.id}`}
+                      onClick={() => onSelectProduct(`combo-${combo.id}`)}
                       className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-lg transition-all overflow-hidden group cursor-pointer flex flex-col"
                     >
                       <div className="bg-gradient-to-br from-green-50 to-emerald-100 p-4 flex items-center gap-3">
@@ -592,7 +627,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ onSelectProduct }) => {
                 >
                   <ChevronLeft className="size-5" />
                 </button>
-                
+
                 <div className="flex gap-2">
                   {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
                     let pageNum;
@@ -605,16 +640,15 @@ const SearchResults: React.FC<SearchResultsProps> = ({ onSelectProduct }) => {
                     } else {
                       pageNum = currentPage - 2 + i;
                     }
-                    
+
                     return (
                       <button
                         key={pageNum}
                         onClick={() => handlePageChange(pageNum)}
-                        className={`w-10 h-10 rounded-full font-bold text-sm transition-colors ${
-                          currentPage === pageNum
+                        className={`w-10 h-10 rounded-full font-bold text-sm transition-colors ${currentPage === pageNum
                             ? 'bg-primary text-white'
                             : 'hover:bg-gray-100 text-gray-700'
-                        }`}
+                          }`}
                       >
                         {pageNum}
                       </button>

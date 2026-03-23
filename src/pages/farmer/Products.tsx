@@ -31,7 +31,7 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
         setShopId(Number(id));
         const [productsRes, combosRes, mysteryRes] = await Promise.all([
           productService.getByShopId(Number(id)).catch(() => ({ result: [] })),
-          comboService.getByShop(Number(id)).catch(() => ({ result: [] })),
+          comboService.getMyCombos().catch(() => ({ result: [] })),
           mysteryBoxService.getMyBoxes().catch(() => ({ result: [] }))
         ]);
         if (productsRes.result) {
@@ -131,7 +131,7 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
     return matchSearch && matchCategory && matchStatus;
   });
 
-  const filteredCombos = combos.filter(c => c.type === 'CUSTOM').filter(c => {
+  const filteredCombos = combos.filter(c => {
     const matchSearch = c.comboName.toLowerCase().includes(searchQuery.toLowerCase()) || c.id.toString().includes(searchQuery);
     return matchSearch;
   });
@@ -175,7 +175,7 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-black font-display text-gray-900">Quản Lý Sản Phẩm</h2>
-          <p className="text-gray-400 font-medium text-sm mt-1">Cửa hàng của bạn đang có {products.length} sản phẩm, {combos.filter(c => c.type === 'CUSTOM').length} combo và {mysteryBoxes.length} hộp mù.</p>
+          <p className="text-gray-400 font-medium text-sm mt-1">Cửa hàng của bạn đang có {products.length} sản phẩm, {combos.length} combo và {mysteryBoxes.length} hộp mù.</p>
         </div>
         <button 
           onClick={() => {
@@ -201,7 +201,7 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
           onClick={() => { setActiveTab('COMBO'); setPage(0); setCategoryFilter(''); setStatusFilter(''); }}
           className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all ${activeTab === 'COMBO' ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
         >
-          TÚI COMBO ({combos.filter(c => c.type === 'CUSTOM').length})
+          TÚI COMBO ({combos.length})
         </button>
         <button
           onClick={() => { setActiveTab('BLIND_BOX'); setPage(0); setCategoryFilter(''); setStatusFilter(''); }}
