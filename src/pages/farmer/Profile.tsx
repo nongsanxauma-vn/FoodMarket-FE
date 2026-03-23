@@ -254,8 +254,8 @@ const Profile: React.FC = () => {
                 </div>
               </div>
               <p className="text-xs font-bold text-gray-500 uppercase mb-1">Đánh giá</p>
-              <h4 className="text-2xl font-black text-gray-900">N/A</h4>
-              <p className="text-[10px] text-gray-400 font-medium mt-1">Chưa có đánh giá</p>
+              <h4 className="text-2xl font-black text-gray-900">{user?.ratingAverage ? user.ratingAverage.toFixed(1) : 'N/A'}</h4>
+              <p className="text-[10px] text-gray-400 font-medium mt-1">{user?.ratingAverage ? `${user.ratingAverage} sao` : 'Chưa có đánh giá'}</p>
             </div>
           </div>
 
@@ -370,7 +370,7 @@ const Profile: React.FC = () => {
                 {/* Join Date */}
                 <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
                   <p className="text-[10px] font-black text-gray-500 uppercase mb-2">Ngày tham gia</p>
-                  <p className="text-sm font-bold text-gray-700">{formatDate(user?.createdAt)}</p>
+                  <p className="text-sm font-bold text-gray-700">{formatDate(user?.createAt || user?.createdAt)}</p>
                 </div>
 
                 {/* Certificates Section */}
