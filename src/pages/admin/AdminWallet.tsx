@@ -12,6 +12,7 @@ const AdminWallet: React.FC = () => {
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [rejectId, setRejectId] = useState<number | null>(null);
   const [rejectNote, setRejectNote] = useState('');
+  
   const [isProcessing, setIsProcessing] = useState(false);
 
   const fetchData = async () => {
@@ -33,19 +34,43 @@ const AdminWallet: React.FC = () => {
   };
 
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const withdrawId = urlParams.get('withdrawId');
+    const cancel = urlParams.get('cancel');
+
+    if (withdrawId) {
+      window.history.replaceState(null, '', window.location.pathname);
+      if (cancel === 'true') {
+        globalShowAlert('Đã huỷ giao dịch chuyển khoản trên PayOS', 'Thông báo', 'info');
+      } else {
+        walletService.confirmWithdrawSuccess(Number(withdrawId), 'Đã giải ngân qua giao diện PayOS')
+          .then(() => {
+             globalShowAlert('Giải ngân PayOS thành công', 'Thành công', 'success');
+             fetchData();
+          })
+          .catch((err: any) => {
+             globalShowAlert(err?.data?.message || 'Lỗi khi đồng bộ kết quả PayOS', 'Lỗi', 'error');
+             fetchData();
+          });
+        return; // Skip initial fetchData since we wait for the promise
+      }
+    }
     fetchData();
   }, []);
 
   const handleApprove = async (id: number) => {
-    if (!await globalShowConfirm('Xác nhận', `Bạn có chắc muốn phê duyệt giải ngân yêu cầu #${id}?`)) return;
+    if (!await globalShowConfirm('Tạo thanh toán', `Bạn muốn điều hướng đến PayOS để chuyển khoản cho yêu cầu #${id}?`)) return;
 
     try {
       setIsProcessing(true);
-      await walletService.confirmWithdrawSuccess(id, 'Đã giải ngân thành công qua Admin');
-      globalShowAlert(`Đã phê duyệt yêu cầu #${id}`, 'Thành công', 'success');
-      fetchData();
+      const res = await walletService.createWithdrawQr(id);
+      if (res.result && res.result.checkoutUrl) {
+        window.location.href = res.result.checkoutUrl;
+      } else {
+        globalShowAlert('Không thể tạo trang thanh toán, vui lòng thử lại', 'Lỗi', 'error');
+      }
     } catch (err: any) {
-      globalShowAlert(err?.data?.message || 'Có lỗi khi duyệt yêu cầu', 'Lỗi', 'error');
+      globalShowAlert(err?.data?.message || 'Có lỗi khi tạo thanh toán', 'Lỗi', 'error');
     } finally {
       setIsProcessing(false);
     }
