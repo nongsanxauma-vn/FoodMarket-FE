@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Camera, ShieldCheck, Mail, Phone, MapPin, Star, Award, Leaf, FileText, Plus, Save, ExternalLink, User, CheckCircle2, Hourglass, ShieldAlert, Package, ShoppingBag, TrendingUp, Loader2 } from 'lucide-react';
 import { authService, UserResponse, productService, ProductResponse, orderService, OrderResponse } from '../../services';
 
@@ -14,6 +14,9 @@ const Profile: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Real statistics
   const [products, setProducts] = useState<ProductResponse[]>([]);
@@ -48,7 +51,24 @@ const Profile: React.FC = () => {
     };
 
     fetchProfile();
+
+    return () => {
+      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+    };
   }, []);
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAvatarFile(file);
+      const previewUrl = URL.createObjectURL(file);
+      setAvatarPreview(previewUrl);
+    }
+  };
 
   const fetchStatistics = async (userId: number) => {
     setStatsLoading(true);
@@ -79,9 +99,10 @@ const Profile: React.FC = () => {
         address,
         shopName,
         description,
-      });
+      }, avatarFile || undefined);
       if (response.result) {
         setUser(response.result);
+        setAvatarFile(null);
         setSuccess('Lưu thay đổi thành công.');
         setTimeout(() => setSuccess(null), 3000);
       }
@@ -171,14 +192,27 @@ const Profile: React.FC = () => {
           <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl border border-gray-100 shadow-sm p-6">
             <div className="flex flex-col md:flex-row items-center gap-6">
               <div className="relative group">
-                <div className="size-24 rounded-2xl overflow-hidden border-4 border-white shadow-lg bg-gradient-to-br from-green-100 to-blue-100">
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleAvatarChange} 
+                  accept="image/*" 
+                  className="hidden" 
+                />
+                <div 
+                  className="size-24 rounded-2xl overflow-hidden border-4 border-white shadow-lg bg-gradient-to-br from-green-100 to-blue-100 cursor-pointer"
+                  onClick={handleAvatarClick}
+                >
                   <img 
-                    src={`https://ui-avatars.com/api/?name=${encodeURIComponent(fullName || 'User')}&background=63b34a&color=fff&size=200&bold=true`}
+                    src={avatarPreview || user?.logoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName || 'User')}&background=63b34a&color=fff&size=200&bold=true`}
                     className="w-full h-full object-cover" 
                     alt="Avatar"
                   />
                 </div>
-                <button className="absolute -bottom-1 -right-1 size-8 bg-primary text-white rounded-lg shadow-lg border-2 border-white flex items-center justify-center hover:scale-110 transition-transform">
+                <button 
+                  onClick={handleAvatarClick}
+                  className="absolute -bottom-1 -right-1 size-8 bg-primary text-white rounded-lg shadow-lg border-2 border-white flex items-center justify-center hover:scale-110 transition-transform"
+                >
                   <Camera className="size-4" />
                 </button>
               </div>

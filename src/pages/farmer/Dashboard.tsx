@@ -29,7 +29,7 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
             .catch(e => { console.error('Orders fetch error', e); return { result: [] }; }),
           walletService.getMyWallet()
             .catch(e => { console.error('Wallet fetch error', e); return { result: null }; }),
-          (shopId ? comboService.getByShop(shopId) : Promise.resolve({ result: [] }))
+          (shopId ? comboService.getMyCombos() : Promise.resolve({ result: [] }))
             .catch(e => { console.error('Combos fetch error', e); return { result: [] }; }),
           mysteryBoxService.getMyBoxes()
             .catch(e => { console.error('Mystery boxes fetch error', e); return { result: [] }; }),
@@ -53,7 +53,7 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
   const totalOrders = orders.length;
   const walletBalance = wallet?.totalBalance || 0;
   const frozenBalance = wallet?.frozenBalance || 0;
-  const totalCombos = combos.filter(c => c.type === 'CUSTOM').length;
+  const totalCombos = combos.length;
   const totalBlindBoxes = mysteryBoxes.length;
 
   if (loading) {
@@ -241,7 +241,7 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
                   ))}
 
                   {/* Rendering Combos */}
-                  {activeTab === 'COMBO' && combos.filter(c => c.type === 'CUSTOM').slice(0, 5).map((c, i) => (
+                  {activeTab === 'COMBO' && combos.slice(0, 5).map((c, i) => (
                     <tr key={c.id || i} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -309,7 +309,7 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
                       <td colSpan={5} className="px-6 py-8 text-center text-gray-400 font-bold text-sm">Chưa có sản phẩm nào. Hãy thêm sản phẩm mới!</td>
                     </tr>
                   )}
-                  {activeTab === 'COMBO' && combos.filter(c => c.type === 'CUSTOM').length === 0 && (
+                  {activeTab === 'COMBO' && combos.length === 0 && (
                     <tr>
                       <td colSpan={5} className="px-6 py-8 text-center text-gray-400 font-bold text-sm">Chưa có combo nào được tạo.</td>
                     </tr>
@@ -322,7 +322,7 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
                 </tbody>
               </table>
               <button onClick={() => onNavigate(activeTab === 'NONG_SAN' ? 'products' : activeTab === 'COMBO' ? 'combo-list' : 'blind-box-list')} className="w-full py-4 text-primary text-xs font-bold hover:bg-primary/5 border-t border-gray-50 transition-all uppercase tracking-widest">
-                Xem chi tiết tất cả {activeTab === 'NONG_SAN' ? products.length : activeTab === 'COMBO' ? combos.filter(c => c.type === 'CUSTOM').length : mysteryBoxes.length} đối tượng
+                Xem chi tiết tất cả {activeTab === 'NONG_SAN' ? products.length : activeTab === 'COMBO' ? combos.length : mysteryBoxes.length} đối tượng
               </button>
             </div>
           </div>
