@@ -1,152 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Edit3, EyeOff, Eye, Trash2, CheckCircle, Clock, AlertCircle, Loader2, X, Sparkles, ChefHat } from 'lucide-react';
-import { productService, comboService, mysteryBoxService, authService, ProductResponse, ProductCreationRequest, BuildComboResponse, MysteryBox } from '../../services';
+import { productService, comboService, mysteryBoxService, authService, ProductResponse, BuildComboResponse, MysteryBox } from '../../services';
 import Pagination, { PageInfo } from '../../components/ui/Pagination';
 import { globalShowAlert, globalShowConfirm } from '../../contexts/PopupContext';
 
 const PAGE_SIZE = 10;
-
-interface EditModalProps {
-  product: ProductResponse;
-  onClose: () => void;
-  onSuccess: () => void;
-}
-
-const EditModal: React.FC<EditModalProps> = ({ product, onClose, onSuccess }) => {
-  const [form, setForm] = useState({
-    productName: product.productName || '',
-    unit: product.unit || '',
-    sellingPrice: product.sellingPrice || 0,
-    stockQuantity: product.stockQuantity || 0,
-    description: product.description || '',
-  });
-  const [image, setImage] = useState<File | null>(null);
-  const [preview, setPreview] = useState(product.imageUrl || '');
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: name === 'sellingPrice' || name === 'stockQuantity' ? Number(value) : value }));
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImage(file);
-      setPreview(URL.createObjectURL(file));
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setIsSaving(true);
-    try {
-      const data: Partial<ProductCreationRequest> = {
-        productName: form.productName,
-        unit: form.unit,
-        sellingPrice: form.sellingPrice,
-        stockQuantity: form.stockQuantity,
-        description: form.description,
-      };
-      await productService.updateProduct(product.id, data, image || undefined);
-      onSuccess();
-      onClose();
-    } catch (err: any) {
-      setError(err?.data?.message || 'Có lỗi khi cập nhật sản phẩm. Vui lòng thử lại.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-[32px] shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          <h3 className="text-xl font-black text-gray-900">Cập nhật sản phẩm</h3>
-          <button onClick={onClose} className="size-10 rounded-2xl bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors">
-            <X className="size-5" />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-5">
-          {error && (
-            <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-sm text-red-600 font-bold flex items-center gap-2">
-              <AlertCircle className="size-4 shrink-0" />{error}
-            </div>
-          )}
-
-          {/* Image Upload */}
-          <div>
-            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Ảnh sản phẩm</label>
-            <div className="flex items-center gap-4">
-              <img src={preview || 'https://picsum.photos/seed/product/80/80'} className="size-16 rounded-2xl object-cover shadow-sm bg-gray-100" />
-              <label className="cursor-pointer px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-sm rounded-xl transition-colors">
-                Thay đổi ảnh
-                <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-              </label>
-            </div>
-          </div>
-
-          {/* Product name */}
-          <div>
-            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Tên sản phẩm *</label>
-            <input name="productName" value={form.productName} onChange={handleChange} required
-              className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-primary/10 transition-all" />
-          </div>
-
-          {/* Unit */}
-          <div>
-            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Đơn vị tính</label>
-            <select name="unit" value={form.unit} onChange={handleChange}
-              className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-primary/10 transition-all">
-              <option value="KG">KG</option>
-              <option value="HOP">Hộp</option>
-              <option value="CAI">Cái</option>
-              <option value="GIO">Giỏ</option>
-              <option value="TRAI">Trái</option>
-              <option value="BICH">Bịch</option>
-            </select>
-          </div>
-
-          {/* Price & Stock */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Giá bán (₫) *</label>
-              <input name="sellingPrice" type="number" min="0" value={form.sellingPrice} onChange={handleChange} required
-                className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-primary/10 transition-all" />
-            </div>
-            <div>
-              <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Tồn kho *</label>
-              <input name="stockQuantity" type="number" min="0" value={form.stockQuantity} onChange={handleChange} required
-                className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-primary/10 transition-all" />
-            </div>
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Mô tả</label>
-            <textarea name="description" value={form.description} onChange={handleChange} rows={3}
-              className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-primary/10 transition-all resize-none" />
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose}
-              className="flex-1 py-3.5 bg-gray-100 text-gray-600 font-black rounded-2xl hover:bg-gray-200 transition-colors">
-              Hủy
-            </button>
-            <button type="submit" disabled={isSaving}
-              className="flex-1 py-3.5 bg-primary text-white font-black rounded-2xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50 flex items-center justify-center gap-2">
-              {isSaving ? <><Loader2 className="size-4 animate-spin" /> Đang lưu...</> : 'Lưu thay đổi'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
 
 const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }) => {
   const [products, setProducts] = useState<ProductResponse[]>([]);
@@ -156,7 +14,6 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<ProductResponse | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<number | ''>('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -315,15 +172,6 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
 
   return (
     <div className="flex flex-col gap-8 p-8 animate-in fade-in duration-500 relative">
-      {/* Edit Modal */}
-      {editingProduct && (
-        <EditModal
-          product={editingProduct}
-          onClose={() => setEditingProduct(null)}
-          onSuccess={fetchData}
-        />
-      )}
-
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-black font-display text-gray-900">Quản Lý Sản Phẩm</h2>
@@ -478,7 +326,7 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
                       <div className="flex flex-col items-end gap-2">
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => setEditingProduct(p)}
+                            onClick={() => onNavigate(`edit-product/${p.id}`)}
                             disabled={isDeleting}
                             title="Chỉnh sửa sản phẩm"
                             className="size-9 bg-gray-50 text-primary rounded-xl flex items-center justify-center hover:bg-primary/10 transition-colors disabled:opacity-50 cursor-pointer"
@@ -503,8 +351,10 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
                 <tr key={c.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-4">
-                      <div className="size-12 rounded-2xl flex items-center justify-center shadow-sm text-white bg-orange-500">
-                        <ChefHat className="size-6" />
+                      <div className="size-12 rounded-2xl flex items-center justify-center shadow-sm text-white bg-orange-500 overflow-hidden flex-shrink-0">
+                        {c.imageUrl
+                          ? <img src={c.imageUrl} className="w-full h-full object-cover" alt={c.comboName} />
+                          : <ChefHat className="size-6" />}
                       </div>
                       <div>
                         <p className="text-sm font-black line-clamp-1 max-w-[200px] text-orange-600">{c.comboName}</p>

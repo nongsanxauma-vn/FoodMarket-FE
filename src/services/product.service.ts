@@ -16,6 +16,7 @@ export interface ProductResponse {
     shopId?: number;
     shopName?: string;
     categoryId?: number;
+    expiryDate?: string; // ISO date string: "YYYY-MM-DD"
 }
 
 function normalizeProduct(p: ProductResponse): ProductResponse {
@@ -30,6 +31,7 @@ export interface ProductCreationRequest {
     description: string;
     imageUrl?: string;
     categoryId?: number;
+    expiryDate?: string; // "YYYY-MM-DD"
 }
 
 class ProductService {
