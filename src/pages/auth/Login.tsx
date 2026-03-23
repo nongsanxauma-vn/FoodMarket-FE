@@ -17,6 +17,37 @@ const Login: React.FC<LoginProps> = ({ onGoToRegister, onForgotPassword }) => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { setIsAuthenticated } = useAuth();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      setError('Vui lòng nhập đầy đủ email và mật khẩu');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await authService.login({ email, password });
+      if (response.result?.token) {
+        setIsAuthenticated(true);
+        // useEffect will handle redirection based on roles
+      } else {
+        setError('Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
+      }
+    } catch (err: any) {
+      console.error('Login error:', err);
+      if (err.status === 401) {
+        setError('Email hoặc mật khẩu không chính xác');
+      } else {
+        setError(err.data?.message || 'Có lỗi xảy ra khi đăng nhập. Vui lòng thử lại sau.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -80,7 +111,7 @@ const Login: React.FC<LoginProps> = ({ onGoToRegister, onForgotPassword }) => {
               <p className="text-slate-500 text-sm font-medium">Đăng nhập để tiếp tục cùng Xấu Mã</p>
             </div>
 
-            <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+            <form className="space-y-4" onSubmit={handleSubmit}>
               {error && (
                 <div className="p-3 bg-red-50 border-l-4 border-red-500 rounded-r-xl">
                   <p className="text-xs text-red-700 font-bold">{error}</p>
@@ -131,6 +162,7 @@ const Login: React.FC<LoginProps> = ({ onGoToRegister, onForgotPassword }) => {
               </div>
 
               <button
+                type="submit"
                 disabled={isLoading}
                 className="w-full py-3 bg-primary text-white font-black rounded-xl hover:bg-primary-dark hover:scale-[1.01] active:scale-[0.99] transition-all shadow-lg shadow-primary/25 disabled:opacity-50 uppercase text-sm tracking-wider"
               >
