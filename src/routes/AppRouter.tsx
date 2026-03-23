@@ -8,7 +8,6 @@ import ProtectedRoutes from './ProtectedRoutes';
 import AdminRoutes from './AdminRoutes';
 import FarmerRoutes from './FarmerRoutes';
 import ShipperRoutes from './ShipperRoutes';
-import ChatPage from '../pages/chat/ChatPage';
 
 const AppRouter: React.FC = () => {
     return (
@@ -20,8 +19,6 @@ const AppRouter: React.FC = () => {
                 {ProtectedRoutes()}
             </Route>
 
-            {/* Chat page - fullscreen, không có header/footer */}
-            <Route path="/chat" element={<ChatPage />} />
 
             {/* Admin, Farmer, Shipper Routes (layout riêng) */}
             {AdminRoutes()}

@@ -564,7 +564,7 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
   return (
     <div className="flex-1 bg-background animate-in fade-in duration-500 pb-20">
       <div style={{ position: 'relative', overflow: 'clip' }}>
-      <div className="max-w-[1280px] mx-auto px-4 md:px-10 lg:px-40 py-12">
+      <div className={viewerRole === 'SHOP_OWNER' ? "px-8 py-8" : "max-w-[1280px] mx-auto px-4 md:px-10 lg:px-40 py-12"}>
 
         {/* Header */}
         <div className="flex items-center gap-4 mb-10">
@@ -690,7 +690,9 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
                   <button
                     onClick={() => {
                       if (location?.shipperId) {
-                        navigate(`/chat?userId=${location.shipperId}&userName=${encodeURIComponent(location.shipperName ?? 'Shipper')}`);
+                        window.dispatchEvent(new CustomEvent('open-chat-with-user', {
+                          detail: { userId: location.shipperId, userName: location.shipperName || 'Shipper' }
+                        }));
                       }
                     }}
                     className="size-11 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all"
@@ -723,7 +725,7 @@ const Tracking: React.FC<TrackingProps> = ({ onBack, orderId: orderIdProp, order
 
           {/* RIGHT */}
           <div className="lg:col-span-8 flex flex-col gap-8">
-            <div className="relative rounded-[40px] shadow-lg border border-gray-100" style={{ height: '480px' }}>
+            <div className="relative rounded-[40px] shadow-lg border border-gray-100" style={{ height: viewerRole === 'SHOP_OWNER' ? '600px' : '480px' }}>
               <div
                 className="absolute inset-0 rounded-[40px] bg-gray-100"
                 style={{ overflow: 'hidden', contain: 'strict' }}

@@ -112,10 +112,14 @@ const ComboDetail: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-2 gap-12 mb-20 animate-in fade-in duration-500">
         {/* Left: Visual */}
         <div className="relative aspect-square rounded-2xl overflow-hidden border border-gray-100 shadow-sm bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4 text-green-300">
-            <ChefHat className="size-32 text-primary/20" />
-            <span className="text-6xl font-black text-primary/10">{combo.items.length} món</span>
-          </div>
+          {combo.imageUrl ? (
+            <img src={combo.imageUrl} className="w-full h-full object-cover" alt={combo.comboName} />
+          ) : (
+            <div className="flex flex-col items-center gap-4 text-green-300">
+              <ChefHat className="size-32 text-primary/20" />
+              <span className="text-6xl font-black text-primary/10">{combo.items.length} món</span>
+            </div>
+          )}
           <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full shadow-sm flex items-center gap-2">
             <ChefHat className="size-4 text-green-600" />
             <span className="text-[10px] font-black uppercase tracking-widest">Combo nấu ăn</span>
@@ -241,7 +245,12 @@ const ComboDetail: React.FC = () => {
                     Xem Cửa Hàng
                   </button>
                   <button
-                    onClick={() => { if (!isAuthenticated) { navigate('/login'); return; } navigate(`/chat?userId=${combo.shopOwnerId}`); }}
+                    onClick={() => { 
+                      if (!isAuthenticated) { navigate('/login'); return; } 
+                      window.dispatchEvent(new CustomEvent('open-chat-with-user', {
+                        detail: { userId: combo.shopOwnerId, userName: 'Chủ shop' }
+                      }));
+                    }}
                     className="flex items-center gap-1.5 px-5 py-2.5 bg-blue-50 text-blue-600 font-black text-[10px] uppercase tracking-widest rounded-xl border border-blue-100 hover:bg-blue-500 hover:text-white transition-all shadow-sm"
                   >
                     <MessageSquare className="size-3.5" /> Chat Shop
