@@ -235,13 +235,15 @@ const AdminWallet: React.FC = () => {
                   <tr key={req.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
-                        <span className="text-sm font-bold text-gray-900">SHOP-{req.shopOwnerId}</span>
+                        <span className="text-sm font-bold text-gray-900">
+                          {req.shipperId ? `SHIPPER-${req.shipperId}` : `SHOP-${req.shopOwnerId}`}
+                        </span>
                         <span className="text-xs text-gray-400">Ví ID: {req.walletId}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="px-2 py-1 text-xs font-bold bg-purple-50 text-purple-600 rounded-md">
-                        SHOP
+                      <span className={`px-2 py-1 text-xs font-bold rounded-md ${req.shipperId ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
+                        {req.shipperId ? 'SHIPPER' : 'SHOP'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -344,7 +346,9 @@ const AdminWallet: React.FC = () => {
                         RÚT TIỀN
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-xs font-medium text-gray-600">SHOP-{tx.shopOwnerId}</td>
+                    <td className="px-6 py-4 text-xs font-medium text-gray-600">
+                      {tx.shipperId ? `SHIPPER-${tx.shipperId}` : `SHOP-${tx.shopOwnerId}`}
+                    </td>
                     <td className="px-6 py-4 text-right text-xs font-bold text-gray-900">
                       {tx.status === 'SUCCESS' ? '-' : ''}{(tx.amount || 0).toLocaleString('vi-VN')} đ
                     </td>
