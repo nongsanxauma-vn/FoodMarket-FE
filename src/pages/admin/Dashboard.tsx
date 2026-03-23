@@ -145,7 +145,9 @@ const AdminDashboard: React.FC = () => {
                     </td>
                     <td className="px-6 py-5 text-xs font-bold text-gray-600">{item.email || 'N/A'}</td>
                     <td className="px-6 py-5">
-                      <span className="px-3 py-1 bg-orange-50 text-orange-500 text-[10px] font-bold rounded-full">{item.status || 'PENDING'}</span>
+                      <span className="px-3 py-1 bg-orange-50 text-orange-500 text-[10px] font-bold rounded-full">
+                        {item.status === 'ACTIVE' ? 'Hoạt động' : item.status === 'DEACTIVATED' ? 'Đã khóa' : item.status === 'INACTIVE' ? 'Tạm ngưng' : 'Chờ duyệt'}
+                      </span>
                     </td>
                     <td className="px-10 py-5 text-right">
                       <button onClick={async () => { try { await userService.approveShopOwner(item.id); setUsers(prev => prev.map(u => u.id === item.id ? { ...u, status: 'ACTIVE', kycStatus: 'APPROVED' } : u)); } catch (e) { console.error(e); } }} className="px-6 py-2 bg-blue-50 text-blue-600 text-xs font-black rounded-xl hover:bg-blue-100 transition-colors">Duyệt</button>
@@ -176,7 +178,7 @@ const AdminDashboard: React.FC = () => {
                     <td className="px-6 py-5 text-center text-sm font-bold text-gray-700">{(order.totalAmount || 0).toLocaleString('vi-VN')}đ</td>
                     <td className="px-6 py-5 text-center">
                       <span className={`px-3 py-1 rounded-lg text-[10px] font-black ${order.status === 'COMPLETED' || order.status === 'DELIVERED' ? 'bg-green-50 text-green-600' : order.status === 'CANCELLED' ? 'bg-red-50 text-red-500' : 'bg-orange-50 text-orange-500'}`}>
-                        {order.status || 'N/A'}
+                        {order.status === 'COMPLETED' ? 'Hoàn thành' : order.status === 'DELIVERED' ? 'Đã giao' : order.status === 'CANCELLED' ? 'Đã hủy' : order.status === 'PENDING' ? 'Chờ xử lý' : order.status === 'PROCESSING' ? 'Đang xử lý' : order.status === 'SHIPPING' ? 'Đang giao' : order.status || 'N/A'}
                       </span>
                     </td>
                   </tr>
@@ -206,7 +208,7 @@ const AdminDashboard: React.FC = () => {
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <p className="text-sm font-black text-gray-900">{shop.shopName || shop.fullName || 'Shop N/A'}</p>
-                      <p className="text-[10px] text-red-500 font-black mt-1 uppercase">{shop.status}</p>
+                      <p className="text-[10px] text-red-500 font-black mt-1 uppercase">{shop.status === 'INACTIVE' ? 'Tạm ngưng' : shop.status === 'DEACTIVATED' ? 'Đã khóa' : shop.status}</p>
                     </div>
                     <div className="size-10 bg-red-500 text-white rounded-xl flex items-center justify-center">
                       <Lock className="size-5" />

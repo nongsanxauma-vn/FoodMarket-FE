@@ -336,7 +336,7 @@ const ShipperManagement: React.FC = () => {
                       >
                         <span className="size-2 bg-current rounded-full" />
                         <span className="text-[10px] font-black uppercase tracking-wider">
-                          {shipper.status}
+                          {shipper.status === 'ACTIVE' ? 'Hoạt động' : shipper.status === 'INACTIVE' ? 'Tạm ngưng' : shipper.status === 'PENDING' ? 'Chờ duyệt' : shipper.status === 'DEACTIVATED' ? 'Đã khóa' : 'Không xác định'}
                         </span>
                       </div>
                     </td>
@@ -422,7 +422,7 @@ const ShipperManagement: React.FC = () => {
                       <span className={`inline-block mb-2 text-[10px] font-black px-3 py-1 rounded-lg uppercase tracking-widest ${selectedShipper.status === 'ACTIVE' ? 'bg-green-50 text-green-600' :
                         selectedShipper.status === 'INACTIVE' ? 'bg-gray-100 text-gray-600' : 'bg-orange-50 text-orange-600'
                         }`}>
-                        {selectedShipper.status === 'INACTIVE' ? 'CHỜ KÍCH HOẠT' : selectedShipper.status}
+                      {selectedShipper.status === 'INACTIVE' ? 'Chờ kích hoạt' : selectedShipper.status === 'ACTIVE' ? 'Hoạt động' : selectedShipper.status === 'PENDING' ? 'Chờ duyệt' : selectedShipper.status === 'DEACTIVATED' ? 'Đã khóa' : 'Không xác định'}
                       </span>
                       <h3 className="text-3xl font-black text-gray-900 tracking-tight">{selectedShipper.fullName || 'Người dùng Xấu Mã'}</h3>
                       <p className="text-gray-500 font-medium text-sm mt-1">ID Shipper: #{selectedShipper.id}</p>

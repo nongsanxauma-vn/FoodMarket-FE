@@ -149,8 +149,9 @@ const BadBuyers: React.FC = () => {
                     </td>
                     <td className="px-6 py-6 text-center text-xs font-bold text-gray-600">{user.email || 'N/A'}</td>
                     <td className="px-6 py-6 text-center">
-                      <span className={`px-3 py-1 rounded-lg text-[10px] font-black ${isBlocked ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'
-                        }`}>{user.status || 'N/A'}</span>
+                      <span className={`px-3 py-1 rounded-lg text-[10px] font-black ${isBlocked ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}`}>
+                        {isBlocked ? 'Đã khóa' : 'Hoạt động'}
+                      </span>
                     </td>
                     <td className="px-10 py-6 text-right">
                       <div className="flex items-center justify-end gap-4">
