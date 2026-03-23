@@ -38,7 +38,7 @@ export interface UserResponse {
   fullName: string;
   phoneNumber: string;
   address?: string;
-  status: 'ACTIVE' | 'INACTIVE' | 'BANNED' | 'DEACTIVATED' | 'PENDING';
+  status: 'ACTIVE' | 'INACTIVE' | 'PENDING';
   role: {
     id: number;
     name: string;

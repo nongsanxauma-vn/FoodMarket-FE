@@ -47,7 +47,7 @@ const ShopMonitoring: React.FC = () => {
       if (!await globalShowConfirm('Xác nhận', 'Bạn có chắc muốn khóa tạm thời cửa hàng này?')) return;
       try {
          await userService.deactivateUser(userId);
-         setShops(prev => prev.map(s => s.id === userId ? { ...s, status: 'DEACTIVATED' } : s));
+         setShops(prev => prev.map(s => s.id === userId ? { ...s, status: 'INACTIVE' } : s));
       } catch (err: any) {
          globalShowAlert(err?.data?.message || 'Không thể khóa cửa hàng', 'Lỗi', 'error');
       }
@@ -70,7 +70,7 @@ const ShopMonitoring: React.FC = () => {
          (s.email || '').toLowerCase().includes(term);
    });
 
-   const inactiveShops = shops.filter(s => s.status === 'DEACTIVATED' || s.status === 'INACTIVE');
+   const inactiveShops = shops.filter(s => s.status === 'INACTIVE');
 
    if (loading) {
       return (
@@ -101,7 +101,7 @@ const ShopMonitoring: React.FC = () => {
                      <div className="flex items-center justify-between mb-4">
                         <h4 className="font-black text-gray-900">{shop.shopName || shop.fullName || 'Shop N/A'}</h4>
                         <span className={`text-[10px] font-black text-gray-400 font-bold uppercase tracking-widest`}>
-                           {shop.status === 'ACTIVE' ? 'Hoạt động' : shop.status === 'DEACTIVATED' ? 'Đã khóa' : shop.status === 'INACTIVE' ? 'Tạm ngưng' : shop.status}
+                           {shop.status === 'ACTIVE' ? 'Hoạt động' : shop.status === 'INACTIVE' ? 'Tạm ngưng' : shop.status === 'PENDING' ? 'Chờ duyệt' : 'N/A'}
                         </span>
                      </div>
                      <div className="flex items-center justify-between mt-4">
@@ -176,7 +176,7 @@ const ShopMonitoring: React.FC = () => {
                               {/* Thêm whitespace-nowrap để chặn xuống dòng, w-max để thẻ co giãn theo chữ */}
                               <span className={`inline-flex items-center justify-center px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider whitespace-nowrap min-w-[100px] ${
                                     shop.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
-                                    shop.status === 'DEACTIVATED' || shop.status === 'INACTIVE' ? 'bg-red-100 text-red-600' :
+                                    shop.status === 'INACTIVE' ? 'bg-red-100 text-red-600' :
                                     'bg-orange-100 text-orange-600'
                                  }`}>
                                  {/* Thêm dấu chấm tròn nhỏ cho chuẩn giao diện Monitoring */}
@@ -185,9 +185,8 @@ const ShopMonitoring: React.FC = () => {
                                  }`}></span>
                                  
                                  {shop.status === 'ACTIVE' ? 'Hoạt động' :
-                                 shop.status === 'DEACTIVATED' ? 'Đã khóa' :
                                  shop.status === 'INACTIVE' ? 'Tạm ngưng' :
-                                 shop.status || 'N/A'}
+                                 shop.status === 'PENDING' ? 'Chờ duyệt' : 'N/A'}
                               </span>
                               </td>
                            <td className="px-10 py-6 text-right">

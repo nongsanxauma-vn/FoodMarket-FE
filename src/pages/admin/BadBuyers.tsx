@@ -48,7 +48,7 @@ const BadBuyers: React.FC = () => {
     setProcessing(userId);
     try {
       await userService.deactivateUser(userId);
-      setBuyers(prev => prev.map(b => b.id === userId ? { ...b, status: 'DEACTIVATED' } : b));
+      setBuyers(prev => prev.map(b => b.id === userId ? { ...b, status: 'INACTIVE' } : b));
     } catch (err: any) {
       globalShowAlert(err?.data?.message || 'Không thể khóa tài khoản', 'Lỗi', 'error');
     } finally {
@@ -68,7 +68,7 @@ const BadBuyers: React.FC = () => {
     }
   };
 
-  const blockedBuyers = buyers.filter(b => b.lockedAt != null || b.status === 'DEACTIVATED' || b.status === 'INACTIVE');
+  const blockedBuyers = buyers.filter(b => b.lockedAt != null || b.status === 'INACTIVE');
   const activeBuyers = buyers.filter(b => b.lockedAt == null && b.status === 'ACTIVE');
 
   if (loading) {
@@ -132,7 +132,7 @@ const BadBuyers: React.FC = () => {
                   <td colSpan={3} className="px-10 py-10 text-center text-gray-400 font-bold">Không có người mua nào.</td>
                 </tr>
               ) : buyers.map((user, i) => {
-                const isBlocked = user.lockedAt != null || user.status === 'DEACTIVATED' || user.status === 'INACTIVE';
+                const isBlocked = user.lockedAt != null || user.status === 'INACTIVE';
                 return (
                   <tr key={user.id} className={`hover:bg-gray-50/30 transition-colors ${isBlocked ? 'bg-red-50/20' : ''}`}>
                     <td className="px-10 py-6">

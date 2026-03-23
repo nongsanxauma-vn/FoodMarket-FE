@@ -150,7 +150,7 @@ const AdminDashboard: React.FC = () => {
                     <td className="px-6 py-5 text-xs font-bold text-gray-600">{item.email || 'N/A'}</td>
                     <td className="px-6 py-5">
                       <span className="px-3 py-1 bg-orange-50 text-orange-500 text-[10px] font-bold rounded-full">
-                        {item.status === 'ACTIVE' ? 'Hoạt động' : item.status === 'DEACTIVATED' ? 'Đã khóa' : item.status === 'INACTIVE' ? 'Tạm ngưng' : 'Chờ duyệt'}
+                        {item.status === 'ACTIVE' ? 'Hoạt động' : item.status === 'INACTIVE' ? 'Tạm ngưng' : 'Chờ duyệt'}
                       </span>
                     </td>
                     <td className="px-10 py-5 text-right">
@@ -205,14 +205,14 @@ const AdminDashboard: React.FC = () => {
               <h4 className="font-black text-gray-800 uppercase tracking-tight">Giám sát shop (Tín nhiệm thấp)</h4>
             </div>
             <div className="space-y-6">
-              {shopOwners.filter(s => s.status === 'INACTIVE' || s.status === 'DEACTIVATED').length === 0 ? (
+              {shopOwners.filter(s => s.status === 'INACTIVE').length === 0 ? (
                 <p className="text-sm text-gray-400 font-medium text-center py-4">Không có shop nào vi phạm.</p>
-              ) : shopOwners.filter(s => s.status === 'INACTIVE' || s.status === 'DEACTIVATED').slice(0, 3).map((shop, i) => (
+              ) : shopOwners.filter(s => s.status === 'INACTIVE').slice(0, 3).map((shop, i) => (
                 <div key={i} className="p-6 bg-gray-50/50 rounded-[32px] border border-gray-100 relative group">
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <p className="text-sm font-black text-gray-900">{shop.shopName || shop.fullName || 'Shop N/A'}</p>
-                      <p className="text-[10px] text-red-500 font-black mt-1 uppercase">{shop.status === 'INACTIVE' ? 'Tạm ngưng' : shop.status === 'DEACTIVATED' ? 'Đã khóa' : shop.status}</p>
+                      <p className="text-[10px] text-red-500 font-black mt-1 uppercase">{shop.status === 'INACTIVE' ? 'Tạm ngưng' : shop.status === 'PENDING' ? 'Chờ duyệt' : shop.status}</p>
                     </div>
                     <div className="size-10 bg-red-500 text-white rounded-xl flex items-center justify-center">
                       <Lock className="size-5" />
