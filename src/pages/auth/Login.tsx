@@ -145,30 +145,7 @@ const Login: React.FC<LoginProps> = ({ onGoToRegister, onForgotPassword }) => {
           }}>
  
             {/* Role Selection */}
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Vai trò:</label>
-              <div className="grid grid-cols-4 gap-2">
-                {[
-                  { role: AppRole.BUYER, icon: 'person' },
-                  { role: AppRole.FARMER, icon: 'agriculture' },
-                  { role: AppRole.SHIPPER, icon: 'local_shipping' },
-                  { role: AppRole.ADMIN, icon: 'shield' },
-                ].map((item) => (
-                  <button
-                    key={item.role}
-                    type="button"
-                    title={item.role}
-                    onClick={() => setSelectedRole(item.role)}
-                    className={`h-10 rounded-xl border-2 flex items-center justify-center transition-all ${selectedRole === item.role
-                      ? 'border-primary bg-primary/10 text-primary shadow-sm'
-                      : 'border-cream bg-white text-slate-300 hover:border-primary/30'
-                      }`}
-                  >
-                    <span className="material-symbols-outlined text-xl">{item.icon}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+           
 
             <div className="space-y-2.5">
               {error && (
