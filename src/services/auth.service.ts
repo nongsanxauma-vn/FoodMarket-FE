@@ -61,6 +61,7 @@ export interface UserResponse {
   profileImageUrl?: string;
   kycStatus?: string;
   createdAt?: string;
+  createAt?: string;
 }
 
 export interface IntrospectRequest {
