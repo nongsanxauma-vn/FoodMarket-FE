@@ -20,7 +20,7 @@ const BadBuyers: React.FC = () => {
       setLoading(true);
       try {
         const res = await userService.getAllUsersPaged(page, PAGE_SIZE);
-        const allUsers = res.result?.content || [];
+        const allUsers = (res.result?.content || []).map((u: UserResponse) => ({ ...u, roleName: u.roleName || u.role?.name }));
         if (res.result) {
           setPageInfo({
             page: res.result.page,

@@ -36,7 +36,11 @@ const AdminDashboard: React.FC = () => {
           orderService.getAllOrders(),
           productService.getAll(),
         ]);
-        if (usersRes.result) setUsers(Array.isArray(usersRes.result) ? usersRes.result : [usersRes.result]);
+        if (usersRes.result) {
+          const rawUsers = Array.isArray(usersRes.result) ? usersRes.result : [usersRes.result];
+          // Normalize: map role.name -> roleName nếu chưa có
+          setUsers(rawUsers.map(u => ({ ...u, roleName: u.roleName || u.role?.name })));
+        }
         if (ordersRes.result) setOrders(Array.isArray(ordersRes.result) ? ordersRes.result : [ordersRes.result]);
         if (productsRes.result) setProducts(Array.isArray(productsRes.result) ? productsRes.result : [productsRes.result]);
       } catch (err) {
@@ -50,8 +54,8 @@ const AdminDashboard: React.FC = () => {
   }, []);
 
   const pendingKyc = users.filter(u => u.status === 'PENDING' || u.kycStatus === 'PENDING');
-  const shopOwners = users.filter(u => u.roleName === 'SHOP_OWNER' || u.roleName === 'FARMER');
-  const buyers = users.filter(u => u.roleName === 'BUYER');
+  const shopOwners = users.filter(u => u.roleName === 'SHOP_OWNER' || u.roleName === 'FARMER' || u.role?.name === 'SHOP_OWNER' || u.role?.name === 'FARMER');
+  const buyers = users.filter(u => u.roleName === 'BUYER' || u.role?.name === 'BUYER');
 
   if (loading) {
     return (
