@@ -304,7 +304,7 @@ const MysteryBoxDetail: React.FC<MysteryBoxDetailProps> = ({
                 <h4 className="font-black text-gray-900 text-lg mb-1">Nông trại đối tác #{box.shopOwnerId}</h4>
                 <div className="flex gap-3 mt-4">
                   <button
-                    onClick={() => setViewShopMode(true)}
+                    onClick={() => { if (box.shopOwnerId) { setViewShopMode(true); } }}
                     className="px-5 py-2.5 bg-white text-primary font-black text-[10px] uppercase tracking-widest rounded-xl border border-primary/20 hover:bg-primary hover:text-white transition-all shadow-sm"
                   >
                     Xem Cửa Hàng
@@ -312,7 +312,9 @@ const MysteryBoxDetail: React.FC<MysteryBoxDetailProps> = ({
                   <button
                     onClick={() => {
                       if (!isAuthenticated) { navigate('/login'); return; }
-                      navigate(`/chat?userId=${box.shopOwnerId}&userName=${encodeURIComponent('Chủ shop')}`);
+                      window.dispatchEvent(new CustomEvent('open-chat-with-user', {
+                        detail: { userId: box.shopOwnerId, userName: 'Chủ shop' }
+                      }));
                     }}
                     className="flex items-center gap-1.5 px-5 py-2.5 bg-blue-50 text-blue-600 font-black text-[10px] uppercase tracking-widest rounded-xl border border-blue-100 hover:bg-blue-500 hover:text-white transition-all shadow-sm"
                   >

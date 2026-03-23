@@ -338,11 +338,6 @@ const Header: React.FC<HeaderProps> = ({
                       <button onClick={() => { setShowProfileMenu(false); navigate('/my-orders'); }} className="w-full px-5 py-3 text-left text-xs font-bold hover:bg-gray-50 flex items-center gap-3 transition-colors">
                         <Package className="size-4 text-gray-400" /> Đơn hàng của tôi
                       </button>
-                      {(user?.role === AppRole.BUYER || user?.role === AppRole.FARMER) && (
-                        <button onClick={() => { setShowProfileMenu(false); navigate('/chat'); }} className="w-full px-5 py-3 text-left text-xs font-bold hover:bg-gray-50 flex items-center gap-3 transition-colors">
-                          <MessageSquare className="size-4 text-gray-400" /> Tin nhắn
-                        </button>
-                      )}
                       <div className="h-px bg-gray-50 mx-3 my-1" />
                       <button onClick={() => { setShowProfileMenu(false); onLogout(); }} className="w-full px-5 py-3 text-left text-xs font-black text-red-500 hover:bg-red-50 flex items-center gap-3 transition-colors">
                         <LogOut className="size-4" /> Đăng xuất
@@ -381,7 +376,12 @@ const Header: React.FC<HeaderProps> = ({
 
           <div className="flex items-center gap-12">
             <nav className="flex items-center gap-10">
-              <a href="#goi-mu" className={`text-xs font-bold hover:text-primary transition-all uppercase tracking-tight ${activeTab === 'blindbox' ? 'text-gray-900 border-b-2 border-[#29a33d] pb-1' : 'text-gray-600'}`}>GÓI MÙ</a>
+              <Link
+                to="/mystery-boxes"
+                className={`text-xs font-bold uppercase tracking-tight transition-all ${location.pathname.includes('/mystery-box') ? 'text-gray-900 border-b-2 border-[#29a33d] pb-1' : 'text-gray-600 hover:text-primary'}`}
+              >
+                GÓI MÙ
+              </Link>
               <Link
                 to="/"
                 className={`text-xs font-black pb-1 uppercase tracking-tight text-nowrap transition-all ${activeTab === 'home' ? 'text-gray-900 border-b-2 border-[#29a33d]' : 'text-gray-600 hover:text-primary'}`}

@@ -77,6 +77,23 @@ const ShipperManagement: React.FC = () => {
     }
   };
 
+  const handleToggleStatus = async (userId: number, action: 'activate' | 'deactivate') => {
+    setError(null);
+    try {
+      if (action === 'activate') {
+        await userService.activateUser(userId);
+      } else {
+        await userService.deactivateUser(userId);
+      }
+      setAllShippers(prev =>
+        prev.map(u => u.id === userId ? { ...u, status: action === 'activate' ? 'ACTIVE' : 'INACTIVE' } : u)
+      );
+    } catch (err) {
+      console.error('Failed to toggle shipper status', err);
+      setError('Thao tác thất bại. Vui lòng thử lại.');
+    }
+  };
+
   const handleViewProfile = async (userId: number) => {
     setModalLoading(true);
     setSelectedShipper(null);
@@ -325,15 +342,25 @@ const ShipperManagement: React.FC = () => {
                     </td>
                     <td className="px-10 py-6 text-right">
                       <div className="flex items-center justify-end gap-4">
-                        <button className="size-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors">
+                        <button
+                          onClick={() => shipper.id && handleViewProfile(shipper.id)}
+                          className="size-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors"
+                          title="Xem hồ sơ"
+                        >
                           <History className="size-5" />
                         </button>
                         {shipper.status === 'ACTIVE' ? (
-                          <button className="px-6 py-2.5 bg-red-50 text-red-500 text-[10px] font-black rounded-xl uppercase tracking-widest hover:bg-red-100 transition-colors">
+                          <button
+                            onClick={() => shipper.id && handleToggleStatus(shipper.id, 'deactivate')}
+                            className="px-6 py-2.5 bg-red-50 text-red-500 text-[10px] font-black rounded-xl uppercase tracking-widest hover:bg-red-100 transition-colors"
+                          >
                             Khóa
                           </button>
                         ) : (
-                          <button className="px-6 py-2.5 bg-green-50 text-green-600 text-[10px] font-black rounded-xl uppercase tracking-widest hover:bg-green-100 transition-colors">
+                          <button
+                            onClick={() => shipper.id && handleToggleStatus(shipper.id, 'activate')}
+                            className="px-6 py-2.5 bg-green-50 text-green-600 text-[10px] font-black rounded-xl uppercase tracking-widest hover:bg-green-100 transition-colors"
+                          >
                             Mở khóa
                           </button>
                         )}
@@ -509,6 +536,31 @@ const ShipperManagement: React.FC = () => {
                   >
                     Đóng lại
                   </button>
+                  {selectedShipper.status === 'ACTIVE' ? (
+                    <button
+                      onClick={() => {
+                        if (selectedShipper.id) {
+                          handleToggleStatus(selectedShipper.id, 'deactivate');
+                          closeModal();
+                        }
+                      }}
+                      className="px-8 py-4 bg-red-500 text-white text-xs font-black rounded-2xl uppercase tracking-widest hover:bg-red-600 transition-all shadow-lg shadow-red-500/20"
+                    >
+                      Khóa tài khoản
+                    </button>
+                  ) : selectedShipper.status !== 'ACTIVE' && selectedShipper.status !== 'PENDING' ? (
+                    <button
+                      onClick={() => {
+                        if (selectedShipper.id) {
+                          handleToggleStatus(selectedShipper.id, 'activate');
+                          closeModal();
+                        }
+                      }}
+                      className="px-8 py-4 bg-green-600 text-white text-xs font-black rounded-2xl uppercase tracking-widest hover:bg-green-700 transition-all shadow-lg shadow-green-600/20"
+                    >
+                      Mở khóa
+                    </button>
+                  ) : null}
                   {selectedShipper.status !== 'ACTIVE' && (
                     <button
                       onClick={() => {

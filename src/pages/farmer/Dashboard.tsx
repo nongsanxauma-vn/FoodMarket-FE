@@ -90,37 +90,77 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
         </div>
       )}
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-        {[
-          { label: 'Tổng đơn hàng', value: totalOrders.toLocaleString('vi-VN'), trend: `${products.length} sản phẩm`, icon: ShoppingCart },
-          { label: 'Sản phẩm đang bán', value: products.length.toString(), trend: 'Đang hoạt động', icon: TrendingUp },
-          { label: 'Combo Đã Tạo', value: totalCombos.toString(), trend: 'Tự chọn', icon: ChefHat },
-          { label: 'Hộp mù (Blind Box)', value: totalBlindBoxes.toString(), trend: 'Giải cứu nông sản', icon: Sparkles },
-          { label: 'Chất lượng Shop', value: '98%', trend: 'Top 5%', icon: Star, bar: 98 },
-          { label: 'Số dư khả dụng', value: `${walletBalance.toLocaleString('vi-VN')}đ`, icon: Wallet, isPrimary: true, frozen: `${frozenBalance.toLocaleString('vi-VN')}đ` },
-        ].map((stat, i) => (
-          <div key={i} className={`p-6 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group ${stat.isPrimary ? 'bg-primary text-white md:col-span-3 lg:col-span-1' : 'bg-white'}`}>
-            <p className={`text-[11px] font-black uppercase tracking-widest ${stat.isPrimary ? 'text-white/70' : 'text-gray-400'}`}>{stat.label}</p>
-            <div className="flex items-baseline gap-2 mt-2">
-              <h3 className="text-2xl font-black font-display truncate">{stat.value}</h3>
-              {stat.trend && <span className={`text-[10px] whitespace-nowrap font-bold ${stat.isPrimary ? 'text-white' : 'text-primary'}`}>{stat.trend}</span>}
-            </div>
-            {stat.bar && (
-              <div className="w-full h-1.5 bg-gray-100 rounded-full mt-3 overflow-hidden">
-                <div className="h-full bg-primary" style={{ width: `${stat.bar}%` }} />
-              </div>
-            )}
-            {stat.isPrimary && (
-              <div className="flex items-center justify-between mt-4">
-                <span className="text-[10px] text-white/70">Bị đóng băng: {stat.frozen}</span>
-                <button onClick={() => onNavigate('wallet')} className="bg-white text-primary text-[10px] font-black px-4 py-1.5 rounded-full hover:bg-gray-50 transition-colors">Rút tiền</button>
-              </div>
-            )}
-            <stat.icon className={`absolute -right-4 -bottom-4 size-20 opacity-5 ${stat.isPrimary ? 'text-white' : 'text-gray-400'}`} />
-          </div>
-        ))}
+{/* Stats Grid */}
+<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+  {[
+    { label: 'Tổng đơn hàng', value: totalOrders.toLocaleString('vi-VN'), trend: `${products.length} sản phẩm`, icon: ShoppingCart },
+    { label: 'Sản phẩm đang bán', value: products.length.toString(), trend: 'Đang hoạt động', icon: TrendingUp },
+    { label: 'Combo Đã Tạo', value: totalCombos.toString(), trend: 'Tự chọn', icon: ChefHat },
+    { label: 'Hộp mù (Blind Box)', value: totalBlindBoxes.toString(), trend: 'Giải cứu nông sản', icon: Sparkles },
+    { label: 'Chất lượng Shop', value: '98%', trend: 'Top 5%', icon: Star, bar: 98 },
+    { label: 'Số dư khả dụng', value: `${walletBalance.toLocaleString('vi-VN')}đ`, icon: Wallet, isPrimary: true, frozen: `${frozenBalance.toLocaleString('vi-VN')}đ` },
+  ].map((stat, i) => (
+    <div 
+      key={i} 
+      className={`p-5 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group min-h-[140px] flex flex-col justify-between ${
+        stat.isPrimary ? 'bg-primary text-white md:col-span-3 lg:col-span-1' : 'bg-white'
+      }`}
+    >
+      {/* Label phần trên */}
+      <div className="relative z-10">
+        <p className={`text-[10px] font-black uppercase tracking-widest leading-tight mb-3 h-[28px] ${
+  stat.isPrimary ? 'text-white/70' : 'text-gray-400'
+}`}>
+  {stat.label}
+</p>
+        
+        {/* Row chứa Số và Trend - Dùng items-end để chân số thẳng hàng */}
+       <div className="flex flex-col justify-center">
+  <h3 className="text-2xl font-black font-display leading-none tabular-nums">
+    {stat.value}
+  </h3>
+
+  {stat.trend && (
+    <span
+      className={`text-[11px] font-medium mt-1 ${
+        stat.isPrimary ? 'text-white/80' : 'text-primary'
+      }`}
+    >
+      {stat.trend}
+    </span>
+  )}
+</div>
       </div>
+
+      {/* Phần bổ sung phía dưới (Bar hoặc Wallet info) */}
+      <div className="relative z-10 mt-auto">
+        {stat.bar ? (
+          <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-full bg-primary" style={{ width: `${stat.bar}%` }} />
+          </div>
+        ) : stat.isPrimary ? (
+          <div className="pt-2">
+            <p className="text-[9px] text-white/70 font-bold mb-2">Đóng băng: {stat.frozen}</p>
+            <button 
+              onClick={() => onNavigate('wallet')} 
+              className="w-full bg-white text-primary text-[10px] font-black py-2 rounded-xl hover:bg-gray-50 transition-all active:scale-95"
+            >
+              RÚT TIỀN
+            </button>
+          </div>
+        ) : (
+          /* Tạo khoảng trống giả để các card không có bar vẫn giữ layout */
+          <div className="h-1.5 w-full" />
+        )}
+      </div>
+
+      {/* Icon nền - Thu nhỏ lại và cố định góc để không đè chữ */}
+      <stat.icon className={`absolute -right-3 -bottom-3 size-16 opacity-[0.05] transform group-hover:scale-110 transition-transform ${
+        stat.isPrimary ? 'text-white' : 'text-gray-400'
+      }`} />
+    </div>
+  ))}
+</div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Product Management Section */}
@@ -132,16 +172,7 @@ const FarmerDashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNav
                   <Package className="size-5" />
                 </div>
                 <h4 className="font-black text-gray-800 uppercase tracking-tight">Quản lý sản phẩm</h4>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => onNavigate('combo-builder')} className="px-4 py-2 bg-orange-50 text-orange-600 rounded-xl text-xs font-bold border border-orange-200 hover:bg-orange-100 transition-colors flex items-center gap-2">
-                  <ChefHat className="size-4" /> Tạo Combo
-                </button>
-                <button onClick={() => onNavigate('blind-box')} className="px-4 py-2 bg-gray-50 text-gray-600 rounded-xl text-xs font-bold border border-gray-100">Blindbox</button>
-                <button onClick={() => onNavigate('add-product')} className="px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-primary/20 hover:bg-primary-dark">
-                  <Plus className="size-4" /> Thêm sản phẩm
-                </button>
-              </div>
+              </div>          
             </div>
             <div className="p-0 overflow-x-auto">
               {/* Inline Tabs for Table */}

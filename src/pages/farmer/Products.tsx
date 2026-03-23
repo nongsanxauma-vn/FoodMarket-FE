@@ -351,8 +351,10 @@ const Products: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }
                 <tr key={c.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-4">
-                      <div className="size-12 rounded-2xl flex items-center justify-center shadow-sm text-white bg-orange-500">
-                        <ChefHat className="size-6" />
+                      <div className="size-12 rounded-2xl flex items-center justify-center shadow-sm text-white bg-orange-500 overflow-hidden flex-shrink-0">
+                        {c.imageUrl
+                          ? <img src={c.imageUrl} className="w-full h-full object-cover" alt={c.comboName} />
+                          : <ChefHat className="size-6" />}
                       </div>
                       <div>
                         <p className="text-sm font-black line-clamp-1 max-w-[200px] text-orange-600">{c.comboName}</p>

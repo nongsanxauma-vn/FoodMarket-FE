@@ -238,17 +238,18 @@ const Register: React.FC<RegisterProps> = ({ onGoToLogin, onGoToShipperRegister 
   const isFarmer = selectedRole === AppRole.FARMER;
 
   return (
-    <div className="flex min-h-screen w-full bg-background-light font-sans">
-
+    <div 
+      className="flex h-screen w-full bg-cover bg-center bg-no-repeat font-sans"
+    >
       {/* ── LEFT ── Brand image panel */}
-      <div className="hidden lg:block lg:w-1/2 relative h-full shrink-0">
-        <div className="absolute inset-0 bg-black/20 z-10" />
+      <div className="hidden lg:flex lg:w-1/2 relative h-full shrink-0">
+        <div className="absolute inset-0 bg-black/15 z-10" />
         <img
           alt="Nông sản tươi sạch"
           className="absolute inset-0 w-full h-full object-cover"
-          src="https://moitruong.net.vn/rau-cu-ptag.html"
+          src="/login.jpg"
         />
-        <div className="absolute inset-0 z-20 p-10 flex flex-col justify-between">
+  <div className="absolute inset-0 z-20 p-10 flex flex-col justify-between">
           {/* Top bar */}
           <div className="flex items-center gap-3">
             <button
@@ -278,9 +279,8 @@ const Register: React.FC<RegisterProps> = ({ onGoToLogin, onGoToShipperRegister 
       </div>
 
       {/* ── RIGHT ── Registration form */}
-      <div className="w-full lg:w-1/2 h-full overflow-y-auto custom-scrollbar bg-background-light flex flex-col">
-        <div className="w-full max-w-[460px] m-auto px-8 py-10 flex-shrink-0">
-
+      <div className="w-full lg:w-1/2  overflow-y-auto custom-scrollbar bg-background-light flex flex-col">
+<div className="w-full max-w-[460px] mx-auto mb-auto mt-4 px-8 pt-2 pb-10 flex-shrink-0">
           {/* Header */}
           <div className="mb-4">
             <h1 className="display-font text-4xl font-extrabold text-primary tracking-tight">Đăng ký</h1>
