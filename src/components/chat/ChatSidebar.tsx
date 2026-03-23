@@ -55,19 +55,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   return (
     <div className="flex flex-col h-full bg-white border-r border-gray-100">
-      {/* Header */}
-      <div className="p-6 border-b border-gray-100">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="size-10 bg-primary/10 rounded-2xl flex items-center justify-center">
-            <MessageSquare className="size-5 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-base font-black text-gray-900 uppercase tracking-tight">Tin nhắn</h2>
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-              {conversations.length} cuộc trò chuyện
-            </p>
-          </div>
-        </div>
+      {/* Search & Header (Simplified) */}
+      <div className="p-4 border-b border-gray-100 bg-white">
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-300" />
@@ -76,10 +65,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
             placeholder="Tìm cuộc trò chuyện..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm font-medium text-gray-700 placeholder-gray-300 outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
+            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm font-medium text-gray-700 placeholder-gray-300 outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
           />
         </div>
       </div>
+
 
       {/* Conversation List */}
       <div className="flex-1 overflow-y-auto">
