@@ -16,7 +16,7 @@ export interface CartItemResponse {
     price: number;
     imageUrl?: string;
     shopName?: string;
-    itemType: 'PRODUCT' | 'MYSTERY_BOX' | 'BUILD_COMBO';
+    itemType: 'PRODUCT' | 'MYSTERY_BOX' | 'BUILD_COMBO' | 'COMBO';
     shopOwnerId?: number;
 }
 
