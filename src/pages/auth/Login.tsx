@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppRole, KYCStatus } from '../../types';
-import { authService } from '../../services';
+import { authService, API_BASE_URL } from '../../services';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface LoginProps {
@@ -65,7 +65,7 @@ const Login: React.FC<LoginProps> = ({ onGoToRegister, onForgotPassword }) => {
   }, [isAuthenticated, user, navigate]);
 
   const handleGoogleLogin = () => {
-    const backendOAuthUrl = `http://localhost:8080/api/v1/oauth2/authorization/google?role=BUYER`;
+    const backendOAuthUrl = `${API_BASE_URL}/oauth2/authorization/google?role=BUYER`;
     window.location.href = backendOAuthUrl;
   };
 

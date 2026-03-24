@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AppRole, KYCStatus } from '../../types/index';
 import { useAuth } from '../../contexts/AuthContext';
 import { ArrowLeft } from 'lucide-react';
-import { authService, otpService } from '../../services';
+import { authService, otpService, API_BASE_URL } from '../../services';
 import OTPVerification from '../../components/auth/OTPVerification';
 
 interface RegisterProps {
@@ -74,13 +74,13 @@ const Register: React.FC<RegisterProps> = ({ onGoToLogin, onGoToShipperRegister 
     let roleParam = selectedRole === AppRole.FARMER ? 'SHOP_OWNER' : selectedRole;
     
     // Construct the backend URL for OAuth2
-    const backendOAuthUrl = `http://localhost:8080/api/v1/oauth2/authorization/google?role=${roleParam}`;
+    const backendOAuthUrl = `${API_BASE_URL}/oauth2/authorization/google?role=${roleParam}`;
     window.location.href = backendOAuthUrl;
   };
 
   const handleFacebookLogin = () => {
     let roleParam = selectedRole === AppRole.FARMER ? 'SHOP_OWNER' : selectedRole;
-    const backendOAuthUrl = `http://localhost:8080/api/v1/oauth2/authorization/facebook?role=${roleParam}`;
+    const backendOAuthUrl = `${API_BASE_URL}/oauth2/authorization/facebook?role=${roleParam}`;
     window.location.href = backendOAuthUrl;
   };
 

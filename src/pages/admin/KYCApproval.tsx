@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ShieldCheck, UserCheck, CheckCircle, Search, Bell, Info, ChevronLeft, ChevronRight, FileText, Landmark, AlertCircle } from 'lucide-react';
-import { userService, UserResponse } from '../../services';
+import { userService, UserResponse, IMAGE_BASE_URL } from '../../services';
 import Pagination, { PageInfo } from '../../components/ui/Pagination';
 
 const PAGE_SIZE = 10;
@@ -80,7 +80,7 @@ const KYCApproval: React.FC = () => {
     if (path.startsWith('http')) return path;
     // Tạm giả định BE serve static files tại root hoặc theo path cụ thể
     // Nếu BE dùng /images/... hoặc tương tự thì cần điều chỉnh ở đây
-    return `http://localhost:8080/${path}`;
+    return `${IMAGE_BASE_URL}/${path}`;
   };
 
   return (
