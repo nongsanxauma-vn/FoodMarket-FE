@@ -47,11 +47,11 @@ export type { ApiResponse, RequestConfig } from './http.client';
 export type { UserUpdateRequest } from './user.service';
 export type {
     BuildPlanResponse,
-    MealItemResponse,
-    BuildPlanRequest,
-    MealItemRequest
+    BuildPlanItemResponse,
+    BuildPlanCreateRequest,
+    BuildPlanItemCreateRequest
 } from '../types';
-export type { ChatRequest, ChatResponse } from './chatbot.service';
+export type { ChatRequest, ChatbotApiResponse } from './chatbot.service';
 
 // Export constants
-export { API_BASE_URL, IMAGE_BASE_URL, TOKEN_KEY, USER_INFO_KEY } from './api.config';
+export { API_BASE_URL, TOKEN_KEY, USER_INFO_KEY } from './api.config';
